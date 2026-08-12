@@ -121,6 +121,18 @@ export const COUNTRY_FLAGS: Record<string, string> = {
 
 export const WEST_AFRICA_COUNTRIES = Object.keys(WEST_AFRICA_LOCATIONS);
 
+// Ville → Pays (pour l'admin / analytics international)
+export const CITY_TO_COUNTRY: Record<string, string> = Object.entries(
+  WEST_AFRICA_LOCATIONS,
+).reduce((acc, [country, cities]) => {
+  for (const city of cities) acc[city] = country;
+  return acc;
+}, {} as Record<string, string>);
+
+// Retourne le pays d'une ville (sinon "Autre")
+export const countryOfCity = (city?: string | null): string =>
+  (city && CITY_TO_COUNTRY[city]) || "Autre";
+
 // Flat list of all West African cities (used in selects and validation)
 export const WEST_AFRICA_CITIES: string[] = Object.values(WEST_AFRICA_LOCATIONS)
   .flat()

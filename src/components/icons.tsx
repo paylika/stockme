@@ -215,3 +215,75 @@ export function IconCheck(p: IconProps) {
     </Base>
   );
 }
+
+/** Groupe d'utilisateurs */
+export function IconUsers(p: IconProps) {
+  return (
+    <Base {...p}>
+      <circle {...soft} cx="9" cy="8" r="3.4" />
+      <circle cx="9" cy="8" r="3" />
+      <path d="M3.5 20a5.5 5.5 0 0 1 11 0" />
+      <path d="M16 5.2a3 3 0 0 1 0 5.6" />
+      <path d="M17.5 14.3A5.5 5.5 0 0 1 20.5 19.2" />
+    </Base>
+  );
+}
+
+/** Globe — international */
+export function IconGlobe(p: IconProps) {
+  return (
+    <Base {...p}>
+      <circle {...soft} cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18" />
+      <path d="M12 3c2.6 2.5 4 5.7 4 9s-1.4 6.5-4 9c-2.6-2.5-4-5.7-4-9s1.4-6.5 4-9Z" />
+    </Base>
+  );
+}
+
+/** Courbe de croissance */
+export function IconTrend(p: IconProps) {
+  return (
+    <Base {...p}>
+      <path d="M4 15l4.5-4.5 3 3L20 6" />
+      <path d="M15 6h5v5" />
+    </Base>
+  );
+}
+
+/** Pièces / valeur */
+export function IconCoins(p: IconProps) {
+  return (
+    <Base {...p}>
+      <ellipse {...soft} cx="8" cy="7" rx="5" ry="2.6" />
+      <ellipse cx="8" cy="7" rx="5" ry="2.6" />
+      <path d="M3 7v5c0 1.4 2.2 2.6 5 2.6s5-1.2 5-2.6V7" />
+      <path d="M11 15.4c.6 1.2 2.6 2.1 5 2.1 2.8 0 5-1.2 5-2.6v-5" />
+      <path d="M11 10.2c.8 1 2.7 1.7 5 1.7 2.8 0 5-1.2 5-2.6" />
+    </Base>
+  );
+}
+
+/** Grille — catégories */
+export function IconGrid(p: IconProps) {
+  return (
+    <Base {...p}>
+      <rect {...soft} x="3" y="3" width="7.5" height="7.5" rx="1.6" />
+      <rect x="3" y="3" width="7.5" height="7.5" rx="1.6" />
+      <rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6" />
+      <rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6" />
+      <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.6" />
+    </Base>
+  );
+}
+
+/** Horloge — récent */
+export function IconClock(p: IconProps) {
+  return (
+    <Base {...p}>
+      <circle {...soft} cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7.5V12l3 2" />
+    </Base>
+  );
+}
