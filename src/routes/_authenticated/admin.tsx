@@ -13,8 +13,7 @@ import {
   Cell,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/stockme-client";
-import { Header } from "@/components/Header";
-import { MobileNav } from "@/components/MobileNav";
+import logoUrl from "@/assets/stockme-logo.png";
 import { countryOfCity, COUNTRY_FLAGS } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
 import {
@@ -32,6 +31,7 @@ import {
 type Profile = {
   id: string;
   full_name: string | null;
+  email: string | null;
   phone: string | null;
   whatsapp: string | null;
   city: string | null;
@@ -79,8 +79,12 @@ function Admin() {
   const [profiles, setProfiles] = useState<Profile[] | null>(null);
   const [products, setProducts] = useState<Product[] | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [adminEmail, setAdminEmail] = useState<string>("");
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+    supabase.auth.getSession().then(({ data }) => setAdminEmail(data.session?.user?.email ?? ""));
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -180,8 +184,38 @@ function Admin() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10 pb-24 md:pb-10">
+      {/* ===== Barre admin dédiée (distincte de l'app grand public) ===== */}
+      <header className="sticky top-0 z-40 border-b border-border bg-primary text-primary-foreground">
+        <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:px-6">
+          <Link to="/" className="flex items-center gap-2">
+            <img src={logoUrl} alt="StockMe" className="h-8 w-8 rounded-lg bg-background/10 object-contain p-0.5" />
+            <span className="font-display text-base font-semibold tracking-tight">
+              Stock<span className="font-bold">Me</span>
+            </span>
+          </Link>
+          <span className="ml-1 hidden rounded-full bg-background/15 px-2.5 py-1 text-[11px] font-semibold sm:inline">
+            Console admin
+          </span>
+          <div className="flex-1" />
+          {adminEmail && (
+            <span className="hidden max-w-[180px] truncate text-xs text-primary-foreground/70 md:inline">{adminEmail}</span>
+          )}
+          <Link
+            to="/"
+            className="rounded-lg bg-background/15 px-3 py-1.5 text-xs font-semibold transition hover:bg-background/25"
+          >
+            Voir le site
+          </Link>
+          <button
+            onClick={() => supabase.auth.signOut().then(() => window.location.assign("/"))}
+            className="rounded-lg bg-background/15 px-3 py-1.5 text-xs font-semibold transition hover:bg-background/25"
+          >
+            Déconnexion
+          </button>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10">
         {/* En-tête */}
         <div className="flex items-center gap-2">
           <IconAdmin className="h-5 w-5 text-volt" />
@@ -323,6 +357,7 @@ function Admin() {
             <thead className="bg-muted/50 text-[11px] uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th className="text-left px-4 py-3">Nom</th>
+                <th className="text-left px-4 py-3 hidden lg:table-cell">Email</th>
                 <th className="text-left px-4 py-3 hidden sm:table-cell">Pays</th>
                 <th className="text-left px-4 py-3 hidden sm:table-cell">Ville</th>
                 <th className="text-left px-4 py-3">WhatsApp</th>
@@ -332,12 +367,13 @@ function Admin() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">Chargement…</td></tr>
+                <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Chargement…</td></tr>
               ) : profs.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">Aucun utilisateur</td></tr>
+                <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Aucun utilisateur</td></tr>
               ) : profs.map((p) => (
                 <tr key={p.id} className="border-t border-border hover:bg-muted/30">
                   <td className="px-4 py-3 font-medium">{p.full_name || "—"}</td>
+                  <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground truncate max-w-[200px]">{p.email || "—"}</td>
                   <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground whitespace-nowrap">
                     {COUNTRY_FLAGS[countryOfCity(p.city)] ?? ""} {countryOfCity(p.city)}
                   </td>
@@ -359,9 +395,7 @@ function Admin() {
           </table>
         </div>
 
-        <Link to="/" className="mt-8 inline-block text-sm text-muted-foreground hover:text-foreground underline underline-offset-2">← Retour à l'accueil</Link>
       </div>
-      <MobileNav />
     </div>
   );
 }
