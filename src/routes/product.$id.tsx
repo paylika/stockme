@@ -1,0 +1,378 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/stockme-client";
+import { Header } from "@/components/Header";
+import { MobileNav } from "@/components/MobileNav";
+import { MobileFooter } from "@/components/MobileFooter";
+import { Button } from "@/components/ui/button";
+import { formatFCFA, whatsappLink } from "@/lib/format";
+import { useAuth } from "@/hooks/useAuth";
+import { ArrowLeft, ChevronLeft, ChevronRight, Heart, Lock, MapPin, MessageCircle, Package, Phone, Share2, ShieldCheck } from "lucide-react";
+import { toast } from "sonner";
+
+type Product = {
+  id: string; name: string; description: string | null; category: string;
+  price_fcfa: number; promo_price_fcfa: number | null; revenue_fcfa: number | null;
+  quantity: number; moq: number; city: string; zone: string | null;
+  images: string[]; owner_id: string; whatsapp: string | null;
+};
+type Profile = { full_name: string | null; whatsapp: string | null; phone: string | null; city: string | null };
+type Similar = { id: string; name: string; price_fcfa: number; promo_price_fcfa: number | null; city: string; images: string[] };
+
+export const Route = createFileRoute("/product/$id")({
+  loader: async ({ params }) => {
+    const { data } = await supabase
+      .from("products")
+      .select("name,description,images,price_fcfa,promo_price_fcfa,city,category")
+      .eq("id", params.id)
+      .maybeSingle();
+    return { seo: data as null | { name: string; description: string | null; images: string[]; price_fcfa: number; promo_price_fcfa: number | null; city: string; category: string } };
+  },
+  head: ({ loaderData }) => {
+    const p = loaderData?.seo;
+    const title = p ? `${p.name} — ${formatFCFA(p.promo_price_fcfa ?? p.price_fcfa)} · ${p.city} | StockMe` : "Produit | StockMe";
+    const description = p
+      ? (p.description?.slice(0, 150) || `${p.name} disponible à ${p.city}. ${p.category} en gros au meilleur prix, contact direct WhatsApp sur StockMe.`)
+      : "Découvrez ce stock disponible sur StockMe.";
+    const image = p?.images?.[0];
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:type", content: "product" },
+        { name: "twitter:card", content: image ? "summary_large_image" : "summary" },
+        ...(image && image.startsWith("https://")
+          ? [
+              { property: "og:image", content: image },
+              { name: "twitter:image", content: image },
+            ]
+          : []),
+      ],
+    };
+  },
+  component: ProductPage,
+});
+
+function ProductPage() {
+  const { id } = Route.useParams();
+  const { user, loading: authLoading } = useAuth();
+  const [product, setProduct] = useState<Product | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [similar, setSimilar] = useState<Similar[]>([]);
+  const [activeImg, setActiveImg] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [isFav, setIsFav] = useState(false);
+
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      setLoading(true);
+      setActiveImg(0);
+      const { data } = await supabase.from("products").select("*").eq("id", id).maybeSingle();
+      if (cancel) return;
+      const p = data as Product | null;
+      setProduct(p);
+      if (p) {
+        const [{ data: prof }, { data: sim }] = await Promise.all([
+          supabase.from("profiles").select("full_name,whatsapp,phone,city").eq("id", p.owner_id).maybeSingle(),
+          supabase.from("products").select("id,name,price_fcfa,promo_price_fcfa,city,images")
+            .eq("category", p.category).neq("id", p.id).order("created_at", { ascending: false }).limit(8),
+        ]);
+        if (!cancel) {
+          setProfile(prof as Profile | null);
+          setSimilar((sim as Similar[] | null) ?? []);
+        }
+      }
+      setLoading(false);
+    })();
+    return () => { cancel = true; };
+  }, [id]);
+
+  useEffect(() => {
+    if (!user) { setIsFav(false); return; }
+    (async () => {
+      const { data } = await supabase.from("favorites").select("id").eq("user_id", user.id).eq("product_id", id).maybeSingle();
+      setIsFav(!!data);
+    })();
+  }, [user, id]);
+
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  const goTo = (i: number) => {
+    const el = scrollerRef.current;
+    if (!el || !product) return;
+    const n = product.images.length;
+    if (!n) return;
+    const idx = (i + n) % n;
+    el.scrollTo({ left: idx * el.clientWidth, behavior: "smooth" });
+    setActiveImg(idx);
+  };
+
+  const onScroll = () => {
+    const el = scrollerRef.current;
+    if (!el || !el.clientWidth) return;
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
+    setActiveImg((prev) => (prev === idx ? prev : idx));
+  };
+
+  const share = async () => {
+    if (!product) return;
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    const text = `${product.name} — ${formatFCFA(product.promo_price_fcfa ?? product.price_fcfa)} · ${product.city} sur StockMe`;
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({ title: product.name, text, url });
+        return;
+      }
+      await navigator.clipboard.writeText(`${text}\n${url}`);
+      toast.success("Lien copié — collez-le sur WhatsApp");
+    } catch (e) {
+      if ((e as Error)?.name === "AbortError") return;
+      window.open(`https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`, "_blank");
+    }
+  };
+
+  const toggleFav = async () => {
+    if (!user) return toast.error("Connectez-vous pour ajouter aux favoris");
+    if (isFav) {
+      await supabase.from("favorites").delete().eq("user_id", user.id).eq("product_id", id);
+      setIsFav(false);
+      toast.success("Retiré des favoris");
+    } else {
+      await supabase.from("favorites").insert({ user_id: user.id, product_id: id });
+      setIsFav(true);
+      toast.success("Ajouté aux favoris");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 grid lg:grid-cols-2 gap-10">
+          <div className="aspect-square rounded-xl shimmer bg-muted" />
+          <div className="space-y-4">
+            <div className="h-8 w-2/3 shimmer bg-muted rounded" />
+            <div className="h-5 w-1/3 shimmer bg-muted rounded" />
+            <div className="h-32 shimmer bg-muted rounded" />
+          </div>
+        </div>
+        <MobileFooter />
+      <MobileNav />
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="mx-auto max-w-3xl px-4 py-20 text-center">
+          <h1 className="text-2xl font-bold">Produit introuvable</h1>
+          <Link to="/" className="mt-4 inline-block text-volt underline">Retour aux produits</Link>
+        </div>
+        <MobileFooter />
+      <MobileNav />
+      </div>
+    );
+  }
+
+  const waNumber = product.whatsapp || profile?.whatsapp || "";
+  const waMsg = `Bonjour, je suis intéressé par votre stock de "${product.name}" sur StockMe.`;
+  const wa = waNumber ? whatsappLink(waNumber, waMsg) : null;
+  const img = product.images[activeImg];
+  const hasPromo = product.promo_price_fcfa && product.promo_price_fcfa < product.price_fcfa;
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-4 sm:py-8">
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" /> Retour
+          </Link>
+          <div className="flex items-center gap-2">
+            <button onClick={share} className="grid h-9 w-9 place-items-center rounded-full border border-border bg-card hover:bg-accent" aria-label="Partager">
+              <Share2 className="h-4 w-4" />
+            </button>
+            <button onClick={toggleFav} className={`grid h-9 w-9 place-items-center rounded-full border border-border ${isFav ? "bg-volt text-volt-foreground border-volt" : "bg-card hover:bg-accent"}`} aria-label="Favori">
+              <Heart className={`h-4 w-4 ${isFav ? "fill-current" : ""}`} />
+            </button>
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-6 lg:gap-10">
+          <div className="space-y-3">
+            <div className="relative">
+              <div
+                ref={scrollerRef}
+                onScroll={onScroll}
+                className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth rounded-2xl border border-border bg-muted [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+              >
+                {product.images.length ? (
+                  product.images.map((src, i) => (
+                    <div key={i} className="w-full shrink-0 snap-center aspect-square">
+                      <img src={src} alt={`${product.name} — photo ${i + 1}`} className="h-full w-full object-cover" />
+                    </div>
+                  ))
+                ) : (
+                  <div className="grid w-full aspect-square place-items-center text-muted-foreground"><Package className="h-16 w-16" /></div>
+                )}
+              </div>
+
+              {product.images.length > 1 && (
+                <>
+                  <button onClick={() => goTo(activeImg - 1)} aria-label="Photo précédente"
+                    className="hidden sm:grid absolute left-2 top-1/2 -translate-y-1/2 h-9 w-9 place-items-center rounded-full bg-background/80 border border-border backdrop-blur hover:bg-background">
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => goTo(activeImg + 1)} aria-label="Photo suivante"
+                    className="hidden sm:grid absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 place-items-center rounded-full bg-background/80 border border-border backdrop-blur hover:bg-background">
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-background/80 px-2.5 py-1.5 backdrop-blur border border-border">
+                    {product.images.map((_, i) => (
+                      <button key={i} onClick={() => goTo(i)} aria-label={`Aller à la photo ${i + 1}`}
+                        className={`h-1.5 rounded-full transition-all ${activeImg === i ? "w-5 bg-volt" : "w-1.5 bg-foreground/30"}`} />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {product.images.length > 1 && (
+              <div className="grid grid-cols-5 gap-2">
+                {product.images.map((src, i) => (
+                  <button key={i} onClick={() => goTo(i)}
+                    className={`aspect-square rounded-md overflow-hidden border-2 transition ${activeImg === i ? "border-volt" : "border-border hover:border-foreground/30"}`}>
+                    <img src={src} alt="" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <p className="text-xs font-medium tracking-[0.18em] uppercase text-muted-foreground">{product.category}</p>
+            <h1 className="mt-2 text-2xl sm:text-4xl font-bold tracking-tight text-balance">{product.name}</h1>
+
+            <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-sm">
+              <MapPin className="h-3.5 w-3.5" /> {product.zone ? `${product.zone}, ${product.city}` : product.city}
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-border bg-card p-5 sm:p-6">
+              {hasPromo ? (
+                <div className="flex items-baseline gap-3 flex-wrap">
+                  <div className="text-3xl sm:text-4xl font-bold tracking-tight">{formatFCFA(product.promo_price_fcfa!)}</div>
+                  <div className="text-base line-through text-muted-foreground">{formatFCFA(product.price_fcfa)}</div>
+                  <span className="rounded-full bg-volt text-volt-foreground px-2 py-0.5 text-[10px] font-bold">PROMO</span>
+                </div>
+              ) : (
+                <div className="text-3xl sm:text-4xl font-bold tracking-tight">{formatFCFA(product.price_fcfa)}</div>
+              )}
+              <div className="mt-1 text-sm text-muted-foreground">prix unitaire</div>
+
+              <div className="mt-5 grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <div className="text-muted-foreground text-xs uppercase tracking-wider">Stock</div>
+                  <div className="mt-0.5 font-semibold">{product.quantity} unités</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground text-xs uppercase tracking-wider">Commande min</div>
+                  <div className="mt-0.5 font-semibold">{product.moq} unités</div>
+                </div>
+                {product.revenue_fcfa ? (
+                  <div className="col-span-2">
+                    <div className="text-muted-foreground text-xs uppercase tracking-wider">CA déjà généré</div>
+                    <div className="mt-0.5 font-semibold text-foreground">{formatFCFA(product.revenue_fcfa)}</div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            {product.description && (
+              <div className="mt-6">
+                <h2 className="text-sm font-semibold tracking-wider uppercase text-muted-foreground">Description</h2>
+                <p className="mt-2 text-sm leading-relaxed whitespace-pre-line">{product.description}</p>
+              </div>
+            )}
+
+            <div className="mt-6 rounded-2xl border border-border p-5 bg-card">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs text-muted-foreground">Fournisseur</div>
+                  <div className="font-semibold">{profile?.full_name ?? "Vendeur"}</div>
+                </div>
+                <ShieldCheck className="h-5 w-5 text-volt" />
+              </div>
+
+              {authLoading ? (
+                <div className="mt-4 h-11 rounded-md bg-muted shimmer" />
+              ) : !user ? (
+                <div className="mt-4 rounded-xl border border-dashed border-border bg-background/50 p-4 text-center">
+                  <Lock className="mx-auto h-5 w-5 text-volt" />
+                  <p className="mt-2 text-sm font-medium">Numéro réservé aux membres</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Créez un compte gratuit pour voir le numéro WhatsApp.</p>
+                  <Link to="/auth" className="mt-3 block">
+                    <Button variant="volt" className="w-full h-11">Créer un compte gratuit</Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="mt-4 flex flex-col sm:flex-row gap-2">
+                  {wa ? (
+                    <a href={wa} target="_blank" rel="noopener noreferrer" className="flex-1">
+                      <Button variant="volt" className="w-full h-11">
+                        <MessageCircle className="mr-1 h-4 w-4" /> WhatsApp
+                      </Button>
+                    </a>
+                  ) : (
+                    <Button variant="volt" disabled className="flex-1 h-11">Contact indisponible</Button>
+                  )}
+                  {(product.whatsapp || profile?.phone) && (
+                    <a href={`tel:${product.whatsapp || profile?.phone}`}>
+                      <Button variant="outline" className="h-11 w-full sm:w-auto">
+                        <Phone className="h-4 w-4" />
+                      </Button>
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {similar.length > 0 && (
+          <section className="mt-12">
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Produits similaires</h2>
+            <p className="text-sm text-muted-foreground">Dans la catégorie {product.category}</p>
+            <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+              {similar.map((s) => {
+                const sp = s.promo_price_fcfa && s.promo_price_fcfa < s.price_fcfa;
+                return (
+                  <Link key={s.id} to="/product/$id" params={{ id: s.id }} className="group rounded-xl border border-border bg-card overflow-hidden hover:border-foreground/30 transition">
+                    <div className="aspect-[4/3] bg-muted overflow-hidden">
+                      {s.images[0] ? (
+                        <img src={s.images[0]} alt={s.name} className="h-full w-full object-cover transition-transform group-hover:scale-105" loading="lazy" />
+                      ) : (
+                        <div className="grid h-full place-items-center text-muted-foreground"><Package className="h-8 w-8" /></div>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <h3 className="font-semibold leading-tight line-clamp-1 text-sm">{s.name}</h3>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{s.city}</p>
+                      <div className="mt-1 font-bold text-sm">{formatFCFA(sp ? s.promo_price_fcfa! : s.price_fcfa)}</div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+      </div>
+      <MobileFooter />
+      <MobileNav />
+    </div>
+  );
+}
