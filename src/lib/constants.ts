@@ -1,11 +1,29 @@
+// Sénégal — hiérarchie officielle Région → Départements / Communes principales.
+// (14 régions administratives). Utilisé pour un sélecteur en cascade cohérent.
+export const SENEGAL_REGIONS: Record<string, string[]> = {
+  Dakar: ["Dakar", "Pikine", "Guédiawaye", "Rufisque", "Keur Massar", "Bargny", "Diamniadio", "Sébikotane"],
+  Thiès: ["Thiès", "Mbour", "Saly", "Tivaouane", "Joal-Fadiouth", "Pout", "Khombole", "Kayar"],
+  Diourbel: ["Diourbel", "Touba", "Mbacké", "Bambey", "Ndoulo"],
+  "Saint-Louis": ["Saint-Louis", "Richard-Toll", "Dagana", "Podor", "Ross Béthio", "Mpal"],
+  Louga: ["Louga", "Kébémer", "Linguère", "Dahra"],
+  Fatick: ["Fatick", "Foundiougne", "Gossas", "Sokone", "Passy", "Diakhao"],
+  Kaolack: ["Kaolack", "Guinguinéo", "Nioro du Rip", "Kahone", "Ndoffane"],
+  Kaffrine: ["Kaffrine", "Birkelane", "Koungheul", "Malem Hodar"],
+  Tambacounda: ["Tambacounda", "Bakel", "Goudiry", "Koumpentoum"],
+  Kédougou: ["Kédougou", "Salémata", "Saraya"],
+  Kolda: ["Kolda", "Vélingara", "Médina Yoro Foulah"],
+  Sédhiou: ["Sédhiou", "Bounkiling", "Goudomp"],
+  Ziguinchor: ["Ziguinchor", "Bignona", "Oussouye", "Cap Skirring"],
+  Matam: ["Matam", "Kanel", "Ranérou", "Ourossogui", "Thilogne"],
+};
+
+// Liste des régions du Sénégal (ordre administratif usuel)
+export const SENEGAL_REGION_NAMES = Object.keys(SENEGAL_REGIONS);
+
 // West African countries (ECOWAS + Mauritania) — main cities
 export const WEST_AFRICA_LOCATIONS: Record<string, string[]> = {
-  Sénégal: [
-    "Dakar", "Thiès", "Saint-Louis", "Mbour", "Rufisque", "Touba",
-    "Kaolack", "Ziguinchor", "Diourbel", "Louga", "Tambacounda",
-    "Kolda", "Fatick", "Matam", "Kaffrine", "Kédougou", "Sédhiou",
-    "Keur Massar", "Guédiawaye", "Pikine",
-  ],
+  // Sénégal = toutes les communes des 14 régions (dérivé, sans doublon)
+  Sénégal: Array.from(new Set(Object.values(SENEGAL_REGIONS).flat())),
   "Côte d'Ivoire": [
     "Abidjan", "Bouaké", "Yamoussoukro", "Daloa", "San-Pédro",
     "Korhogo", "Man", "Gagnoa", "Divo", "Anyama", "Abengourou",

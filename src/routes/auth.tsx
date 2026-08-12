@@ -28,9 +28,12 @@ import {
   WEST_AFRICA_COUNTRIES,
   COUNTRY_DIAL_CODES,
   COUNTRY_FLAGS,
+  SENEGAL_REGIONS,
+  SENEGAL_REGION_NAMES,
 } from "@/lib/constants";
 import { toast } from "sonner";
-import { Boxes, Check, ChevronDown } from "lucide-react";
+import { IconCheck, IconChevronDown } from "@/components/icons";
+import logoUrl from "@/assets/stockme-logo.png";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>): { redirect?: string; mode?: "login" | "signup" } => ({
@@ -57,20 +60,30 @@ function AuthPage() {
   const [sCountry, setSCountry] = useState("Sénégal");
   const [countryOpen, setCountryOpen] = useState(false);
   const [sLocalPhone, setSLocalPhone] = useState("");
+  const [sRegion, setSRegion] = useState("");
   const [sCity, setSCity] = useState("");
-  const [regionOpen, setRegionOpen] = useState(false);
+  const [cityOpen, setCityOpen] = useState(false);
   const [sRole, setSRole] = useState("both");
   const destination = redirect?.startsWith("/") ? redirect : "/dashboard";
 
   const dial = COUNTRY_DIAL_CODES[sCountry] ?? "+221";
-  const regions = useMemo(() => WEST_AFRICA_LOCATIONS[sCountry] ?? [], [sCountry]);
-
+  const isSenegal = sCountry === "Sénégal";
+  // Villes proposées : communes de la région choisie (Sénégal) sinon liste du pays.
+  const cityOptions = useMemo(() => {
+    if (isSenegal) return sRegion ? SENEGAL_REGIONS[sRegion] ?? [] : [];
+    return WEST_AFRICA_LOCATIONS[sCountry] ?? [];
+  }, [isSenegal, sRegion, sCountry]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) window.location.assign(destination);
     });
   }, [destination]);
+
+  const resetLocation = () => {
+    setSRegion("");
+    setSCity("");
+  };
 
   const goAfterAuth = () => {
     window.location.assign(destination);
@@ -90,7 +103,8 @@ function AuthPage() {
     e.preventDefault();
     const digits = sLocalPhone.replace(/\D/g, "");
     if (digits.length < 6) return toast.error("Numéro WhatsApp invalide");
-    if (!sCity) return toast.error("Veuillez choisir votre région");
+    if (isSenegal && !sRegion) return toast.error("Veuillez choisir votre région");
+    if (!sCity) return toast.error("Veuillez choisir votre ville");
     const fullPhone = `${dial}${digits}`;
     setLoading(true);
 
@@ -104,6 +118,7 @@ function AuthPage() {
           phone: fullPhone,
           whatsapp: fullPhone,
           country: sCountry,
+          region: isSenegal ? sRegion : null,
           city: sCity || sCountry,
           role: sRole,
         },
@@ -124,225 +139,264 @@ function AuthPage() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <div className="mx-auto max-w-md px-4 sm:px-6 py-10 pb-28">
-        <Link to="/" className="flex items-center gap-2 mb-6">
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground">
-            <Boxes className="h-5 w-5" />
-          </div>
-          <span className="font-bold text-lg">StockMe</span>
-        </Link>
+      <div className="mx-auto w-full max-w-md px-4 sm:px-6">
+        <div className="py-8 md:py-14">
+          <div className="w-full pb-24 md:pb-6">
+            <Link to="/" className="mb-8 flex items-center gap-2.5">
+              <img src={logoUrl} alt="StockMe" className="h-10 w-10 rounded-xl object-contain" />
+              <span className="text-lg font-display font-semibold tracking-tight">
+                Stock<span className="font-bold">Me</span>
+              </span>
+            </Link>
 
-        <Tabs value={tab} onValueChange={(value) => setTab(value as "login" | "signup")}>
-          <TabsList className="grid grid-cols-2 w-full">
-            <TabsTrigger value="signup">Créer un compte</TabsTrigger>
-            <TabsTrigger value="login">Connexion</TabsTrigger>
-          </TabsList>
+            <Tabs value={tab} onValueChange={(value) => setTab(value as "login" | "signup")}>
+              <TabsList className="grid h-11 w-full grid-cols-2 rounded-xl bg-muted p-1">
+                <TabsTrigger value="signup" className="rounded-lg text-sm">Créer un compte</TabsTrigger>
+                <TabsTrigger value="login" className="rounded-lg text-sm">Connexion</TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="signup" className="mt-6">
-            <div className="mb-5">
-              <h1 className="text-2xl font-bold font-display tracking-tight">Créez votre compte</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Gratuit — accédez aux numéros WhatsApp des fournisseurs.
-              </p>
-            </div>
-            <form onSubmit={signup} className="space-y-5">
-              <div className="space-y-1.5">
-                <Label htmlFor="sn">Nom complet ou entreprise</Label>
-                <Input id="sn" required value={sName} onChange={(e) => setSName(e.target.value)} />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="se">Email</Label>
-                <Input
-                  id="se"
-                  type="email"
-                  required
-                  value={sEmail}
-                  onChange={(e) => setSEmail(e.target.value)}
-                />
-              </div>
-
-              {/* Pays — liste déroulante avec recherche */}
-              <div className="space-y-1.5">
-                <Label>Pays</Label>
-                <Popover open={countryOpen} onOpenChange={setCountryOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="flex h-11 w-full items-center justify-between rounded-md border border-input bg-background px-3 text-sm"
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="text-base">{COUNTRY_FLAGS[sCountry]}</span>
-                        {sCountry}
-                        <span className="text-muted-foreground">{dial}</span>
-                      </span>
-                      <ChevronDown className="h-4 w-4 opacity-50" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Rechercher un pays..." />
-                      <CommandList>
-                        <CommandEmpty>Aucun pays trouvé.</CommandEmpty>
-                        <CommandGroup>
-                          {WEST_AFRICA_COUNTRIES.map((c) => (
-                            <CommandItem
-                              key={c}
-                              value={c}
-                              onSelect={() => {
-                                setSCountry(c);
-                                setSCity("");
-                                setCountryOpen(false);
-                              }}
-                            >
-                              <span className="mr-2 text-base">{COUNTRY_FLAGS[c]}</span>
-                              <span className="flex-1">{c}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {COUNTRY_DIAL_CODES[c]}
-                              </span>
-                              {sCountry === c && <Check className="ml-2 h-4 w-4 text-primary" />}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* WhatsApp avec indicatif automatique */}
-              <div className="space-y-1.5">
-                <Label htmlFor="sph">Numéro WhatsApp</Label>
-                <div className="flex h-11 items-center rounded-md border border-input bg-background focus-within:ring-1 focus-within:ring-ring">
-                  <span className="flex items-center gap-1.5 pl-3 pr-2 text-sm font-medium text-muted-foreground border-r border-input h-full">
-                    <span className="text-base">{COUNTRY_FLAGS[sCountry]}</span>
-                    {dial}
-                  </span>
-                  <input
-                    id="sph"
-                    type="tel"
-                    inputMode="numeric"
-                    required
-                    placeholder="76 678 32 15"
-                    value={sLocalPhone}
-                    onChange={(e) => setSLocalPhone(e.target.value.replace(/[^\d\s]/g, ""))}
-                    className="flex-1 h-full bg-transparent px-3 text-sm outline-none"
-                  />
+              <TabsContent value="signup" className="mt-7">
+                <div className="mb-6">
+                  <h1 className="font-display text-2xl font-bold tracking-tight">Créez votre compte</h1>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Gratuit — accédez aux numéros WhatsApp des fournisseurs.
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  L'indicatif s'ajuste selon votre pays.
-                </p>
-              </div>
+                <form onSubmit={signup} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="sn">Nom complet ou entreprise</Label>
+                    <Input id="sn" className="h-11" required value={sName} onChange={(e) => setSName(e.target.value)} />
+                  </div>
 
-              {/* Région — liste déroulante avec recherche, filtrée par pays */}
-              <div className="space-y-1.5">
-                <Label>Région</Label>
-                <Popover open={regionOpen} onOpenChange={setRegionOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="flex h-11 w-full items-center justify-between rounded-md border border-input bg-background px-3 text-sm"
-                    >
-                      <span className={sCity ? "" : "text-muted-foreground"}>
-                        {sCity || "Choisir votre région..."}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="se">Email</Label>
+                    <Input
+                      id="se"
+                      type="email"
+                      className="h-11"
+                      required
+                      value={sEmail}
+                      onChange={(e) => setSEmail(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Pays */}
+                  <div className="space-y-1.5">
+                    <Label>Pays</Label>
+                    <Popover open={countryOpen} onOpenChange={setCountryOpen}>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="flex h-11 w-full items-center justify-between rounded-md border border-input bg-background px-3 text-sm transition hover:border-foreground/30"
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className="text-base">{COUNTRY_FLAGS[sCountry]}</span>
+                            {sCountry}
+                            <span className="text-muted-foreground">{dial}</span>
+                          </span>
+                          <IconChevronDown className="h-4 w-4 opacity-50" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Rechercher un pays..." />
+                          <CommandList>
+                            <CommandEmpty>Aucun pays trouvé.</CommandEmpty>
+                            <CommandGroup>
+                              {WEST_AFRICA_COUNTRIES.map((c) => (
+                                <CommandItem
+                                  key={c}
+                                  value={c}
+                                  onSelect={() => {
+                                    setSCountry(c);
+                                    resetLocation();
+                                    setCountryOpen(false);
+                                  }}
+                                >
+                                  <span className="mr-2 text-base">{COUNTRY_FLAGS[c]}</span>
+                                  <span className="flex-1">{c}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {COUNTRY_DIAL_CODES[c]}
+                                  </span>
+                                  {sCountry === c && <IconCheck className="ml-2 h-4 w-4 text-primary" />}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* WhatsApp */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="sph">Numéro WhatsApp</Label>
+                    <div className="flex h-11 items-center rounded-md border border-input bg-background focus-within:ring-1 focus-within:ring-ring">
+                      <span className="flex h-full items-center gap-1.5 border-r border-input pl-3 pr-2 text-sm font-medium text-muted-foreground">
+                        <span className="text-base">{COUNTRY_FLAGS[sCountry]}</span>
+                        {dial}
                       </span>
-                      <ChevronDown className="h-4 w-4 opacity-50" />
+                      <input
+                        id="sph"
+                        type="tel"
+                        inputMode="numeric"
+                        required
+                        placeholder="76 678 32 15"
+                        value={sLocalPhone}
+                        onChange={(e) => setSLocalPhone(e.target.value.replace(/[^\d\s]/g, ""))}
+                        className="h-full flex-1 bg-transparent px-3 text-sm outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Localisation — Région → Ville pour le Sénégal, sinon Ville */}
+                  <div className={isSenegal ? "grid grid-cols-2 gap-3" : ""}>
+                    {isSenegal && (
+                      <div className="space-y-1.5">
+                        <Label>Région</Label>
+                        <Select
+                          value={sRegion}
+                          onValueChange={(v) => {
+                            setSRegion(v);
+                            setSCity("");
+                          }}
+                        >
+                          <SelectTrigger className="h-11">
+                            <SelectValue placeholder="Région" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SENEGAL_REGION_NAMES.map((r) => (
+                              <SelectItem key={r} value={r}>{r}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    <div className="space-y-1.5">
+                      <Label>{isSenegal ? "Ville / Commune" : "Ville"}</Label>
+                      <Popover open={cityOpen} onOpenChange={setCityOpen}>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            disabled={isSenegal && !sRegion}
+                            className="flex h-11 w-full items-center justify-between rounded-md border border-input bg-background px-3 text-sm transition hover:border-foreground/30 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <span className={sCity ? "truncate" : "truncate text-muted-foreground"}>
+                              {sCity || (isSenegal && !sRegion ? "Choisir la région d'abord" : "Choisir…")}
+                            </span>
+                            <IconChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Rechercher…" />
+                            <CommandList>
+                              <CommandEmpty>Aucun résultat.</CommandEmpty>
+                              <CommandGroup heading={isSenegal ? sRegion : sCountry}>
+                                {cityOptions.map((c) => (
+                                  <CommandItem
+                                    key={c}
+                                    value={c}
+                                    onSelect={() => {
+                                      setSCity(c);
+                                      setCityOpen(false);
+                                    }}
+                                  >
+                                    <span className="flex-1">{c}</span>
+                                    {sCity === c && <IconCheck className="ml-2 h-4 w-4 text-primary" />}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Profil</Label>
+                    <Select value={sRole} onValueChange={setSRole}>
+                      <SelectTrigger className="h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="both">Les deux (acheter & vendre)</SelectItem>
+                        <SelectItem value="fournisseur">Fournisseur</SelectItem>
+                        <SelectItem value="revendeur">Revendeur</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="sp">Mot de passe</Label>
+                    <Input
+                      id="sp"
+                      type="password"
+                      className="h-11"
+                      required
+                      minLength={6}
+                      value={sPwd}
+                      onChange={(e) => setSPwd(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">6 caractères minimum.</p>
+                  </div>
+
+                  <Button type="submit" variant="volt" className="h-12 w-full text-base font-semibold" disabled={loading}>
+                    {loading ? "Création..." : "Créer mon compte"}
+                  </Button>
+                  <p className="text-center text-xs text-muted-foreground">
+                    Déjà inscrit ?{" "}
+                    <button type="button" onClick={() => setTab("login")} className="font-semibold text-primary underline underline-offset-2">
+                      Se connecter
                     </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Rechercher une région..." />
-                      <CommandList>
-                        <CommandEmpty>Aucune région trouvée.</CommandEmpty>
-                        <CommandGroup heading={sCountry}>
-                          {regions.map((r) => (
-                            <CommandItem
-                              key={r}
-                              value={r}
-                              onSelect={() => {
-                                setSCity(r);
-                                setRegionOpen(false);
-                              }}
-                            >
-                              <span className="flex-1">{r}</span>
-                              {sCity === r && <Check className="ml-2 h-4 w-4 text-primary" />}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
+                  </p>
+                </form>
+              </TabsContent>
 
-              <div className="space-y-1.5">
-                <Label>Profil</Label>
-                <Select value={sRole} onValueChange={setSRole}>
-                  <SelectTrigger className="h-11">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="both">Les deux</SelectItem>
-                    <SelectItem value="fournisseur">Fournisseur</SelectItem>
-                    <SelectItem value="revendeur">Revendeur</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-
-              <div className="space-y-1.5">
-                <Label htmlFor="sp">Mot de passe</Label>
-                <Input
-                  id="sp"
-                  type="password"
-                  required
-                  minLength={6}
-                  value={sPwd}
-                  onChange={(e) => setSPwd(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">6 caractères minimum.</p>
-              </div>
-
-              <Button type="submit" variant="volt" className="w-full h-12 text-base font-semibold" disabled={loading}>
-                {loading ? "Création..." : "Créer mon compte"}
-              </Button>
-              <p className="text-center text-xs text-muted-foreground">
-                Déjà inscrit ?{" "}
-                <button type="button" onClick={() => setTab("login")} className="font-semibold text-primary underline">
-                  Se connecter
-                </button>
-              </p>
-            </form>
-          </TabsContent>
-
-          <TabsContent value="login" className="mt-6">
-            <form onSubmit={login} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="le">Email</Label>
-                <Input
-                  id="le"
-                  type="email"
-                  required
-                  value={lEmail}
-                  onChange={(e) => setLEmail(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="lp">Mot de passe</Label>
-                <Input
-                  id="lp"
-                  type="password"
-                  required
-                  value={lPwd}
-                  onChange={(e) => setLPwd(e.target.value)}
-                />
-              </div>
-              <Button type="submit" variant="volt" className="w-full h-12 text-base font-semibold" disabled={loading}>
-                {loading ? "..." : "Se connecter"}
-              </Button>
-            </form>
-          </TabsContent>
-        </Tabs>
+              <TabsContent value="login" className="mt-7">
+                <div className="mb-6">
+                  <h1 className="font-display text-2xl font-bold tracking-tight">Content de vous revoir</h1>
+                  <p className="mt-1 text-sm text-muted-foreground">Connectez-vous à votre compte StockMe.</p>
+                </div>
+                <form onSubmit={login} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="le">Email</Label>
+                    <Input
+                      id="le"
+                      type="email"
+                      className="h-11"
+                      required
+                      value={lEmail}
+                      onChange={(e) => setLEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="lp">Mot de passe</Label>
+                    <Input
+                      id="lp"
+                      type="password"
+                      className="h-11"
+                      required
+                      value={lPwd}
+                      onChange={(e) => setLPwd(e.target.value)}
+                    />
+                  </div>
+                  <Button type="submit" variant="volt" className="h-12 w-full text-base font-semibold" disabled={loading}>
+                    {loading ? "..." : "Se connecter"}
+                  </Button>
+                  <p className="text-center text-xs text-muted-foreground">
+                    Pas encore de compte ?{" "}
+                    <button type="button" onClick={() => setTab("signup")} className="font-semibold text-primary underline underline-offset-2">
+                      Créer un compte
+                    </button>
+                  </p>
+                </form>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
       </div>
       <MobileNav />
     </div>

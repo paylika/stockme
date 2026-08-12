@@ -8,18 +8,18 @@ import { MobileFooter } from "@/components/MobileFooter";
 import { CATEGORIES, WEST_AFRICA_LOCATIONS } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
 import {
-  MapPin,
-  Package,
-  Search,
-  X,
-  ArrowRight,
-  MessageCircle,
-  ShieldCheck,
-  BadgeCheck,
-  Store,
-  Flame,
-  ChevronDown,
-} from "lucide-react";
+  IconPin as MapPin,
+  IconBox as Package,
+  IconSearch as Search,
+  IconClose as X,
+  IconArrow as ArrowRight,
+  IconWhatsApp as MessageCircle,
+  IconShield as ShieldCheck,
+  IconBadge as BadgeCheck,
+  IconStore as Store,
+  IconFlame as Flame,
+  IconChevronDown as ChevronDown,
+} from "@/components/icons";
 
 type Filters = { country?: string; city?: string; category?: string; q?: string };
 
@@ -116,12 +116,40 @@ function Index() {
       <Header />
 
       {/* ============ COMPACT HERO ============ */}
-      <section className="relative border-b border-border">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-3 sm:pt-5 pb-3 sm:pb-5">
-          {/* Title — ultra compact */}
-          <h1 className="font-display font-bold tracking-tight text-foreground text-lg sm:text-2xl leading-tight">
-            Votre stock, <span className="font-serif italic font-normal">en mouvement.</span>
+      <section className="relative border-b border-border overflow-hidden">
+        {/* Fond de marque subtil */}
+        <div
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{
+            background:
+              "radial-gradient(90rem 30rem at 15% -10%, color-mix(in oklab, var(--primary) 12%, transparent), transparent 60%), radial-gradient(70rem 26rem at 100% 0%, color-mix(in oklab, var(--volt) 16%, transparent), transparent 55%)",
+          }}
+        />
+        <div
+          className="pointer-events-none absolute inset-0 -z-10 opacity-[0.5]"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, color-mix(in oklab, var(--border) 55%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in oklab, var(--border) 55%, transparent) 1px, transparent 1px)",
+            backgroundSize: "44px 44px",
+            maskImage: "linear-gradient(to bottom, black, transparent 75%)",
+            WebkitMaskImage: "linear-gradient(to bottom, black, transparent 75%)",
+          }}
+        />
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-6 sm:pt-10 pb-4 sm:pb-6">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-[11px] font-semibold text-primary">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-volt opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-volt" />
+            </span>
+            Marketplace B2B · Afrique de l'Ouest
+          </div>
+          {/* Titre */}
+          <h1 className="mt-3 font-display font-bold tracking-tight text-foreground text-2xl sm:text-4xl md:text-5xl leading-[1.05] max-w-3xl">
+            Votre stock, <span className="font-serif italic font-normal text-primary">en mouvement.</span>
           </h1>
+          <p className="mt-2.5 text-sm sm:text-base text-muted-foreground max-w-xl">
+            Écoulez votre stock dormant, trouvez des produits près de chez vous. Contact direct sur WhatsApp, sans intermédiaire.
+          </p>
 
           {/* Unified search bar */}
           <form

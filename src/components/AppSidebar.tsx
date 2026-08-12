@@ -1,5 +1,13 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Heart, PlusCircle, Package, User as UserIcon, ShieldAlert, MessageCircle } from "lucide-react";
+import {
+  IconHome,
+  IconHeart,
+  IconSell,
+  IconStock,
+  IconUser,
+  IconAdmin,
+  IconWhatsApp,
+} from "@/components/icons";
 import {
   Sidebar,
   SidebarContent,
@@ -21,32 +29,32 @@ export function AppSidebar() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
 
   const items = [
-    { to: "/", label: "Accueil", icon: Home, match: "/" },
+    { to: "/", label: "Accueil", icon: IconHome, match: "/" },
     {
       to: user ? "/favorites" : "/auth",
       label: "Favoris",
-      icon: Heart,
+      icon: IconHeart,
       search: user ? undefined : { redirect: "/favorites", mode: "signup" as const },
       match: "/favorites",
     },
     {
       to: user ? "/dashboard/new" : "/auth",
       label: "Vendre",
-      icon: PlusCircle,
+      icon: IconSell,
       search: user ? undefined : { redirect: "/dashboard/new", mode: "signup" as const },
       match: "/dashboard/new",
     },
     {
       to: user ? "/dashboard" : "/auth",
       label: "Mon stock",
-      icon: Package,
+      icon: IconStock,
       search: user ? undefined : { redirect: "/dashboard", mode: "signup" as const },
       match: "/dashboard",
     },
     {
       to: user ? "/profile" : "/auth",
       label: "Profil",
-      icon: UserIcon,
+      icon: IconUser,
       search: user ? undefined : { redirect: "/profile", mode: "login" as const },
       match: "/profile",
     },
@@ -58,7 +66,7 @@ export function AppSidebar() {
   return (
     <Sidebar
       collapsible="none"
-      className="hidden md:flex border-r border-border bg-background"
+      className="hidden md:flex md:sticky md:top-0 md:self-start md:!h-svh md:overflow-y-auto border-r border-border bg-background"
     >
       <SidebarHeader className="border-b border-border/60 py-4">
         <Link to="/" className="flex items-center gap-2.5 px-2">
@@ -112,7 +120,7 @@ export function AppSidebar() {
                     ].join(" ")}
                   >
                     <Link to="/admin" className="flex items-center gap-3">
-                      <ShieldAlert className="h-[18px] w-[18px] shrink-0" />
+                      <IconAdmin className="h-[18px] w-[18px] shrink-0" />
                       <span className="truncate">Admin</span>
                     </Link>
                   </SidebarMenuButton>
@@ -130,7 +138,7 @@ export function AppSidebar() {
           rel="noopener noreferrer"
           className="flex items-center gap-2.5 rounded-xl bg-foreground px-3 py-2.5 text-xs font-semibold text-background hover:opacity-90 transition"
         >
-          <MessageCircle className="h-4 w-4 text-volt" />
+          <IconWhatsApp className="h-4 w-4 text-volt" />
           <span className="truncate">Besoin d'aide ? WhatsApp</span>
         </a>
       </SidebarFooter>

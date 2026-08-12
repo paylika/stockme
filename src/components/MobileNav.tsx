@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Home, Heart, PlusCircle, User as UserIcon, Package } from "lucide-react";
+import { IconHome, IconHeart, IconSell, IconUser, IconStock } from "@/components/icons";
 import { useAuth } from "@/hooks/useAuth";
 
 export function MobileNav() {
@@ -9,18 +9,18 @@ export function MobileNav() {
   // Same 5 icons whether logged in or not.
   // Unauthenticated taps go through /auth with a redirect back.
   const items = [
-    { to: "/", label: "Accueil", icon: Home, public: true },
+    { to: "/", label: "Accueil", icon: IconHome, public: true },
     {
       to: user ? "/favorites" : "/auth",
       label: "Favoris",
-      icon: Heart,
+      icon: IconHeart,
       search: user ? undefined : { redirect: "/favorites", mode: "signup" },
       activeMatch: "/favorites",
     },
     {
       to: user ? "/dashboard/new" : "/auth",
       label: "Vendre",
-      icon: PlusCircle,
+      icon: IconSell,
       primary: true,
       search: user ? undefined : { redirect: "/dashboard/new", mode: "signup" },
       activeMatch: "/dashboard/new",
@@ -28,14 +28,14 @@ export function MobileNav() {
     {
       to: user ? "/dashboard" : "/auth",
       label: "Mon stock",
-      icon: Package,
+      icon: IconStock,
       search: user ? undefined : { redirect: "/dashboard", mode: "signup" },
       activeMatch: "/dashboard",
     },
     {
       to: user ? "/profile" : "/auth",
       label: "Profil",
-      icon: UserIcon,
+      icon: IconUser,
       search: user ? undefined : { redirect: "/profile", mode: "login" },
       activeMatch: "/profile",
     },
