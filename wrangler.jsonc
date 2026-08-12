@@ -3,5 +3,19 @@
   "name": "stockme",
   "compatibility_date": "2025-09-24",
   "compatibility_flags": ["nodejs_compat"],
-  "main": "src/server.ts",
+  // Cloudflare Workers Builds lance `npx wrangler deploy`. Wrangler exécute d'abord
+  // cette commande de build (génère .output/), puis déploie le worker compilé ci-dessous.
+  "build": { "command": "npm run build" },
+  "main": ".output/server/index.mjs",
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".output/public"
+  },
+  "no_bundle": true,
+  "rules": [
+    {
+      "type": "ESModule",
+      "globs": ["**/*.mjs", "**/*.js"]
+    }
+  ]
 }
