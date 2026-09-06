@@ -140,8 +140,8 @@ function AuthPage() {
     <div className="min-h-screen bg-background">
       <Header />
       <div className="mx-auto w-full max-w-md px-4 sm:px-6">
-        <div className="py-8 md:py-14">
-          <div className="w-full pb-24 md:pb-6">
+        <div className="py-10 md:py-16">
+          <div className="w-full pb-10">
             <Link to="/" className="mb-8 flex items-center gap-2.5">
               <img src={logoUrl} alt="StockMe" className="h-10 w-10 rounded-xl object-contain" />
               <span className="text-lg font-display font-semibold tracking-tight">

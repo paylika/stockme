@@ -19,9 +19,9 @@ export function Footer() {
         <div>
           <h4 className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground">Plateforme</h4>
           <ul className="mt-4 space-y-2 text-sm">
-            <li><Link to="/" className="hover:text-foreground text-muted-foreground">Parcourir le stock</Link></li>
-            <li><Link to="/auth" className="hover:text-foreground text-muted-foreground">Créer un compte</Link></li>
-            <li><Link to="/dashboard" className="hover:text-foreground text-muted-foreground">Vendre du stock</Link></li>
+            <li><Link to="/" className="text-muted-foreground transition-colors hover:text-foreground">Parcourir le stock</Link></li>
+            <li><Link to="/auth" className="text-muted-foreground transition-colors hover:text-foreground">Créer un compte</Link></li>
+            <li><Link to="/dashboard" className="text-muted-foreground transition-colors hover:text-foreground">Vendre du stock</Link></li>
           </ul>
         </div>
 
