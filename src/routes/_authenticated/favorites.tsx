@@ -50,9 +50,9 @@ function Favorites() {
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
-              {items.filter(i => i.products).map((i) => {
+              {items.filter(i => i.products).map((i, idx) => {
                 const p = i.products!;
-                return <ProductCard key={p.id} product={p} />;
+                return <ProductCard key={p.id} product={p} delayMs={idx * 45} />;
               })}
             </div>
           )}

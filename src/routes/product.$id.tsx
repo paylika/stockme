@@ -271,7 +271,7 @@ function ProductPage() {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-10">
-          <div className="space-y-3">
+          <div className="space-y-3 lg:sticky lg:top-24 lg:self-start">
             <div className="relative">
               <div
                 ref={scrollerRef}
@@ -366,7 +366,8 @@ function ProductPage() {
               </div>
             )}
 
-            <div className="mt-6 rounded-2xl border border-border p-5 bg-card shadow-sm">
+            <h2 className="mt-8 text-sm font-semibold tracking-wider uppercase text-muted-foreground">À propos du vendeur</h2>
+            <div className="mt-3 rounded-2xl border border-border p-5 bg-card shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-xs text-muted-foreground">Fournisseur</div>

@@ -1,4 +1,4 @@
-﻿import { Link } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { formatFCFA } from "@/lib/format";
 import { IconPin as MapPin, IconBox as Package } from "@/components/icons";
 
@@ -16,7 +16,7 @@ export type ListingProduct = {
   sold_out?: boolean;
 };
 
-export function ProductCard({ product }: { product: ListingProduct }) {
+export function ProductCard({ product, delayMs = 0 }: { product: ListingProduct; delayMs?: number }) {
   const img = product.images[0];
   const hasPromo = product.promo_price_fcfa && product.promo_price_fcfa < product.price_fcfa;
   const discount = hasPromo
@@ -28,7 +28,8 @@ export function ProductCard({ product }: { product: ListingProduct }) {
     <Link
       to="/product/$id"
       params={{ id: product.id }}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-[0_20px_40px_-24px_rgba(0,0,0,0.25)]"
+      className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-[0_20px_40px_-24px_rgba(0,0,0,0.25)] fade-in"
+      style={{ animationDelay: `${delayMs}ms` }}
     >
       <div className="relative aspect-square w-full overflow-hidden bg-muted">
         {img ? (

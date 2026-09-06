@@ -72,14 +72,17 @@ export function MobileNav() {
                 key={idx}
                 to={it.to}
                 search={(it as any).search}
-                className={`flex flex-col items-center justify-center py-2 text-[10px] font-medium ${
-                  active ? "text-foreground" : "text-muted-foreground"
+                className={`flex flex-col items-center justify-center py-2 text-[10px] font-medium transition-colors ${
+                  active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <Icon
-                  className={`h-5 w-5 ${active ? "text-volt" : ""}`}
-                  strokeWidth={1.75}
-                />
+                <span
+                  className={`grid h-7 w-7 place-items-center rounded-full transition-all ${
+                    active ? "bg-volt/15 text-volt" : ""
+                  }`}
+                >
+                  <Icon className="h-5 w-5" strokeWidth={active ? 2.15 : 1.75} />
+                </span>
                 <span className="mt-0.5">{it.label}</span>
               </Link>
             );

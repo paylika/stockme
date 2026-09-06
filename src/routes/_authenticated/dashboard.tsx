@@ -112,7 +112,7 @@ function Dashboard() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {items.map((p) => (
-                <div key={p.id} className="rounded-xl border border-border bg-card overflow-hidden">
+                <div key={p.id} className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
                   <Link to="/product/$id" params={{ id: p.id }} className="block aspect-[4/3] bg-muted overflow-hidden">
                     {p.images[0] ? (
                       <img src={p.images[0]} alt={p.name} className="h-full w-full object-cover" />
