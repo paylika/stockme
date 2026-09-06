@@ -20,8 +20,12 @@ import {
   IconFlame as Flame,
   IconChevronDown as ChevronDown,
 } from "@/components/icons";
+import { SlidersHorizontal } from "lucide-react";
+import { ProductCard, type ProductCardProduct } from "@/components/ProductCard";
+import { FilterPanel, type FilterState } from "@/components/FilterPanel";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
-type Filters = { country?: string; city?: string; category?: string; q?: string };
+type Filters = FilterState & { q?: string };
 
 export const Route = createFileRoute("/")({
   validateSearch: (s: Record<string, unknown>): Filters => ({
@@ -29,6 +33,14 @@ export const Route = createFileRoute("/")({
     city: typeof s.city === "string" ? s.city : undefined,
     category: typeof s.category === "string" ? s.category : undefined,
     q: typeof s.q === "string" ? s.q : undefined,
+    min:
+      typeof s.min === "string" && s.min !== "" && Number.isFinite(Number(s.min))
+        ? Number(s.min)
+        : undefined,
+    max:
+      typeof s.max === "string" && s.max !== "" && Number.isFinite(Number(s.max))
+        ? Number(s.max)
+        : undefined,
   }),
   head: () => ({
     meta: [
@@ -43,19 +55,7 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-type Product = {
-  id: string;
-  name: string;
-  category: string;
-  price_fcfa: number;
-  promo_price_fcfa: number | null;
-  quantity: number;
-  moq: number;
-  city: string;
-  zone: string | null;
-  images: string[];
-  sold_out: boolean;
-};
+type Product = ProductCardProduct;
 
 
 
@@ -64,6 +64,7 @@ function Index() {
   const navigate = useNavigate({ from: "/" });
   const [items, setItems] = useState<Product[] | null>(null);
   const [q, setQ] = useState(search.q ?? "");
+  const [filterOpen, setFilterOpen] = useState(false);
 
   useEffect(() => {
     setQ(search.q ?? "");
@@ -86,19 +87,21 @@ function Index() {
       }
       if (search.category) query = query.eq("category", search.category);
       if (search.q) query = query.ilike("name", `%${search.q}%`);
+      if (search.min !== undefined) query = query.gte("price_fcfa", search.min);
+      if (search.max !== undefined) query = query.lte("price_fcfa", search.max);
       const { data } = await query;
       if (!cancel) setItems((data as Product[] | null) ?? []);
     })();
     return () => {
       cancel = true;
     };
-  }, [search.country, search.city, search.category, search.q]);
+  }, [search.country, search.city, search.category, search.q, search.min, search.max]);
 
 
   const update = (patch: Partial<Filters>) =>
     navigate({ search: (prev: Filters) => ({ ...prev, ...patch }) });
   const clearAll = () => navigate({ search: {} });
-  const hasFilters = !!(search.country || search.city || search.category || search.q);
+  const hasFilters = !!(search.country || search.city || search.category || search.q || search.min !== undefined || search.max !== undefined);
 
   const promos = useMemo(
     () => (items ?? []).filter((p) => p.promo_price_fcfa && p.promo_price_fcfa < p.price_fcfa).slice(0, 6),
@@ -322,6 +325,12 @@ function Index() {
             {search.category && (
               <Chip onRemove={() => update({ category: undefined })}>{search.category}</Chip>
             )}
+            {search.min !== undefined && (
+              <Chip onRemove={() => update({ min: undefined })}>Min {formatFCFA(search.min)}</Chip>
+            )}
+            {search.max !== undefined && (
+              <Chip onRemove={() => update({ max: undefined })}>Max {formatFCFA(search.max)}</Chip>
+            )}
             <button
               onClick={clearAll}
               className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
@@ -353,7 +362,7 @@ function Index() {
         </section>
       )}
 
-      {/* ============ PRODUCT GRID ============ */}
+      {/* ============ CATALOGUE : FILTER RAIL + GRID ============ */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10">
         <div className="flex items-end justify-between flex-wrap gap-3 mb-4 sm:mb-6">
           <div>
@@ -368,24 +377,66 @@ function Index() {
                 : `${items.length} produit${items.length > 1 ? "s" : ""} disponible${items.length > 1 ? "s" : ""}`}
             </h2>
           </div>
+          <button
+            onClick={() => setFilterOpen(true)}
+            className="lg:hidden inline-flex items-center gap-1.5 h-10 px-4 rounded-full border border-border bg-card text-sm font-medium hover:bg-accent"
+          >
+            <SlidersHorizontal className="h-4 w-4" /> Filtres
+          </button>
         </div>
 
-        {items === null ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
+        <div className="flex gap-8">
+          {/* Filter rail (desktop) */}
+          <aside className="hidden lg:block w-64 shrink-0">
+            <div className="sticky top-24">
+              <FilterPanel
+                filters={search}
+                countries={countries}
+                cities={availableCities}
+                onUpdate={update}
+                onClear={clearAll}
+              />
+            </div>
+          </aside>
+
+          {/* Grid */}
+          <div className="flex-1 min-w-0">
+            {items === null ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <SkeletonCard key={i} />
+                ))}
+              </div>
+            ) : items.length === 0 ? (
+              <EmptyState onClear={clearAll} />
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+                {items.map((p) => (
+                  <ProductCard key={p.id} product={p} />
+                ))}
+              </div>
+            )}
           </div>
-        ) : items.length === 0 ? (
-          <EmptyState onClear={clearAll} />
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
-            {items.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        )}
+        </div>
       </section>
+
+      {/* Mobile filters drawer */}
+      <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+        <SheetContent side="left" className="w-[320px] p-0">
+          <SheetHeader className="px-5 pt-5">
+            <SheetTitle>Filtres</SheetTitle>
+          </SheetHeader>
+          <div className="px-5 py-4 overflow-y-auto">
+            <FilterPanel
+              filters={search}
+              countries={countries}
+              cities={availableCities}
+              onUpdate={update}
+              onClear={clearAll}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* ============ SELL CTA ============ */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-10 sm:pb-16">
@@ -467,68 +518,3 @@ function EmptyState({ onClear }: { onClear: () => void }) {
   );
 }
 
-function ProductCard({ product }: { product: Product }) {
-  const img = product.images[0];
-  const hasPromo = product.promo_price_fcfa && product.promo_price_fcfa < product.price_fcfa;
-  const discount = hasPromo
-    ? Math.round(((product.price_fcfa - (product.promo_price_fcfa as number)) / product.price_fcfa) * 100)
-    : 0;
-  return (
-    <Link
-      to="/product/$id"
-      params={{ id: product.id }}
-      className="group block rounded-2xl border border-border bg-card overflow-hidden hover:border-foreground/40 transition-all hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-20px_rgba(0,0,0,0.2)]"
-    >
-      <div className="aspect-square bg-muted overflow-hidden relative">
-        {img ? (
-          <img
-            src={img}
-            alt={product.name}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
-          />
-        ) : (
-          <div className="grid h-full place-items-center text-muted-foreground">
-            <Package className="h-10 w-10" />
-          </div>
-        )}
-        {hasPromo && (
-          <div className="absolute top-2 left-2 rounded-full bg-volt text-volt-foreground px-2 py-0.5 text-[10px] font-black tracking-wide">
-            -{discount}%
-          </div>
-        )}
-        {product.sold_out && (
-          <div className="absolute top-2 right-2 rounded-full bg-destructive text-background px-2 py-0.5 text-[10px] font-black tracking-wide">
-            Épuisé
-          </div>
-        )}
-        <div className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-background/95 backdrop-blur px-2 py-0.5 text-[10px] font-medium">
-          <MapPin className="h-2.5 w-2.5" /> {product.zone || product.city}
-        </div>
-      </div>
-      <div className="p-3 sm:p-4">
-        <h3 className="font-semibold leading-tight line-clamp-1 text-sm sm:text-base">{product.name}</h3>
-        <p className="mt-0.5 text-[11px] text-muted-foreground line-clamp-1">{product.category}</p>
-        <div className="mt-2 flex items-baseline justify-between gap-2">
-          {hasPromo ? (
-            <div className="flex items-baseline gap-1.5 flex-wrap">
-              <span className="text-base sm:text-lg font-bold tracking-tight">
-                {formatFCFA(product.promo_price_fcfa!)}
-              </span>
-              <span className="text-[11px] line-through text-muted-foreground">
-                {formatFCFA(product.price_fcfa)}
-              </span>
-            </div>
-          ) : (
-            <div className="text-base sm:text-lg font-bold tracking-tight">
-              {formatFCFA(product.price_fcfa)}
-            </div>
-          )}
-        </div>
-        <div className="mt-1 text-[10px] sm:text-[11px] text-muted-foreground">
-          MOQ {product.moq} · Stock {product.quantity}
-        </div>
-      </div>
-    </Link>
-  );
-}
