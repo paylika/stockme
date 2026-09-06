@@ -25,7 +25,7 @@ function Page() {
       <p>Vous pouvez à tout moment supprimer les cookies via les paramètres de votre navigateur.</p>
 
       <h2 className="mt-6 text-xl font-semibold">Contact</h2>
-      <p>+221 76 678 32 15 — contact@stockme.app</p>
+      <p>+221 78 663 53 31 — met.app.orderly@gmail.com</p>
     </article>
   );
 }

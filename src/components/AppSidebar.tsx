@@ -133,7 +133,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="border-t border-border/60 p-3">
         <a
-          href="https://wa.me/221766783215"
+          href="https://wa.me/221786635331"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2.5 rounded-xl bg-foreground px-3 py-2.5 text-xs font-semibold text-background hover:opacity-90 transition"

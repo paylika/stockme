@@ -32,7 +32,7 @@ function Page() {
       <p>StockMe ne peut être tenu responsable des litiges entre utilisateurs. Nous mettons tout en œuvre pour assurer la sécurité et la disponibilité du service sans garantie absolue.</p>
 
       <h2 className="mt-6 text-xl font-semibold">6. Contact</h2>
-      <p>Pour toute question : +221 76 678 32 15 — contact@stockme.app</p>
+      <p>Pour toute question : +221 78 663 53 31 — met.app.orderly@gmail.com</p>
     </article>
   );
 }

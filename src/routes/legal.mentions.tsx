@@ -20,7 +20,7 @@ function Page() {
       <p>Le site StockMe est édité et maintenu par l'équipe StockMe.</p>
 
       <h2 className="mt-6 text-xl font-semibold">Contact</h2>
-      <p>Téléphone / WhatsApp : +221 76 678 32 15<br />Email : contact@stockme.app</p>
+      <p>Téléphone / WhatsApp : +221 78 663 53 31<br />Email : met.app.orderly@gmail.com</p>
 
       <h2 className="mt-6 text-xl font-semibold">Hébergement</h2>
       <p>La plateforme est hébergée sur une infrastructure cloud sécurisée en Europe.</p>

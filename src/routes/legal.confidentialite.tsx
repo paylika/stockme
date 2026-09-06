@@ -26,10 +26,10 @@ function Page() {
       <p>Votre numéro WhatsApp n'est visible que par les utilisateurs connectés qui consultent votre annonce. Nous ne vendons jamais vos données à des tiers.</p>
 
       <h2 className="mt-6 text-xl font-semibold">Vos droits</h2>
-      <p>Vous pouvez à tout moment consulter, modifier ou supprimer vos données en nous contactant à contact@stockme.app.</p>
+      <p>Vous pouvez à tout moment consulter, modifier ou supprimer vos données en nous contactant à met.app.orderly@gmail.com.</p>
 
       <h2 className="mt-6 text-xl font-semibold">Contact</h2>
-      <p>+221 76 678 32 15 — contact@stockme.app</p>
+      <p>+221 78 663 53 31 — met.app.orderly@gmail.com</p>
     </article>
   );
 }

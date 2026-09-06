@@ -241,7 +241,7 @@ function AuthPage() {
                         type="tel"
                         inputMode="numeric"
                         required
-                        placeholder="76 678 32 15"
+                        placeholder="78 663 53 31"
                         value={sLocalPhone}
                         onChange={(e) => setSLocalPhone(e.target.value.replace(/[^\d\s]/g, ""))}
                         className="h-full flex-1 bg-transparent px-3 text-sm outline-none"
