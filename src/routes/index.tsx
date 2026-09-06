@@ -1,24 +1,19 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
-import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
+import { SiteHeader } from "@/components/SiteHeader";
 import { CATEGORIES, WEST_AFRICA_LOCATIONS } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
 import {
   IconPin as MapPin,
   IconBox as Package,
-  IconSearch as Search,
   IconClose as X,
   IconArrow as ArrowRight,
-  IconWhatsApp as MessageCircle,
-  IconShield as ShieldCheck,
-  IconBadge as BadgeCheck,
   IconStore as Store,
   IconFlame as Flame,
-  IconChevronDown as ChevronDown,
 } from "@/components/icons";
 
 type Filters = { country?: string; city?: string; category?: string; q?: string };
@@ -115,154 +110,20 @@ function Index() {
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
-      <Header />
-
-      {/* ============ COMPACT HERO ============ */}
-      <section className="relative border-b border-border overflow-hidden">
-        {/* Fond de marque subtil */}
-        <div
-          className="pointer-events-none absolute inset-0 -z-10"
-          style={{
-            background:
-              "radial-gradient(90rem 30rem at 15% -10%, color-mix(in oklab, var(--primary) 12%, transparent), transparent 60%), radial-gradient(70rem 26rem at 100% 0%, color-mix(in oklab, var(--volt) 16%, transparent), transparent 55%)",
-          }}
-        />
-        <div
-          className="pointer-events-none absolute inset-0 -z-10 opacity-[0.5]"
-          style={{
-            backgroundImage:
-              "linear-gradient(to right, color-mix(in oklab, var(--border) 55%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in oklab, var(--border) 55%, transparent) 1px, transparent 1px)",
-            backgroundSize: "44px 44px",
-            maskImage: "linear-gradient(to bottom, black, transparent 75%)",
-            WebkitMaskImage: "linear-gradient(to bottom, black, transparent 75%)",
-          }}
-        />
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-4 sm:pt-6 pb-4 sm:pb-5">
-          {/* Unified search bar */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              update({ q: q || undefined });
-            }}
-            className="mt-3 sm:mt-4"
-          >
-            {/* Mobile: single pill with search + inline submit */}
-            <div className="sm:hidden">
-              <div className="relative flex items-center h-12 rounded-full border border-border bg-background pl-4 pr-1.5 shadow-sm focus-within:border-foreground/40">
-                <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-                <input
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  type="search"
-                  inputMode="search"
-                  placeholder="Rechercher un produit…"
-                  className="min-w-0 flex-1 bg-transparent px-2 text-sm placeholder:text-muted-foreground focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  aria-label="Rechercher"
-                  className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background hover:opacity-90 transition shrink-0"
-                >
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
-
-              {/* Country + City compact row */}
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <div className="relative">
-                  <select
-                    value={search.country ?? ""}
-                    onChange={(e) => update({ country: e.target.value || undefined, city: undefined })}
-                    className="appearance-none w-full h-10 rounded-full border border-border bg-background pl-3 pr-8 text-xs font-medium focus:outline-none focus:border-foreground/40 truncate"
-                  >
-                    <option value="">Tous les pays</option>
-                    {countries.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                </div>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                  <input
-                    list="stockme-cities"
-                    value={search.city ?? ""}
-                    onChange={(e) => update({ city: e.target.value || undefined })}
-                    type="search"
-                    placeholder="Ville"
-                    className="w-full h-10 rounded-full border border-border bg-background pl-8 pr-3 text-xs font-medium placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Desktop: single row */}
-            <div className="hidden sm:grid gap-2 grid-cols-[1fr_auto_auto_auto] items-stretch">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <input
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  type="search"
-                  inputMode="search"
-                  placeholder="Rechercher un produit, une marque…"
-                  className="w-full h-11 rounded-xl border border-border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
-                />
-              </div>
-              <div className="relative">
-                <select
-                  value={search.country ?? ""}
-                  onChange={(e) => update({ country: e.target.value || undefined, city: undefined })}
-                  className="appearance-none w-40 h-11 rounded-xl border border-border bg-background pl-3 pr-8 text-sm focus:outline-none focus:border-foreground/40"
-                >
-                  <option value="">Tous les pays</option>
-                  {countries.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              </div>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <input
-                  list="stockme-cities"
-                  value={search.city ?? ""}
-                  onChange={(e) => update({ city: e.target.value || undefined })}
-                  type="search"
-                  placeholder="Ville / région"
-                  className="w-48 h-11 rounded-xl border border-border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
-                />
-              </div>
-              <button
-                type="submit"
-                className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-foreground text-background px-5 text-sm font-semibold hover:opacity-90 transition"
-              >
-                <span>Rechercher</span>
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </div>
-
-            <datalist id="stockme-cities">
-              {availableCities.map((city) => (
-                <option key={city} value={city} />
-              ))}
-            </datalist>
-          </form>
-
-          {/* Trust row — subtle inline */}
-          <div className="mt-3 flex items-center gap-3 text-[11px] text-muted-foreground">
-            <span className="inline-flex items-center gap-1"><ShieldCheck className="h-3 w-3" /> Vérifiés</span>
-            <span className="h-0.5 w-0.5 rounded-full bg-muted-foreground/50" />
-            <span className="inline-flex items-center gap-1"><MessageCircle className="h-3 w-3" /> WhatsApp</span>
-            <span className="h-0.5 w-0.5 rounded-full bg-muted-foreground/50" />
-            <span className="inline-flex items-center gap-1"><BadgeCheck className="h-3 w-3" /> 100% gratuit</span>
-          </div>
-        </div>
-      </section>
+      <SiteHeader
+        q={q}
+        onQChange={setQ}
+        country={search.country}
+        city={search.city}
+        countries={countries}
+        cities={availableCities}
+        onUpdate={(patch) => update(patch)}
+        onSubmit={() => update({ q: q || undefined })}
+      />
 
 
       {/* ============ CATEGORY RAIL ============ */}
-      <section className="border-b border-border bg-background sticky top-14 md:top-0 z-30 backdrop-blur">
+      <section className="border-b border-border bg-background sticky top-0 z-30 backdrop-blur">
         <div className="mx-auto max-w-7xl">
           <div className="overflow-x-auto no-scrollbar">
             <div className="flex items-center gap-2 px-4 sm:px-6 py-3">
