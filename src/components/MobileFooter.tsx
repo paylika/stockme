@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Phone, Mail, MessageCircle } from "lucide-react";
 
-const CONTACT_EMAIL = "met.app.orderly@gmail.com";
+const CONTACT_EMAIL = "app.orderly@gmail.com";
 const WHATSAPP_DISPLAY = "+221 78 663 53 31";
 const WHATSAPP_DIGITS = "221786635331";
 

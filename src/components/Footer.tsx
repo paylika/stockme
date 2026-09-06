@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Mail, MessageCircle, Phone } from "lucide-react";
 import logoUrl from "@/assets/stockme-logo.png";
 
-const CONTACT_EMAIL = "met.app.orderly@gmail.com";
+const CONTACT_EMAIL = "app.orderly@gmail.com";
 const WHATSAPP_DISPLAY = "+221 78 663 53 31";
 const WHATSAPP_DIGITS = "221786635331";
 

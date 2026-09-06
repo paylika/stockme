@@ -1,4 +1,4 @@
-User-agent: *
+﻿User-agent: *
 Allow: /
 Disallow: /auth
 Disallow: /dashboard
@@ -11,4 +11,4 @@ Disallow: /api/
 Disallow: /.wrangler/
 Disallow: /.output/
 
-Sitemap: https://stockme.app/sitemap.xml
+Sitemap: https://www.stockme.store/sitemap.xml

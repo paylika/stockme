@@ -1,8 +1,8 @@
 // ⚠️ IMPORTANT : remplace par le vrai domaine de production (ex: https://stockme.sn)
-export const SITE_URL = "https://stockme.app";
+export const SITE_URL = "https://www.stockme.store";
 
 export const siteName = "StockMe";
-export const siteEmail = "met.app.orderly@gmail.com";
+export const siteEmail = "app.orderly@gmail.com";
 export const sitePhone = "+221786635331";
 export const defaultTitle =
   "StockMe — Marketplace B2B de stock en gros en Afrique de l'Ouest";
