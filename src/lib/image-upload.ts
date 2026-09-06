@@ -114,3 +114,17 @@ export async function uploadImages(
   }
   return urls;
 }
+
+/** Upload d'une image de profil (avatar/logo) sous un chemin stable par utilisateur. Renvoie l'URL publique. */
+export async function uploadAvatar(file: File, userId: string): Promise<string> {
+  const blob = await compressImage(file);
+  const path = `${userId}/avatar`; // chemin fixe → remplace l'ancien avatar sans orphelin
+  const { error } = await supabase.storage.from("product-images").upload(path, blob, {
+    contentType: blob.type || "image/jpeg",
+    cacheControl: "3600",
+    upsert: true,
+  });
+  if (error) throw error;
+  const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+  return data.publicUrl;
+}
