@@ -7,7 +7,9 @@ import { MobileFooter } from "@/components/MobileFooter";
 import { Button } from "@/components/ui/button";
 import { formatFCFA, whatsappLink } from "@/lib/format";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, ChevronLeft, ChevronRight, Heart, Lock, MapPin, MessageCircle, Package, Phone, Share2, ShieldCheck } from "lucide-react";
+import { IntensityGauge, computeIntensity } from "@/components/IntensityGauge";
+import { countryOfCity } from "@/lib/constants";
+import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, Eye, Heart, Lock, MapPin, MessageCircle, Package, Phone, Share2, ShieldCheck, Store } from "lucide-react";
 import { toast } from "sonner";
 
 type Product = {
@@ -17,8 +19,17 @@ type Product = {
   images: string[]; owner_id: string; whatsapp: string | null;
   published: boolean; sold_out: boolean;
 };
-type Profile = { full_name: string | null; whatsapp: string | null; phone: string | null; city: string | null };
+type Profile = { full_name: string | null; whatsapp: string | null; phone: string | null; city: string | null; shop_name: string | null };
 type Similar = { id: string; name: string; price_fcfa: number; promo_price_fcfa: number | null; city: string; images: string[] };
+type SellerStats = {
+  total_products: number;
+  total_views: number;
+  total_contacts: number;
+  total_favorites: number;
+  stock_value: number;
+  countries: { country: string | null; value: number }[];
+  trend: { day: string; value: number }[];
+};
 
 export const Route = createFileRoute("/product/$id")({
   loader: async ({ params }) => {
@@ -65,6 +76,8 @@ function ProductPage() {
   const [activeImg, setActiveImg] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isFav, setIsFav] = useState(false);
+  const [sellerStats, setSellerStats] = useState<SellerStats | null>(null);
+  const viewerCountryRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancel = false;
@@ -77,7 +90,7 @@ function ProductPage() {
       setProduct(p);
       if (p) {
         const [{ data: prof }, { data: sim }] = await Promise.all([
-          supabase.from("profiles").select("full_name,whatsapp,phone,city").eq("id", p.owner_id).maybeSingle(),
+          supabase.from("profiles").select("full_name,whatsapp,phone,city,shop_name").eq("id", p.owner_id).maybeSingle(),
           supabase.from("products").select("id,name,price_fcfa,promo_price_fcfa,city,images")
             .eq("category", p.category).neq("id", p.id).order("created_at", { ascending: false }).limit(8),
         ]);
@@ -85,11 +98,44 @@ function ProductPage() {
           setProfile(prof as Profile | null);
           setSimilar((sim as Similar[] | null) ?? []);
         }
+        // Statistiques réelles du vendeur (insignes)
+        supabase
+          .rpc("get_seller_stats", { p_seller_id: p.owner_id })
+          .then(({ data }) => setSellerStats((data as SellerStats | null) ?? null));
       }
       setLoading(false);
     })();
     return () => { cancel = true; };
   }, [id]);
+
+  // 1 vue produit par visite (dédupliquée par session)
+  useEffect(() => {
+    if (!product) return;
+    const key = `stockme:viewed:${id}`;
+    if (typeof window !== "undefined" && !sessionStorage.getItem(key)) {
+      sessionStorage.setItem(key, "1");
+      supabase.rpc("log_product_event", { p_product_id: id, p_event: "view" }).then(() => {});
+    }
+  }, [product, id]);
+
+  // Pays de l'acheteur (pour les contacts) — déduit du profil
+  useEffect(() => {
+    if (!user) { viewerCountryRef.current = null; return; }
+    supabase
+      .from("profiles")
+      .select("city")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        viewerCountryRef.current = countryOfCity(data?.city);
+      });
+  }, [user]);
+
+  const logContact = () => {
+    supabase
+      .rpc("log_product_event", { p_product_id: id, p_event: "contact", p_country: viewerCountryRef.current })
+      .then(() => {});
+  };
 
   useEffect(() => {
     if (!user) { setIsFav(false); return; }
@@ -201,6 +247,10 @@ function ProductPage() {
   const wa = waNumber ? whatsappLink(waNumber, waMsg) : null;
   const img = product.images[activeImg];
   const hasPromo = product.promo_price_fcfa && product.promo_price_fcfa < product.price_fcfa;
+
+  const stats = sellerStats;
+  const contactRate = stats && stats.total_views > 0 ? Math.round((stats.total_contacts / stats.total_views) * 100) : 0;
+  const intensity = stats ? computeIntensity(stats) : 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -317,13 +367,41 @@ function ProductPage() {
             )}
 
             <div className="mt-6 rounded-2xl border border-border p-5 bg-card">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-xs text-muted-foreground">Fournisseur</div>
-                  <div className="font-semibold">{profile?.full_name ?? "Vendeur"}</div>
+                  <div className="font-semibold">{profile?.shop_name || profile?.full_name || "Vendeur"}</div>
+                  <span className="mt-1 inline-flex items-center gap-1 text-xs text-volt font-medium">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Vérifié
+                  </span>
                 </div>
-                <ShieldCheck className="h-5 w-5 text-volt" />
+                {stats ? (
+                  <IntensityGauge value={intensity} size={110} />
+                ) : (
+                  <div className="h-16 w-16 rounded-full shimmer bg-muted" />
+                )}
               </div>
+
+              {stats && (
+                <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <BadgeStat icon={Store} label="Produits" value={String(stats.total_products)} />
+                  <BadgeStat icon={Eye} label="Vues" value={formatCount(stats.total_views)} />
+                  <BadgeStat icon={MessageCircle} label="Contacts" value={formatCount(stats.total_contacts)} />
+                  <BadgeStat icon={Heart} label="Favoris" value={formatCount(stats.total_favorites)} />
+                  <div className="col-span-2 sm:col-span-4">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Taux de contact</span>
+                      <span className="font-semibold text-foreground">{contactRate}%</span>
+                    </div>
+                    <div className="mt-1 h-2 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-volt transition-all duration-700"
+                        style={{ width: `${contactRate}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {product.sold_out ? (
                 <div className="mt-4 rounded-xl border border-dashed border-border bg-background/50 p-4 text-center">
@@ -347,7 +425,7 @@ function ProductPage() {
               ) : (
                 <div className="mt-4 flex flex-col sm:flex-row gap-2">
                   {wa ? (
-                    <a href={wa} target="_blank" rel="noopener noreferrer" className="flex-1">
+                    <a href={wa} target="_blank" rel="noopener noreferrer" onClick={() => logContact()} className="flex-1">
                       <Button variant="volt" className="w-full h-11">
                         <MessageCircle className="mr-1 h-4 w-4" /> WhatsApp
                       </Button>
@@ -356,7 +434,7 @@ function ProductPage() {
                     <Button variant="volt" disabled className="flex-1 h-11">Contact indisponible</Button>
                   )}
                   {(product.whatsapp || profile?.phone) && (
-                    <a href={`tel:${product.whatsapp || profile?.phone}`}>
+                    <a href={`tel:${product.whatsapp || profile?.phone}`} onClick={() => logContact()}>
                       <Button variant="outline" className="h-11 w-full sm:w-auto">
                         <Phone className="h-4 w-4" />
                       </Button>
@@ -401,3 +479,28 @@ function ProductPage() {
     </div>
   );
 }
+
+function formatCount(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`;
+  return String(n);
+}
+
+function BadgeStat({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-background/50 p-3">
+      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <Icon className="h-3.5 w-3.5" /> {label}
+      </div>
+      <div className="mt-1 text-lg font-bold tracking-tight">{value}</div>
+    </div>
+  );
+}
+

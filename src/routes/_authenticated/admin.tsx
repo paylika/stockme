@@ -53,6 +53,25 @@ type Product = {
   created_at: string;
 };
 
+type SellerStat = {
+  seller_id: string;
+  products: number;
+  views: number;
+  contacts: number;
+  favorites: number;
+  stock_value: number;
+};
+
+type SellerDetail = {
+  total_products: number;
+  total_views: number;
+  total_contacts: number;
+  total_favorites: number;
+  stock_value: number;
+  countries: { country: string | null; value: number }[];
+  trend: { day: string; value: number }[];
+};
+
 export const Route = createFileRoute("/_authenticated/admin")({
   beforeLoad: async ({ location }) => {
     if (typeof window === "undefined") return;
@@ -80,6 +99,9 @@ function Admin() {
   const [products, setProducts] = useState<Product[] | null>(null);
   const [mounted, setMounted] = useState(false);
   const [adminEmail, setAdminEmail] = useState<string>("");
+  const [sellerStats, setSellerStats] = useState<Record<string, SellerStat>>({});
+  const [selectedSeller, setSelectedSeller] = useState<string>("");
+  const [selectedDetail, setSelectedDetail] = useState<SellerDetail | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -99,6 +121,24 @@ function Admin() {
       setProducts((prods ?? []) as Product[]);
     })();
   }, []);
+
+  // Statistiques réelles des vendeurs (insignes + détail)
+  useEffect(() => {
+    supabase.rpc("get_all_seller_stats", {}).then(({ data }) => {
+      const list = (data as SellerStat[] | null) ?? [];
+      const map: Record<string, SellerStat> = {};
+      for (const s of list) map[s.seller_id] = s;
+      setSellerStats(map);
+      if (list.length > 0 && !selectedSeller) setSelectedSeller(list[0].seller_id);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!selectedSeller) return;
+    supabase.rpc("get_seller_stats", { p_seller_id: selectedSeller }).then(({ data }) => {
+      setSelectedDetail((data as SellerDetail | null) ?? null);
+    });
+  }, [selectedSeller]);
 
   const loading = profiles === null || products === null;
   const profs = profiles ?? [];
@@ -309,6 +349,75 @@ function Admin() {
           </ChartCard>
         </div>
 
+        {/* Performance des vendeurs */}
+        <SectionTitle>Performance des vendeurs</SectionTitle>
+        <div className="mt-4 grid gap-4 lg:grid-cols-3">
+          <ChartCard title="Insignes du vendeur" icon={IconUsers}>
+            <div className="mb-3">
+              <select
+                value={selectedSeller}
+                onChange={(e) => setSelectedSeller(e.target.value)}
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="">Choisir un vendeur…</option>
+                {profs.filter((p) => sellerStats[p.id]).map((p) => (
+                  <option key={p.id} value={p.id}>{p.full_name || p.email || "Vendeur"}</option>
+                ))}
+              </select>
+            </div>
+            {selectedDetail ? (
+              <div className="grid grid-cols-2 gap-2">
+                <MiniStat label="Produits" value={String(selectedDetail.total_products)} />
+                <MiniStat label="Vues" value={String(selectedDetail.total_views)} />
+                <MiniStat label="Contacts" value={String(selectedDetail.total_contacts)} />
+                <MiniStat label="Favoris" value={String(selectedDetail.total_favorites)} />
+                <div className="col-span-2">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Valeur du stock</span>
+                    <span className="font-semibold text-foreground">{formatFCFA(selectedDetail.stock_value)}</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Sélectionnez un vendeur avec des statistiques.</p>
+            )}
+          </ChartCard>
+
+          <ChartCard title="Tendance des vues (30 jours)" icon={IconTrend}>
+            {mounted && selectedDetail && selectedDetail.trend.length > 0 && (
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={selectedDetail.trend} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gradSeller" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#7C3AED" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#7C3AED" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis dataKey="day" tick={{ fontSize: 10 }} stroke="var(--muted-foreground)" />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
+                  <Tooltip content={<TipBox />} />
+                  <Area type="monotone" dataKey="value" stroke="#7C3AED" strokeWidth={2} fill="url(#gradSeller)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCard>
+
+          <ChartCard title="Contacts par pays" icon={IconGlobe}>
+            {mounted && selectedDetail && selectedDetail.countries.length > 0 && (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart layout="vertical" data={selectedDetail.countries} margin={{ top: 4, right: 16, left: 8, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
+                  <YAxis type="category" dataKey="country" tick={{ fontSize: 11 }} width={100} stroke="var(--muted-foreground)" />
+                  <Tooltip content={<TipBox />} cursor={{ fill: "color-mix(in oklab, var(--volt) 12%, transparent)" }} />
+                  <Bar dataKey="value" radius={[0, 6, 6, 0]} fill="#F0A836" isAnimationActive />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCard>
+        </div>
+
         {/* Derniers produits */}
         <SectionTitle>Derniers produits</SectionTitle>
         <div className="mt-4 rounded-2xl border border-border bg-card overflow-x-auto">
@@ -363,13 +472,14 @@ function Admin() {
                 <th className="text-left px-4 py-3">WhatsApp</th>
                 <th className="text-left px-4 py-3 hidden md:table-cell">Rôle</th>
                 <th className="text-left px-4 py-3 hidden md:table-cell">Inscrit le</th>
+                <th className="text-left px-4 py-3 hidden xl:table-cell">Insignes</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Chargement…</td></tr>
+                <tr><td colSpan={8} className="px-4 py-6 text-center text-muted-foreground">Chargement…</td></tr>
               ) : profs.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Aucun utilisateur</td></tr>
+                <tr><td colSpan={8} className="px-4 py-6 text-center text-muted-foreground">Aucun utilisateur</td></tr>
               ) : profs.map((p) => (
                 <tr key={p.id} className="border-t border-border hover:bg-muted/30">
                   <td className="px-4 py-3 font-medium">{p.full_name || "—"}</td>
@@ -388,6 +498,16 @@ function Admin() {
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell text-muted-foreground text-xs whitespace-nowrap">
                     {new Date(p.created_at).toLocaleDateString("fr-FR")}
+                  </td>
+                  <td className="px-4 py-3 hidden xl:table-cell">
+                    {sellerStats[p.id] ? (
+                      <div className="flex flex-wrap gap-1">
+                        <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px]">{sellerStats[p.id].products}p</span>
+                        <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px]">{sellerStats[p.id].views}v</span>
+                        <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px]">{sellerStats[p.id].contacts}c</span>
+                        <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px]">{sellerStats[p.id].favorites}f</span>
+                      </div>
+                    ) : "—"}
                   </td>
                 </tr>
               ))}
@@ -458,3 +578,13 @@ function TipBox({ active, payload, label }: any) {
     </div>
   );
 }
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-background/50 p-3">
+      <div className="text-[11px] text-muted-foreground">{label}</div>
+      <div className="mt-0.5 text-lg font-bold tracking-tight">{value}</div>
+    </div>
+  );
+}
+

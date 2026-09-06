@@ -181,6 +181,39 @@ export type Database = {
         }
         Returns: boolean
       }
+      log_product_event: {
+        Args: {
+          p_product_id: string
+          p_event: string
+          p_country?: string | null
+        }
+        Returns: undefined
+      }
+      get_seller_stats: {
+        Args: {
+          p_seller_id: string
+        }
+        Returns: {
+          total_products: number
+          total_views: number
+          total_contacts: number
+          total_favorites: number
+          stock_value: number
+          countries: { country: string | null; value: number }[]
+          trend: { day: string; value: number }[]
+        }
+      }
+      get_all_seller_stats: {
+        Args: Record<string, never>
+        Returns: {
+          seller_id: string
+          products: number
+          views: number
+          contacts: number
+          favorites: number
+          stock_value: number
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "user"
