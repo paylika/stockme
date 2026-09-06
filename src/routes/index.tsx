@@ -137,22 +137,7 @@ function Index() {
             WebkitMaskImage: "linear-gradient(to bottom, black, transparent 75%)",
           }}
         />
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-6 sm:pt-10 pb-4 sm:pb-6">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-[11px] font-semibold text-primary">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-volt opacity-75" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-volt" />
-            </span>
-            Marketplace B2B · Afrique de l'Ouest
-          </div>
-          {/* Titre */}
-          <h1 className="mt-3 font-display font-bold tracking-tight text-foreground text-2xl sm:text-4xl md:text-5xl leading-[1.05] max-w-3xl">
-            Votre stock, <span className="font-serif italic font-normal text-primary">en mouvement.</span>
-          </h1>
-          <p className="mt-2.5 text-sm sm:text-base text-muted-foreground max-w-xl">
-            Écoulez votre stock dormant, trouvez des produits près de chez vous. Contact direct sur WhatsApp, sans intermédiaire.
-          </p>
-
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-4 sm:pt-6 pb-4 sm:pb-5">
           {/* Unified search bar */}
           <form
             onSubmit={(e) => {
