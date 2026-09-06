@@ -15,6 +15,7 @@ type Product = {
   price_fcfa: number; promo_price_fcfa: number | null; revenue_fcfa: number | null;
   quantity: number; moq: number; city: string; zone: string | null;
   images: string[]; owner_id: string; whatsapp: string | null;
+  published: boolean; sold_out: boolean;
 };
 type Profile = { full_name: string | null; whatsapp: string | null; phone: string | null; city: string | null };
 type Similar = { id: string; name: string; price_fcfa: number; promo_price_fcfa: number | null; city: string; images: string[] };
@@ -179,6 +180,22 @@ function ProductPage() {
     );
   }
 
+  // Produit dépublié : accessible uniquement à son propriétaire.
+  if (!product.published && user?.id !== product.owner_id) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="mx-auto max-w-3xl px-4 py-20 text-center">
+          <h1 className="text-2xl font-bold">Produit introuvable</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Ce produit n'est plus disponible.</p>
+          <Link to="/" className="mt-4 inline-block text-volt underline">Retour aux produits</Link>
+        </div>
+        <MobileFooter />
+      <MobileNav />
+      </div>
+    );
+  }
+
   const waNumber = product.whatsapp || profile?.whatsapp || "";
   const waMsg = `Bonjour, je suis intéressé par votre stock de "${product.name}" sur StockMe.`;
   const wa = waNumber ? whatsappLink(waNumber, waMsg) : null;
@@ -308,7 +325,15 @@ function ProductPage() {
                 <ShieldCheck className="h-5 w-5 text-volt" />
               </div>
 
-              {authLoading ? (
+              {product.sold_out ? (
+                <div className="mt-4 rounded-xl border border-dashed border-border bg-background/50 p-4 text-center">
+                  <Package className="mx-auto h-5 w-5 text-muted-foreground" />
+                  <p className="mt-2 text-sm font-medium">Produit épuisé</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Revenez bientôt ou contactez le vendeur pour un réapprovisionnement.
+                  </p>
+                </div>
+              ) : authLoading ? (
                 <div className="mt-4 h-11 rounded-md bg-muted shimmer" />
               ) : !user ? (
                 <div className="mt-4 rounded-xl border border-dashed border-border bg-background/50 p-4 text-center">

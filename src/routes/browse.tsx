@@ -26,6 +26,7 @@ export const Route = createFileRoute("/browse")({
 type Product = {
   id: string; name: string; description: string | null; category: string;
   price_fcfa: number; quantity: number; moq: number; city: string; images: string[];
+  sold_out: boolean;
 };
 
 function Browse() {
@@ -38,7 +39,7 @@ function Browse() {
     let cancel = false;
     setItems(null);
     const run = async () => {
-      let query = supabase.from("products").select("*").order("created_at", { ascending: false }).limit(60);
+      let query = supabase.from("products").select("*").eq("published", true).order("created_at", { ascending: false }).limit(60);
       if (search.city) query = query.eq("city", search.city);
       if (search.category) query = query.eq("category", search.category);
       if (search.q) query = query.ilike("name", `%${search.q}%`);
@@ -157,6 +158,11 @@ function ProductCard({ product }: { product: Product }) {
         <div className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-background/90 backdrop-blur px-2 py-0.5 text-[11px] font-medium">
           <MapPin className="h-3 w-3" /> {product.city}
         </div>
+        {product.sold_out && (
+          <div className="absolute top-3 right-3 rounded-full bg-destructive text-background px-2 py-0.5 text-[11px] font-bold">
+            Épuisé
+          </div>
+        )}
       </div>
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">

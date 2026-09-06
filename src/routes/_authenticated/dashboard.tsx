@@ -7,10 +7,21 @@ import { MobileFooter } from "@/components/MobileFooter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatFCFA } from "@/lib/format";
-import { Edit2, MapPin, Package, Plus, Save, Trash2, X } from "lucide-react";
+import { Edit2, MapPin, Package, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
-type P = { id: string; name: string; price_fcfa: number; quantity: number; moq: number; city: string; category: string; images: string[] };
+type P = {
+  id: string;
+  name: string;
+  price_fcfa: number;
+  quantity: number;
+  moq: number;
+  city: string;
+  category: string;
+  images: string[];
+  published: boolean;
+  sold_out: boolean;
+};
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
@@ -25,8 +36,11 @@ function Dashboard() {
   const load = async () => {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
-    const { data } = await supabase.from("products").select("id,name,price_fcfa,quantity,moq,city,category,images")
-      .eq("owner_id", u.user.id).order("created_at", { ascending: false });
+    const { data } = await supabase
+      .from("products")
+      .select("id,name,price_fcfa,quantity,moq,city,category,images,published,sold_out")
+      .eq("owner_id", u.user.id)
+      .order("created_at", { ascending: false });
     setItems((data ?? []) as P[]);
   };
 
@@ -45,6 +59,20 @@ function Dashboard() {
     if (error) return toast.error(error.message);
     toast.success("Quantité mise à jour");
     setEditing(null);
+    load();
+  };
+
+  const togglePublished = async (p: P, val: boolean) => {
+    const { error } = await supabase.from("products").update({ published: val }).eq("id", p.id);
+    if (error) return toast.error(error.message);
+    toast.success(val ? "Produit publié" : "Produit dépublié");
+    load();
+  };
+
+  const toggleSoldOut = async (p: P, val: boolean) => {
+    const { error } = await supabase.from("products").update({ sold_out: val }).eq("id", p.id);
+    if (error) return toast.error(error.message);
+    toast.success(val ? "Marqué épuisé" : "Disponible à la vente");
     load();
   };
 
@@ -94,7 +122,17 @@ function Dashboard() {
                   </Link>
                   <div className="p-4">
                     <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-semibold line-clamp-1">{p.name}</h3>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <h3 className="font-semibold line-clamp-1">{p.name}</h3>
+                        <Link
+                          to="/dashboard/edit/$id"
+                          params={{ id: p.id }}
+                          className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-border text-muted-foreground hover:text-foreground hover:border-foreground/40"
+                          aria-label="Modifier"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Link>
+                      </div>
                       <button onClick={() => remove(p.id)} className="text-muted-foreground hover:text-destructive">
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -118,6 +156,28 @@ function Dashboard() {
                         </button>
                       )}
                     </div>
+
+                    {/* Statut + actions rapides */}
+                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-3">
+                      <StatusToggle
+                        checked={p.published}
+                        onChange={(v) => togglePublished(p, v)}
+                        label={p.published ? "Publié" : "Dépublié"}
+                      />
+                      <StatusToggle
+                        checked={p.sold_out}
+                        onChange={(v) => toggleSoldOut(p, v)}
+                        label="Épuisé"
+                        tone="destructive"
+                      />
+                      <Link
+                        to="/dashboard/edit/$id"
+                        params={{ id: p.id }}
+                        className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium text-foreground hover:text-primary"
+                      >
+                        <Pencil className="h-3 w-3" /> Modifier
+                      </Link>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -128,5 +188,31 @@ function Dashboard() {
       <MobileFooter />
       <MobileNav />
     </div>
+  );
+}
+
+function StatusToggle({
+  checked,
+  onChange,
+  label,
+  tone = "default",
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  label: string;
+  tone?: "default" | "destructive";
+}) {
+  const on = tone === "destructive" ? "bg-destructive" : "bg-volt";
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+    >
+      <span className={`relative h-4 w-7 rounded-full transition ${checked ? on : "bg-muted"}`}>
+        <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-background shadow transition-all ${checked ? "left-3.5" : "left-0.5"}`} />
+      </span>
+      <span className={checked ? "font-semibold text-foreground" : ""}>{label}</span>
+    </button>
   );
 }

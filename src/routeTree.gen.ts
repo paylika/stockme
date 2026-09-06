@@ -24,6 +24,7 @@ import { Route as LegalCookiesRouteImport } from './routes/legal.cookies'
 import { Route as LegalMentionsRouteImport } from './routes/legal.mentions'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
 import { Route as AuthenticatedDashboardNewRouteImport } from './routes/_authenticated/dashboard.new'
+import { Route as AuthenticatedDashboardEditIdRouteImport } from './routes/_authenticated/dashboard.edit.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -100,6 +101,12 @@ const AuthenticatedDashboardNewRoute =
     path: '/new',
     getParentRoute: () => AuthenticatedDashboardRoute,
   } as any)
+const AuthenticatedDashboardEditIdRoute =
+  AuthenticatedDashboardEditIdRouteImport.update({
+    id: '/edit/$id',
+    path: '/edit/$id',
+    getParentRoute: () => AuthenticatedDashboardRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -116,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/legal/mentions': typeof LegalMentionsRoute
   '/product/$id': typeof ProductIdRoute
   '/dashboard/new': typeof AuthenticatedDashboardNewRoute
+  '/dashboard/edit/$id': typeof AuthenticatedDashboardEditIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -132,6 +140,7 @@ export interface FileRoutesByTo {
   '/legal/mentions': typeof LegalMentionsRoute
   '/product/$id': typeof ProductIdRoute
   '/dashboard/new': typeof AuthenticatedDashboardNewRoute
+  '/dashboard/edit/$id': typeof AuthenticatedDashboardEditIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -150,6 +159,7 @@ export interface FileRoutesById {
   '/legal/mentions': typeof LegalMentionsRoute
   '/product/$id': typeof ProductIdRoute
   '/_authenticated/dashboard/new': typeof AuthenticatedDashboardNewRoute
+  '/_authenticated/dashboard/edit/$id': typeof AuthenticatedDashboardEditIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -168,6 +178,7 @@ export interface FileRouteTypes {
     | '/legal/mentions'
     | '/product/$id'
     | '/dashboard/new'
+    | '/dashboard/edit/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -184,6 +195,7 @@ export interface FileRouteTypes {
     | '/legal/mentions'
     | '/product/$id'
     | '/dashboard/new'
+    | '/dashboard/edit/$id'
   id:
     | '__root__'
     | '/'
@@ -201,6 +213,7 @@ export interface FileRouteTypes {
     | '/legal/mentions'
     | '/product/$id'
     | '/_authenticated/dashboard/new'
+    | '/_authenticated/dashboard/edit/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -319,16 +332,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardNewRouteImport
       parentRoute: typeof AuthenticatedDashboardRoute
     }
+    '/_authenticated/dashboard/edit/$id': {
+      id: '/_authenticated/dashboard/edit/$id'
+      path: '/edit/$id'
+      fullPath: '/dashboard/edit/$id'
+      preLoaderRoute: typeof AuthenticatedDashboardEditIdRouteImport
+      parentRoute: typeof AuthenticatedDashboardRoute
+    }
   }
 }
 
 interface AuthenticatedDashboardRouteChildren {
   AuthenticatedDashboardNewRoute: typeof AuthenticatedDashboardNewRoute
+  AuthenticatedDashboardEditIdRoute: typeof AuthenticatedDashboardEditIdRoute
 }
 
 const AuthenticatedDashboardRouteChildren: AuthenticatedDashboardRouteChildren =
   {
     AuthenticatedDashboardNewRoute: AuthenticatedDashboardNewRoute,
+    AuthenticatedDashboardEditIdRoute: AuthenticatedDashboardEditIdRoute,
   }
 
 const AuthenticatedDashboardRouteWithChildren =

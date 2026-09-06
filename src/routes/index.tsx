@@ -54,6 +54,7 @@ type Product = {
   city: string;
   zone: string | null;
   images: string[];
+  sold_out: boolean;
 };
 
 
@@ -74,7 +75,8 @@ function Index() {
     (async () => {
       let query = supabase
         .from("products")
-        .select("id,name,category,price_fcfa,promo_price_fcfa,quantity,moq,city,zone,images")
+        .select("id,name,category,price_fcfa,promo_price_fcfa,quantity,moq,city,zone,images,sold_out")
+        .eq("published", true)
         .order("created_at", { ascending: false })
         .limit(60);
       if (search.city) {
@@ -493,6 +495,11 @@ function ProductCard({ product }: { product: Product }) {
         {hasPromo && (
           <div className="absolute top-2 left-2 rounded-full bg-volt text-volt-foreground px-2 py-0.5 text-[10px] font-black tracking-wide">
             -{discount}%
+          </div>
+        )}
+        {product.sold_out && (
+          <div className="absolute top-2 right-2 rounded-full bg-destructive text-background px-2 py-0.5 text-[10px] font-black tracking-wide">
+            Épuisé
           </div>
         )}
         <div className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-background/95 backdrop-blur px-2 py-0.5 text-[10px] font-medium">

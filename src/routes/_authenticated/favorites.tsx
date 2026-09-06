@@ -7,7 +7,7 @@ import { MobileFooter } from "@/components/MobileFooter";
 import { formatFCFA } from "@/lib/format";
 import { Heart, MapPin, Package } from "lucide-react";
 
-type Fav = { product_id: string; products: { id: string; name: string; price_fcfa: number; promo_price_fcfa: number | null; city: string; images: string[]; category: string } | null };
+type Fav = { product_id: string; products: { id: string; name: string; price_fcfa: number; promo_price_fcfa: number | null; city: string; images: string[]; category: string; sold_out: boolean } | null };
 
 export const Route = createFileRoute("/_authenticated/favorites")({
   component: Favorites,
@@ -21,8 +21,9 @@ function Favorites() {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
       const { data } = await supabase.from("favorites")
-        .select("product_id, products(id,name,price_fcfa,promo_price_fcfa,city,images,category)")
+        .select("product_id, products(id,name,price_fcfa,promo_price_fcfa,city,images,category,sold_out)")
         .eq("user_id", u.user.id)
+        .eq("products.published", true)
         .order("created_at", { ascending: false });
       setItems((data as unknown as Fav[]) ?? []);
     })();
@@ -54,11 +55,16 @@ function Favorites() {
                 const promo = p.promo_price_fcfa && p.promo_price_fcfa < p.price_fcfa;
                 return (
                   <Link key={p.id} to="/product/$id" params={{ id: p.id }} className="group rounded-xl border border-border bg-card overflow-hidden hover:border-foreground/30 transition">
-                    <div className="aspect-[4/3] bg-muted overflow-hidden">
+                    <div className="relative aspect-[4/3] bg-muted overflow-hidden">
                       {p.images[0] ? (
                         <img src={p.images[0]} alt={p.name} className="h-full w-full object-cover transition-transform group-hover:scale-105" loading="lazy" />
                       ) : (
                         <div className="grid h-full place-items-center text-muted-foreground"><Package className="h-10 w-10" /></div>
+                      )}
+                      {p.sold_out && (
+                        <div className="absolute top-2 right-2 rounded-full bg-destructive text-background px-2 py-0.5 text-[10px] font-bold">
+                          Épuisé
+                        </div>
                       )}
                     </div>
                     <div className="p-3 sm:p-4">

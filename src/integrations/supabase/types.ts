@@ -56,8 +56,10 @@ export type Database = {
           owner_id: string
           price_fcfa: number
           promo_price_fcfa: number | null
+          published: boolean
           quantity: number
           revenue_fcfa: number | null
+          sold_out: boolean
           updated_at: string
           whatsapp: string | null
           zone: string | null
@@ -74,8 +76,10 @@ export type Database = {
           owner_id: string
           price_fcfa: number
           promo_price_fcfa?: number | null
+          published?: boolean
           quantity?: number
           revenue_fcfa?: number | null
+          sold_out?: boolean
           updated_at?: string
           whatsapp?: string | null
           zone?: string | null
@@ -92,8 +96,10 @@ export type Database = {
           owner_id?: string
           price_fcfa?: number
           promo_price_fcfa?: number | null
+          published?: boolean
           quantity?: number
           revenue_fcfa?: number | null
+          sold_out?: boolean
           updated_at?: string
           whatsapp?: string | null
           zone?: string | null

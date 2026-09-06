@@ -100,3 +100,17 @@ export async function uploadProductImage(file: File, userId: string): Promise<st
       : `Photo non envoyée (${file.name}) : ${msg}`,
   );
 }
+
+/** Upload séquentiel de plusieurs images (avec progression optionnelle). Renvoie les URLs publiques. */
+export async function uploadImages(
+  files: File[],
+  userId: string,
+  onStatus?: (status: string) => void,
+): Promise<string[]> {
+  const urls: string[] = [];
+  for (let i = 0; i < files.length; i++) {
+    onStatus?.(`Envoi de la photo ${i + 1}/${files.length}...`);
+    urls.push(await uploadProductImage(files[i], userId));
+  }
+  return urls;
+}
