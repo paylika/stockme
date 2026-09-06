@@ -278,6 +278,10 @@ export function ProductForm({
         </div>
       )}
 
+      <div className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+        💡 StockMe est une marketplace de <span className="font-semibold text-foreground">vente en gros (B2B)</span>, pas un site e-commerce classique. Mettez un prix <span className="font-semibold text-foreground">réaliste et attractif</span> pour écouler votre lot plus vite.
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label htmlFor="price">Prix avant (FCFA) *</Label>
