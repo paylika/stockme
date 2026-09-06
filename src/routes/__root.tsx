@@ -96,7 +96,9 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   // En mode admin, on ne montre pas la sidebar StockMe (l'admin a sa propre sidebar).
   const routeMatches = useRouterState({ select: (r) => r.matches });
-  const isAdminLayout = routeMatches.some((m) => m.route.id === "/_admin" || m.route.id.startsWith("/_admin/"));
+  const isAdminLayout = routeMatches.some(
+    (m) => m.route?.id === "/_admin" || m.route?.id?.startsWith("/_admin/"),
+  );
 
   return (
     <QueryClientProvider client={queryClient}>
