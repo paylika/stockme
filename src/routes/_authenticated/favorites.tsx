@@ -4,8 +4,8 @@ import { supabase } from "@/integrations/supabase/stockme-client";
 import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
-import { formatFCFA } from "@/lib/format";
-import { Heart, MapPin, Package } from "lucide-react";
+import { ProductCard } from "@/components/ProductCard";
+import { Heart } from "lucide-react";
 
 type Fav = { product_id: string; products: { id: string; name: string; price_fcfa: number; promo_price_fcfa: number | null; city: string; images: string[]; category: string; sold_out: boolean } | null };
 
@@ -52,28 +52,7 @@ function Favorites() {
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
               {items.filter(i => i.products).map((i) => {
                 const p = i.products!;
-                const promo = p.promo_price_fcfa && p.promo_price_fcfa < p.price_fcfa;
-                return (
-                  <Link key={p.id} to="/product/$id" params={{ id: p.id }} className="group rounded-xl border border-border bg-card overflow-hidden hover:border-foreground/30 transition">
-                    <div className="relative aspect-[4/3] bg-muted overflow-hidden">
-                      {p.images[0] ? (
-                        <img src={p.images[0]} alt={p.name} className="h-full w-full object-cover transition-transform group-hover:scale-105" loading="lazy" />
-                      ) : (
-                        <div className="grid h-full place-items-center text-muted-foreground"><Package className="h-10 w-10" /></div>
-                      )}
-                      {p.sold_out && (
-                        <div className="absolute top-2 right-2 rounded-full bg-destructive text-background px-2 py-0.5 text-[10px] font-bold">
-                          Épuisé
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-3 sm:p-4">
-                      <h3 className="font-semibold line-clamp-1 text-sm sm:text-base">{p.name}</h3>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{p.city}</p>
-                      <div className="mt-2 font-bold">{formatFCFA(promo ? p.promo_price_fcfa! : p.price_fcfa)}</div>
-                    </div>
-                  </Link>
-                );
+                return <ProductCard key={p.id} product={p} />;
               })}
             </div>
           )}

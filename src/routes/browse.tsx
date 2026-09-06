@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { Header } from "@/components/Header";
@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { CATEGORIES, WEST_AFRICA_LOCATIONS } from "@/lib/constants";
-import { formatFCFA } from "@/lib/format";
-import { MapPin, Package, Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, SlidersHorizontal, X } from "lucide-react";
+import { ProductCard, type ListingProduct } from "@/components/ProductCard";
 
 type Filters = { city?: string; category?: string; q?: string; min?: number; max?: number };
 
@@ -23,11 +23,7 @@ export const Route = createFileRoute("/browse")({
   component: Browse,
 });
 
-type Product = {
-  id: string; name: string; description: string | null; category: string;
-  price_fcfa: number; quantity: number; moq: number; city: string; images: string[];
-  sold_out: boolean;
-};
+type Product = ListingProduct;
 
 function Browse() {
   const search = Route.useSearch();
@@ -109,10 +105,13 @@ function Browse() {
             {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : items.length === 0 ? (
-          <div className="grid place-items-center py-24 text-center">
+          <div className="grid place-items-center py-16 text-center border border-dashed border-border rounded-3xl bg-muted/30">
             <SlidersHorizontal className="h-10 w-10 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-semibold">Aucun produit trouvé</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Essayez d'élargir vos filtres.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Essayez d'élargir vos filtres ou une autre catégorie.</p>
+            <button onClick={clearAll} className="mt-4 rounded-full bg-foreground text-background px-4 py-2 text-xs font-semibold">
+              Réinitialiser les filtres
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -145,37 +144,3 @@ function SkeletonCard() {
   );
 }
 
-function ProductCard({ product }: { product: Product }) {
-  const img = product.images[0];
-  return (
-    <Link to="/product/$id" params={{ id: product.id }} className="group rounded-xl border border-border bg-card overflow-hidden hover:border-foreground/30 transition-all hover:-translate-y-0.5 hover:shadow-lg">
-      <div className="aspect-[4/3] bg-muted overflow-hidden relative">
-        {img ? (
-          <img src={img} alt={product.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
-        ) : (
-          <div className="grid h-full place-items-center text-muted-foreground"><Package className="h-10 w-10" /></div>
-        )}
-        <div className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-background/90 backdrop-blur px-2 py-0.5 text-[11px] font-medium">
-          <MapPin className="h-3 w-3" /> {product.city}
-        </div>
-        {product.sold_out && (
-          <div className="absolute top-3 right-3 rounded-full bg-destructive text-background px-2 py-0.5 text-[11px] font-bold">
-            Épuisé
-          </div>
-        )}
-      </div>
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold leading-tight line-clamp-1">{product.name}</h3>
-        </div>
-        <p className="mt-0.5 text-xs text-muted-foreground">{product.category}</p>
-        <div className="mt-3 flex items-end justify-between">
-          <div>
-            <div className="text-lg font-bold tracking-tight">{formatFCFA(product.price_fcfa)}</div>
-            <div className="text-[11px] text-muted-foreground">MOQ: {product.moq} · Stock: {product.quantity}</div>
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-}
