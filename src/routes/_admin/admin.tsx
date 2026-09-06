@@ -310,7 +310,7 @@ function AdminDashboard() {
             <select
               value={selectedSeller}
               onChange={(e) => setSelectedSeller(e.target.value)}
-              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              className="form-select"
             >
               <option value="">Choisir un vendeur…</option>
               {profs.filter((p) => sellerStats[p.id]).map((p) => (

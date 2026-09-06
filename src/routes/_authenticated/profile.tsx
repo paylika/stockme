@@ -268,7 +268,7 @@ function ProfilePage() {
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  className="form-select"
                 >
                   <option value="fournisseur">Fournisseur</option>
                   <option value="revendeur">Revendeur</option>
@@ -308,7 +308,7 @@ function ProfilePage() {
                 <select
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  className="form-select"
                 >
                   <option value="">Choisir...</option>
                   {Object.entries(WEST_AFRICA_LOCATIONS).map(([country, cities]) => (

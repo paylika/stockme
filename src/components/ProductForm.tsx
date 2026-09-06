@@ -250,14 +250,14 @@ export function ProductForm({
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label htmlFor="category">Catégorie *</Label>
-          <select id="category" required value={category} onChange={(e) => setCategory(e.target.value)} className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+          <select id="category" required value={category} onChange={(e) => setCategory(e.target.value)} className="form-select">
             <option value="">Choisir...</option>
             {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="city">Pays / Ville *</Label>
-          <select id="city" required value={city} onChange={(e) => setCity(e.target.value)} className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+          <select id="city" required value={city} onChange={(e) => setCity(e.target.value)} className="form-select">
             <option value="">Choisir...</option>
             {Object.entries(WEST_AFRICA_LOCATIONS).map(([country, cities]) => (
               <optgroup key={country} label={country}>
@@ -271,7 +271,7 @@ export function ProductForm({
       {zones.length > 0 && (
         <div className="space-y-1.5">
           <Label htmlFor="zone">Zone / Quartier (optionnel)</Label>
-          <select id="zone" value={zone} onChange={(e) => setZone(e.target.value)} className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+          <select id="zone" value={zone} onChange={(e) => setZone(e.target.value)} className="form-select">
             <option value="">Préciser dans {city}...</option>
             {zones.map((z) => <option key={z} value={z}>{z}</option>)}
           </select>
