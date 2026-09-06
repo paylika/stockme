@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { formatFCFA, whatsappLink } from "@/lib/format";
 import { useAuth } from "@/hooks/useAuth";
 import { IntensityGauge, computeIntensity } from "@/components/IntensityGauge";
+import { JsonLd } from "@/components/JsonLd";
+import { buildSeoHead, productLd, breadcrumbLd } from "@/lib/seo";
 import { countryOfCity } from "@/lib/constants";
 import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, Eye, Heart, Lock, MapPin, MessageCircle, Package, Phone, Share2, ShieldCheck, Store } from "lucide-react";
 import { toast } from "sonner";
@@ -35,10 +37,24 @@ export const Route = createFileRoute("/product/$id")({
   loader: async ({ params }) => {
     const { data } = await supabase
       .from("products")
-      .select("name,description,images,price_fcfa,promo_price_fcfa,city,category")
+      .select("id,name,description,images,price_fcfa,promo_price_fcfa,city,category,quantity,moq,sold_out")
       .eq("id", params.id)
       .maybeSingle();
-    return { seo: data as null | { name: string; description: string | null; images: string[]; price_fcfa: number; promo_price_fcfa: number | null; city: string; category: string } };
+    return {
+      seo: data as null | {
+        id: string;
+        name: string;
+        description: string | null;
+        images: string[];
+        price_fcfa: number;
+        promo_price_fcfa: number | null;
+        city: string;
+        category: string;
+        quantity: number;
+        moq: number;
+        sold_out: boolean;
+      },
+    };
   },
   head: ({ loaderData }) => {
     const p = loaderData?.seo;
@@ -47,22 +63,14 @@ export const Route = createFileRoute("/product/$id")({
       ? (p.description?.slice(0, 150) || `${p.name} disponible à ${p.city}. ${p.category} en gros au meilleur prix, contact direct WhatsApp sur StockMe.`)
       : "Découvrez ce stock disponible sur StockMe.";
     const image = p?.images?.[0];
-    return {
-      meta: [
-        { title },
-        { name: "description", content: description },
-        { property: "og:title", content: title },
-        { property: "og:description", content: description },
-        { property: "og:type", content: "product" },
-        { name: "twitter:card", content: image ? "summary_large_image" : "summary" },
-        ...(image && image.startsWith("https://")
-          ? [
-              { property: "og:image", content: image },
-              { name: "twitter:image", content: image },
-            ]
-          : []),
-      ],
-    };
+    const { meta, links } = buildSeoHead({
+      title,
+      description,
+      image,
+      path: p ? `/product/${p.id}` : "/product",
+      type: "product",
+    });
+    return { meta, links };
   },
   component: ProductPage,
 });
@@ -70,6 +78,32 @@ export const Route = createFileRoute("/product/$id")({
 function ProductPage() {
   const { id } = Route.useParams();
   const { user, loading: authLoading } = useAuth();
+  const loaderSeo = Route.useLoaderData()?.seo;
+  const seoLd = loaderSeo ? (
+    <>
+      <JsonLd
+        data={productLd({
+          id: loaderSeo.id,
+          name: loaderSeo.name,
+          description: loaderSeo.description,
+          images: loaderSeo.images,
+          category: loaderSeo.category,
+          price_fcfa: loaderSeo.price_fcfa,
+          promo_price_fcfa: loaderSeo.promo_price_fcfa,
+          quantity: loaderSeo.quantity,
+          moq: loaderSeo.moq,
+          sold_out: loaderSeo.sold_out,
+          city: loaderSeo.city,
+        })}
+      />
+      <JsonLd
+        data={breadcrumbLd([
+          { name: "Accueil", path: "/" },
+          { name: loaderSeo.name, path: `/product/${loaderSeo.id}` },
+        ])}
+      />
+    </>
+  ) : null;
   const [product, setProduct] = useState<Product | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [similar, setSimilar] = useState<Similar[]>([]);
@@ -197,6 +231,7 @@ function ProductPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
+        {seoLd}
         <Header />
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 grid lg:grid-cols-2 gap-10">
           <div className="aspect-square rounded-xl shimmer bg-muted" />
@@ -254,6 +289,7 @@ function ProductPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {seoLd}
       <Header />
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-4 sm:py-8">
         <div className="flex items-center justify-between mb-4 sm:mb-6">

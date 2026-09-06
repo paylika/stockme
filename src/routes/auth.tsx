@@ -32,6 +32,7 @@ import {
   SENEGAL_REGION_NAMES,
 } from "@/lib/constants";
 import { toast } from "sonner";
+import { buildSeoHead } from "@/lib/seo";
 import { IconCheck, IconChevronDown } from "@/components/icons";
 import logoUrl from "@/assets/stockme-logo.png";
 
@@ -40,6 +41,14 @@ export const Route = createFileRoute("/auth")({
     redirect: typeof search.redirect === "string" ? search.redirect : undefined,
     mode: search.mode === "login" ? "login" : "signup",
   }),
+  head: () => {
+    const { meta, links } = buildSeoHead({
+      noindex: true,
+      title: "Créer un compte / Connexion — StockMe",
+      path: "/auth",
+    });
+    return { meta, links };
+  },
   component: AuthPage,
 });
 

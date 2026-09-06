@@ -6,6 +6,7 @@ import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ProductCard, type ListingProduct } from "@/components/ProductCard";
+import { buildSeoHead } from "@/lib/seo";
 import { CATEGORIES, WEST_AFRICA_LOCATIONS } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
 import {
@@ -25,16 +26,17 @@ export const Route = createFileRoute("/")({
     category: typeof s.category === "string" ? s.category : undefined,
     q: typeof s.q === "string" ? s.q : undefined,
   }),
-  head: () => ({
-    meta: [
-      { title: "StockMe — Écoulez et trouvez du stock en Afrique de l'Ouest" },
-      {
-        name: "description",
-        content:
-          "La marketplace B2B de l'Afrique de l'Ouest. Écoulez votre stock dormant, trouvez des produits près de chez vous, contact direct WhatsApp.",
-      },
-    ],
-  }),
+  head: () => {
+    const { meta, links } = buildSeoHead({
+      title: "StockMe — Achetez & vendez du stock en gros en Afrique de l'Ouest",
+      description:
+        "Marketplace B2B d'Afrique de l'Ouest : écoulez votre stock dormant et achetez des produits en gros (lots, MOQ) près de chez vous. Contact direct WhatsApp, sans intermédiaire.",
+      path: "/",
+      keywords:
+        "stock en gros, vente en gros, marketplace B2B, stock dormant, liquidation stock, Afrique de l'Ouest, Sénégal, Côte d'Ivoire, Mali, gros acheteur, revendeur, B2B Afrique",
+    });
+    return { meta, links };
+  },
   component: Index,
 });
 

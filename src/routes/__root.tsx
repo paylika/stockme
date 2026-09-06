@@ -11,6 +11,15 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { JsonLd } from "@/components/JsonLd";
+import {
+  buildSeoHead,
+  defaultImage,
+  defaultTitle,
+  defaultDescription,
+  organizationLd,
+  webSiteLd,
+} from "@/lib/seo";
 
 import appCss from "../styles.css?url";
 
@@ -51,29 +60,28 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { name: "theme-color", content: "#0f172a" },
-      { title: "StockMe — Trouvez et écoulez du stock" },
-      { name: "description", content: "La plateforme qui connecte e-commerçants pour trouver et écouler du stock rapidement. Contact direct WhatsApp." },
-      { property: "og:title", content: "StockMe — Trouvez et écoulez du stock" },
-      { property: "og:description", content: "La plateforme qui connecte e-commerçants pour trouver et écouler du stock rapidement. Contact direct WhatsApp." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "StockMe — Trouvez et écoulez du stock" },
-      { name: "twitter:description", content: "La plateforme qui connecte e-commerçants pour trouver et écouler du stock rapidement. Contact direct WhatsApp." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3222f741-6e0f-4629-be4e-f7edebd9e5fb/id-preview-9fa2ac45--9b779be2-ba90-44e1-bd94-3f69841c7713.lovable.app-1778311385306.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3222f741-6e0f-4629-be4e-f7edebd9e5fb/id-preview-9fa2ac45--9b779be2-ba90-44e1-bd94-3f69841c7713.lovable.app-1778311385306.png" },
-    ],
-    links: [
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Instrument+Serif&family=Inter:wght@400;500;600;700&display=swap" },
-      { rel: "stylesheet", href: appCss },
-    ],
-  }),
+  head: () => {
+    const { meta, links } = buildSeoHead({
+      title: defaultTitle,
+      description: defaultDescription,
+      image: defaultImage,
+      path: "/",
+    });
+    return {
+      meta: [
+        { charSet: "utf-8" },
+        { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+        ...meta,
+      ],
+      links: [
+        { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+        { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Instrument+Serif&family=Inter:wght@400;500;600;700&display=swap" },
+        { rel: "stylesheet", href: appCss },
+        ...links,
+      ],
+    };
+  },
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
@@ -112,6 +120,8 @@ function RootComponent() {
           </SidebarInset>
         </SidebarProvider>
       )}
+      <JsonLd data={organizationLd()} />
+      <JsonLd data={webSiteLd()} />
       <Toaster richColors position="top-right" />
     </QueryClientProvider>
   );

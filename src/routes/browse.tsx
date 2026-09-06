@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { CATEGORIES, WEST_AFRICA_LOCATIONS } from "@/lib/constants";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { ProductCard, type ListingProduct } from "@/components/ProductCard";
+import { buildSeoHead } from "@/lib/seo";
 
 type Filters = { city?: string; category?: string; q?: string; min?: number; max?: number };
 
@@ -20,6 +21,17 @@ export const Route = createFileRoute("/browse")({
     min: typeof s.min === "number" ? s.min : undefined,
     max: typeof s.max === "number" ? s.max : undefined,
   }),
+  head: () => {
+    const { meta, links } = buildSeoHead({
+      title: "Rechercher du stock en gros en Afrique de l'Ouest — StockMe",
+      description:
+        "Parcourez des lots de produits en gros disponibles auprès de fournisseurs d'Afrique de l'Ouest : mode, beauté, électronique, alimentation et plus. Contact direct WhatsApp.",
+      path: "/browse",
+      keywords:
+        "rechercher stock, acheter en gros, fournisseur gros, stock disponible, Afrique de l'Ouest, wholesale, grossiste, MOQ",
+    });
+    return { meta, links };
+  },
   component: Browse,
 });
 

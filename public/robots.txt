@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /favorites
+Disallow: /admin
+Disallow: /products
+Disallow: /users
+Disallow: /api/
+Disallow: /.wrangler/
+Disallow: /.output/
+
+Sitemap: https://stockme.app/sitemap.xml

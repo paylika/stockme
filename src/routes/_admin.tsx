@@ -2,6 +2,7 @@ import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router"
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { AdminSidebar } from "@/components/AdminSidebar";
+import { buildSeoHead } from "@/lib/seo";
 import logoUrl from "@/assets/stockme-logo.png";
 
 export const Route = createFileRoute("/_admin")({
@@ -19,6 +20,10 @@ export const Route = createFileRoute("/_admin")({
       .eq("role", "admin")
       .maybeSingle();
     if (error || !adminRole) throw redirect({ to: "/" });
+  },
+  head: () => {
+    const { meta } = buildSeoHead({ noindex: true, title: "Administration — StockMe" });
+    return { meta, links: [] };
   },
   component: AdminLayout,
 });
