@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -93,14 +94,22 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  // En mode admin, on ne montre pas la sidebar StockMe (l'admin a sa propre sidebar).
+  const routeMatches = useRouterState({ select: (r) => r.matches });
+  const isAdminLayout = routeMatches.some((m) => m.route.id === "/_admin" || m.route.id.startsWith("/_admin/"));
+
   return (
     <QueryClientProvider client={queryClient}>
-      <SidebarProvider>
-        <AppSidebar />
-        <SidebarInset className="min-w-0">
-          <Outlet />
-        </SidebarInset>
-      </SidebarProvider>
+      {isAdminLayout ? (
+        <Outlet />
+      ) : (
+        <SidebarProvider>
+          <AppSidebar />
+          <SidebarInset className="min-w-0">
+            <Outlet />
+          </SidebarInset>
+        </SidebarProvider>
+      )}
       <Toaster richColors position="top-right" />
     </QueryClientProvider>
   );

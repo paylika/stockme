@@ -214,6 +214,33 @@ export type Database = {
           stock_value: number
         }[]
       }
+      set_user_role: {
+        Args: {
+          p_user_id: string
+          p_role: string
+        }
+        Returns: undefined
+      }
+      admin_list_users: {
+        Args: Record<string, never>
+        Returns: {
+          id: string
+          email: string | null
+          full_name: string | null
+          city: string | null
+          role: string | null
+          created_at: string
+          is_admin: boolean
+        }[]
+      }
+      get_platform_stats: {
+        Args: Record<string, never>
+        Returns: {
+          views: number
+          contacts: number
+          favorites: number
+        }
+      }
     }
     Enums: {
       app_role: "admin" | "user"
