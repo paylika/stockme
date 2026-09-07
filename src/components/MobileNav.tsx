@@ -12,19 +12,19 @@ export function MobileNav() {
     { to: "/", label: "Accueil", icon: IconHome, public: true },
     { to: "/dropshipping", label: "Dropshipping", icon: IconStock, activeMatch: "/dropshipping" },
     {
-      to: user ? "/favorites" : "/auth",
-      label: "Favoris",
-      icon: IconHeart,
-      search: user ? undefined : { redirect: "/favorites", mode: "signup" },
-      activeMatch: "/favorites",
-    },
-    {
       to: user ? "/dashboard/new" : "/auth",
       label: "Publier",
       icon: IconSell,
       primary: true,
       search: user ? undefined : { redirect: "/dashboard/new", mode: "signup" },
       activeMatch: "/dashboard/new",
+    },
+    {
+      to: user ? "/favorites" : "/auth",
+      label: "Favoris",
+      icon: IconHeart,
+      search: user ? undefined : { redirect: "/favorites", mode: "signup" },
+      activeMatch: "/favorites",
     },
     {
       to: user ? "/profile" : "/auth",
