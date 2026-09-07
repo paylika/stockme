@@ -21,6 +21,7 @@ type P = {
   images: string[];
   published: boolean;
   sold_out: boolean;
+  dropshipping: boolean;
 };
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -38,7 +39,7 @@ function Dashboard() {
     if (!u.user) return;
     const { data } = await supabase
       .from("products")
-      .select("id,name,price_fcfa,quantity,moq,city,category,images,published,sold_out")
+      .select("id,name,price_fcfa,quantity,moq,city,category,images,published,sold_out,dropshipping")
       .eq("owner_id", u.user.id)
       .order("created_at", { ascending: false });
     setItems((data ?? []) as P[]);
@@ -73,6 +74,13 @@ function Dashboard() {
     const { error } = await supabase.from("products").update({ sold_out: val }).eq("id", p.id);
     if (error) return toast.error(error.message);
     toast.success(val ? "Marqué épuisé" : "Disponible à la vente");
+    load();
+  };
+
+  const toggleDropshipping = async (p: P, val: boolean) => {
+    const { error } = await supabase.from("products").update({ dropshipping: val }).eq("id", p.id);
+    if (error) return toast.error(error.message);
+    toast.success(val ? "Produit en dropshipping (livraison sur commande)" : "Produit en vente en gros");
     load();
   };
 
@@ -169,6 +177,11 @@ function Dashboard() {
                         onChange={(v) => toggleSoldOut(p, v)}
                         label="Épuisé"
                         tone="destructive"
+                      />
+                      <StatusToggle
+                        checked={p.dropshipping}
+                        onChange={(v) => toggleDropshipping(p, v)}
+                        label="Dropshipping"
                       />
                       <Link
                         to="/dashboard/edit/$id"

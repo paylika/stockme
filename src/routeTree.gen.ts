@@ -14,6 +14,7 @@ import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BrowseRouteImport } from './routes/browse'
+import { Route as DropshippingRouteImport } from './routes/dropshipping'
 import { Route as LegalRouteImport } from './routes/legal'
 import { Route as AdminAdminRouteImport } from './routes/_admin/admin'
 import { Route as AdminProductsRouteImport } from './routes/_admin/products'
@@ -27,6 +28,7 @@ import { Route as LegalCookiesRouteImport } from './routes/legal.cookies'
 import { Route as LegalMentionsRouteImport } from './routes/legal.mentions'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
 import { Route as AuthenticatedDashboardNewRouteImport } from './routes/_authenticated/dashboard.new'
+import { Route as AuthenticatedProfileEditRouteImport } from './routes/_authenticated/profile.edit'
 import { Route as AuthenticatedDashboardEditIdRouteImport } from './routes/_authenticated/dashboard.edit.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -50,6 +52,11 @@ const AuthRoute = AuthRouteImport.update({
 const BrowseRoute = BrowseRouteImport.update({
   id: '/browse',
   path: '/browse',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DropshippingRoute = DropshippingRouteImport.update({
+  id: '/dropshipping',
+  path: '/dropshipping',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LegalRoute = LegalRouteImport.update({
@@ -118,6 +125,12 @@ const AuthenticatedDashboardNewRoute =
     path: '/new',
     getParentRoute: () => AuthenticatedDashboardRoute,
   } as any)
+const AuthenticatedProfileEditRoute =
+  AuthenticatedProfileEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => AuthenticatedProfileRoute,
+  } as any)
 const AuthenticatedDashboardEditIdRoute =
   AuthenticatedDashboardEditIdRouteImport.update({
     id: '/edit/$id',
@@ -129,38 +142,42 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/browse': typeof BrowseRoute
+  '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
   '/admin': typeof AdminAdminRoute
   '/products': typeof AdminProductsRoute
   '/users': typeof AdminUsersRoute
   '/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/favorites': typeof AuthenticatedFavoritesRoute
-  '/profile': typeof AuthenticatedProfileRoute
+  '/profile': typeof AuthenticatedProfileRouteWithChildren
   '/legal/cgu': typeof LegalCguRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/mentions': typeof LegalMentionsRoute
   '/product/$id': typeof ProductIdRoute
   '/dashboard/new': typeof AuthenticatedDashboardNewRoute
+  '/profile/edit': typeof AuthenticatedProfileEditRoute
   '/dashboard/edit/$id': typeof AuthenticatedDashboardEditIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/browse': typeof BrowseRoute
+  '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
   '/admin': typeof AdminAdminRoute
   '/products': typeof AdminProductsRoute
   '/users': typeof AdminUsersRoute
   '/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/favorites': typeof AuthenticatedFavoritesRoute
-  '/profile': typeof AuthenticatedProfileRoute
+  '/profile': typeof AuthenticatedProfileRouteWithChildren
   '/legal/cgu': typeof LegalCguRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/mentions': typeof LegalMentionsRoute
   '/product/$id': typeof ProductIdRoute
   '/dashboard/new': typeof AuthenticatedDashboardNewRoute
+  '/profile/edit': typeof AuthenticatedProfileEditRoute
   '/dashboard/edit/$id': typeof AuthenticatedDashboardEditIdRoute
 }
 export interface FileRoutesById {
@@ -170,19 +187,21 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth': typeof AuthRoute
   '/browse': typeof BrowseRoute
+  '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
   '/_admin/admin': typeof AdminAdminRoute
   '/_admin/products': typeof AdminProductsRoute
   '/_admin/users': typeof AdminUsersRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/_authenticated/favorites': typeof AuthenticatedFavoritesRoute
-  '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/profile': typeof AuthenticatedProfileRouteWithChildren
   '/legal/cgu': typeof LegalCguRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/mentions': typeof LegalMentionsRoute
   '/product/$id': typeof ProductIdRoute
   '/_authenticated/dashboard/new': typeof AuthenticatedDashboardNewRoute
+  '/_authenticated/profile/edit': typeof AuthenticatedProfileEditRoute
   '/_authenticated/dashboard/edit/$id': typeof AuthenticatedDashboardEditIdRoute
 }
 export interface FileRouteTypes {
@@ -191,6 +210,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/browse'
+    | '/dropshipping'
     | '/legal'
     | '/admin'
     | '/products'
@@ -204,12 +224,14 @@ export interface FileRouteTypes {
     | '/legal/mentions'
     | '/product/$id'
     | '/dashboard/new'
+    | '/profile/edit'
     | '/dashboard/edit/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/browse'
+    | '/dropshipping'
     | '/legal'
     | '/admin'
     | '/products'
@@ -223,6 +245,7 @@ export interface FileRouteTypes {
     | '/legal/mentions'
     | '/product/$id'
     | '/dashboard/new'
+    | '/profile/edit'
     | '/dashboard/edit/$id'
   id:
     | '__root__'
@@ -231,6 +254,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/browse'
+    | '/dropshipping'
     | '/legal'
     | '/_admin/admin'
     | '/_admin/products'
@@ -244,6 +268,7 @@ export interface FileRouteTypes {
     | '/legal/mentions'
     | '/product/$id'
     | '/_authenticated/dashboard/new'
+    | '/_authenticated/profile/edit'
     | '/_authenticated/dashboard/edit/$id'
   fileRoutesById: FileRoutesById
 }
@@ -253,6 +278,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
   BrowseRoute: typeof BrowseRoute
+  DropshippingRoute: typeof DropshippingRoute
   LegalRoute: typeof LegalRouteWithChildren
   ProductIdRoute: typeof ProductIdRoute
 }
@@ -292,6 +318,13 @@ declare module '@tanstack/react-router' {
       path: '/browse'
       fullPath: '/browse'
       preLoaderRoute: typeof BrowseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dropshipping': {
+      id: '/dropshipping'
+      path: '/dropshipping'
+      fullPath: '/dropshipping'
+      preLoaderRoute: typeof DropshippingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/legal': {
@@ -385,6 +418,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardNewRouteImport
       parentRoute: typeof AuthenticatedDashboardRoute
     }
+    '/_authenticated/profile/edit': {
+      id: '/_authenticated/profile/edit'
+      path: '/edit'
+      fullPath: '/profile/edit'
+      preLoaderRoute: typeof AuthenticatedProfileEditRouteImport
+      parentRoute: typeof AuthenticatedProfileRoute
+    }
     '/_authenticated/dashboard/edit/$id': {
       id: '/_authenticated/dashboard/edit/$id'
       path: '/edit/$id'
@@ -425,16 +465,27 @@ const AuthenticatedDashboardRouteWithChildren =
     AuthenticatedDashboardRouteChildren,
   )
 
+interface AuthenticatedProfileRouteChildren {
+  AuthenticatedProfileEditRoute: typeof AuthenticatedProfileEditRoute
+}
+
+const AuthenticatedProfileRouteChildren: AuthenticatedProfileRouteChildren = {
+  AuthenticatedProfileEditRoute: AuthenticatedProfileEditRoute,
+}
+
+const AuthenticatedProfileRouteWithChildren =
+  AuthenticatedProfileRoute._addFileChildren(AuthenticatedProfileRouteChildren)
+
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRouteWithChildren
   AuthenticatedFavoritesRoute: typeof AuthenticatedFavoritesRoute
-  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRouteWithChildren,
   AuthenticatedFavoritesRoute: AuthenticatedFavoritesRoute,
-  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedProfileRoute: AuthenticatedProfileRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -463,6 +514,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
   BrowseRoute: BrowseRoute,
+  DropshippingRoute: DropshippingRoute,
   LegalRoute: LegalRouteWithChildren,
   ProductIdRoute: ProductIdRoute,
 }

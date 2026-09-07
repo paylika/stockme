@@ -11,7 +11,7 @@ import { IntensityGauge, computeIntensity } from "@/components/IntensityGauge";
 import { JsonLd } from "@/components/JsonLd";
 import { buildSeoHead, productLd, breadcrumbLd } from "@/lib/seo";
 import { countryOfCity } from "@/lib/constants";
-import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, Eye, Heart, Lock, MapPin, MessageCircle, Package, Phone, Share2, ShieldCheck, Store } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, Eye, Heart, Lock, MapPin, MessageCircle, Package, Phone, Share2, ShieldCheck, Store, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 type Product = {
@@ -19,7 +19,7 @@ type Product = {
   price_fcfa: number; promo_price_fcfa: number | null; revenue_fcfa: number | null;
   quantity: number; moq: number; city: string; zone: string | null;
   images: string[]; owner_id: string; whatsapp: string | null;
-  published: boolean; sold_out: boolean;
+  published: boolean; sold_out: boolean; dropshipping: boolean;
 };
 type Profile = { full_name: string | null; whatsapp: string | null; phone: string | null; city: string | null; shop_name: string | null };
 type Similar = { id: string; name: string; price_fcfa: number; promo_price_fcfa: number | null; city: string; images: string[] };
@@ -278,7 +278,9 @@ function ProductPage() {
   }
 
   const waNumber = product.whatsapp || profile?.whatsapp || "";
-  const waMsg = `Bonjour, je suis intéressé par votre stock de "${product.name}" sur StockMe.`;
+  const waMsg = product.dropshipping
+    ? `Bonjour, je souhaite commander "${product.name}" (dropshipping) sur StockMe.`
+    : `Bonjour, je suis intéressé par votre stock de "${product.name}" sur StockMe.`;
   const wa = waNumber ? whatsappLink(waNumber, waMsg) : null;
   const img = product.images[activeImg];
   const hasPromo = product.promo_price_fcfa && product.promo_price_fcfa < product.price_fcfa;
@@ -365,7 +367,17 @@ function ProductPage() {
               <MapPin className="h-3.5 w-3.5" /> {product.zone ? `${product.zone}, ${product.city}` : product.city}
             </div>
 
-            <div className="mt-5 rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm">
+            {product.dropshipping && (
+              <div className="mt-5 mb-3 rounded-2xl border border-dashed border-volt/50 bg-volt/10 p-4">
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-volt">
+                  <Zap className="h-4 w-4" /> Produit en dropshipping
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  Vendu et <strong>livré sur commande</strong>, unité par unité. Le vendeur vous livre après votre commande.
+                </p>
+              </div>
+            )}
+            <div className="mt-3 rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm">
               {hasPromo ? (
                 <div className="flex items-baseline gap-3 flex-wrap">
                   <div className="text-3xl sm:text-4xl font-bold tracking-tight">{formatFCFA(product.promo_price_fcfa!)}</div>
@@ -464,7 +476,7 @@ function ProductPage() {
                   {wa ? (
                     <a href={wa} target="_blank" rel="noopener noreferrer" onClick={() => logContact()} className="flex-1">
                       <Button variant="volt" className="w-full h-11">
-                        <MessageCircle className="mr-1 h-4 w-4" /> WhatsApp
+                        <MessageCircle className="mr-1 h-4 w-4" /> {product.dropshipping ? "Commander sur WhatsApp" : "WhatsApp"}
                       </Button>
                     </a>
                   ) : (

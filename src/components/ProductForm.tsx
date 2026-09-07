@@ -22,6 +22,7 @@ export type ProductFormValues = {
   quantity: number;
   moq: number;
   whatsapp: string;
+  dropshipping: boolean;
   existingImages: string[];
   newFiles: File[];
 };
@@ -38,6 +39,7 @@ export type ProductFormInitial = {
   quantity: number;
   moq: number;
   whatsapp: string | null;
+  dropshipping: boolean;
   images: string[];
 };
 
@@ -71,6 +73,7 @@ export function ProductForm({
   const [quantity, setQuantity] = useState<number | "">(initial?.quantity ?? "");
   const [moq, setMoq] = useState<number | "">(initial?.moq ?? 1);
   const [whatsapp, setWhatsapp] = useState(initial?.whatsapp ?? "");
+  const [dropshipping, setDropshipping] = useState(initial?.dropshipping ?? false);
   const [images, setImages] = useState<FormImage[]>(
     (initial?.images ?? []).map((url) => ({ url, preview: url })),
   );
@@ -167,6 +170,7 @@ export function ProductForm({
         quantity: Number(quantity),
         moq: Number(moq),
         whatsapp: normalizedWhatsapp,
+        dropshipping,
         existingImages,
         newFiles,
       });
@@ -357,6 +361,25 @@ export function ProductForm({
         <p className="text-xs text-muted-foreground">
           Visible uniquement par les utilisateurs connectés.
         </p>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-4">
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={dropshipping}
+            onChange={(e) => setDropshipping(e.target.checked)}
+            className="mt-0.5 h-5 w-5 shrink-0 rounded-md border-input accent-volt"
+          />
+          <span className="text-sm">
+            <span className="font-semibold">Produit en dropshipping</span>
+            <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
+              Cochez si ce produit doit être <strong>vendu et livré sur commande</strong> (unité par
+              unité, vous livrez quand il y a une commande). Décoché = <strong>vente en gros</strong> (lots,
+              sur l'accueil).
+            </span>
+          </span>
+        </label>
       </div>
 
       <div className="flex justify-end gap-3 pt-4 border-t border-border">

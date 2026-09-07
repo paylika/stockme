@@ -30,6 +30,7 @@ export function AppSidebar() {
 
   const items = [
     { to: "/", label: "Accueil", icon: IconHome, match: "/" },
+    { to: "/dropshipping", label: "Dropshipping", icon: IconStock, match: "/dropshipping" },
     {
       to: user ? "/favorites" : "/auth",
       label: "Favoris",
@@ -43,13 +44,6 @@ export function AppSidebar() {
       icon: IconSell,
       search: user ? undefined : { redirect: "/dashboard/new", mode: "signup" as const },
       match: "/dashboard/new",
-    },
-    {
-      to: user ? "/dashboard" : "/auth",
-      label: "Mon stock",
-      icon: IconStock,
-      search: user ? undefined : { redirect: "/dashboard", mode: "signup" as const },
-      match: "/dashboard",
     },
     {
       to: user ? "/profile" : "/auth",

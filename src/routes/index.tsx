@@ -62,6 +62,7 @@ function Index() {
         .from("products")
         .select("id,name,category,price_fcfa,promo_price_fcfa,quantity,moq,city,zone,images,sold_out")
         .eq("published", true)
+        .eq("dropshipping", false)
         .order("created_at", { ascending: false })
         .limit(60);
       if (search.city) {

@@ -50,6 +50,7 @@ function EditProduct() {
         quantity: data.quantity,
         moq: data.moq,
         whatsapp: data.whatsapp,
+        dropshipping: data.dropshipping ?? false,
         images: data.images ?? [],
       });
       setLoading(false);
@@ -82,6 +83,7 @@ function EditProduct() {
         moq: values.moq,
         whatsapp: values.whatsapp,
         images,
+        dropshipping: values.dropshipping,
       })
       .eq("id", id);
     if (error) throw new Error(error.message);

@@ -10,6 +10,7 @@ export function MobileNav() {
   // Unauthenticated taps go through /auth with a redirect back.
   const items = [
     { to: "/", label: "Accueil", icon: IconHome, public: true },
+    { to: "/dropshipping", label: "Dropshipping", icon: IconStock, activeMatch: "/dropshipping" },
     {
       to: user ? "/favorites" : "/auth",
       label: "Favoris",
@@ -24,13 +25,6 @@ export function MobileNav() {
       primary: true,
       search: user ? undefined : { redirect: "/dashboard/new", mode: "signup" },
       activeMatch: "/dashboard/new",
-    },
-    {
-      to: user ? "/dashboard" : "/auth",
-      label: "Mon stock",
-      icon: IconStock,
-      search: user ? undefined : { redirect: "/dashboard", mode: "signup" },
-      activeMatch: "/dashboard",
     },
     {
       to: user ? "/profile" : "/auth",

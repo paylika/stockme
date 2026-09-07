@@ -49,6 +49,7 @@ export type Database = {
           city: string
           created_at: string
           description: string | null
+          dropshipping: boolean
           id: string
           images: string[]
           moq: number
@@ -69,6 +70,7 @@ export type Database = {
           city: string
           created_at?: string
           description?: string | null
+          dropshipping?: boolean
           id?: string
           images?: string[]
           moq?: number
@@ -89,6 +91,7 @@ export type Database = {
           city?: string
           created_at?: string
           description?: string | null
+          dropshipping?: boolean
           id?: string
           images?: string[]
           moq?: number

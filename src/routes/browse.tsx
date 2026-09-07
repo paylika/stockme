@@ -47,7 +47,7 @@ function Browse() {
     let cancel = false;
     setItems(null);
     const run = async () => {
-      let query = supabase.from("products").select("*").eq("published", true).order("created_at", { ascending: false }).limit(60);
+      let query = supabase.from("products").select("*").eq("published", true).eq("dropshipping", false).order("created_at", { ascending: false }).limit(60);
       if (search.city) query = query.eq("city", search.city);
       if (search.category) query = query.eq("category", search.category);
       if (search.q) query = query.ilike("name", `%${search.q}%`);

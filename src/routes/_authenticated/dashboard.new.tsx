@@ -39,6 +39,7 @@ function NewProduct() {
       images: urls,
       published: true,
       sold_out: false,
+      dropshipping: values.dropshipping,
     };
 
     let insertError: string | null = null;

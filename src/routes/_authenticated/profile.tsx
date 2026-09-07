@@ -1,17 +1,58 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { WEST_AFRICA_LOCATIONS } from "@/lib/constants";
-import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
+import { useAuth } from "@/hooks/useAuth";
+import { formatFCFA } from "@/lib/format";
+import { COUNTRY_FLAGS, countryOfCity } from "@/lib/constants";
 import { toast } from "sonner";
-import { Camera, LogOut, Mail, MapPin, MessageCircle, Package, Phone, Store, UserRound } from "lucide-react";
+import {
+  CheckCircle2,
+  LogOut,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Package,
+  Pencil,
+  Phone,
+  Trash2,
+  Zap,
+} from "lucide-react";
+
+type Profile = {
+  full_name: string | null;
+  shop_name: string | null;
+  bio: string | null;
+  avatar_url: string | null;
+  city: string | null;
+  whatsapp: string | null;
+  phone: string | null;
+  role: string;
+};
+
+type Product = {
+  id: string;
+  name: string;
+  price_fcfa: number;
+  promo_price_fcfa: number | null;
+  quantity: number;
+  moq: number;
+  category: string;
+  images: string[];
+  published: boolean;
+  sold_out: boolean;
+  dropshipping: boolean;
+};
+
+type Stats = {
+  total_products: number;
+  total_views: number;
+  total_contacts: number;
+  total_favorites: number;
+};
 
 export const Route = createFileRoute("/_authenticated/profile")({
   component: ProfilePage,
@@ -19,101 +60,50 @@ export const Route = createFileRoute("/_authenticated/profile")({
 
 function ProfilePage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [products, setProducts] = useState<Product[] | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [shopName, setShopName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
-  const [city, setCity] = useState("");
-  const [role, setRole] = useState("both");
-  const [bio, setBio] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState("");
-  const [productCount, setProductCount] = useState(0);
 
-  useEffect(() => {
-    (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return;
-      setEmail(u.user.email ?? "");
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", u.user.id)
-        .maybeSingle();
-      if (data) {
-        setName(data.full_name ?? "");
-        setShopName(data.shop_name ?? "");
-        setPhone(data.phone ?? "");
-        setWhatsapp(data.whatsapp ?? "");
-        setCity(data.city ?? "");
-        setRole(data.role ?? "both");
-        setBio(data.bio ?? "");
-        setAvatarUrl(data.avatar_url ?? "");
-      }
-      const { count } = await supabase
-        .from("products")
-        .select("id", { count: "exact", head: true })
-        .eq("owner_id", u.user.id)
-        .eq("published", true);
-      setProductCount(count ?? 0);
-      setLoading(false);
-    })();
-  }, []);
-
-  const onAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.type && !file.type.startsWith("image/")) {
-      return toast.error("Choisissez une image.");
-    }
-    if (file.size > MAX_PHOTO_SIZE) {
-      return toast.error("Image trop lourde (max 15 Mo).");
-    }
-    setAvatarFile(file);
-    const r = new FileReader();
-    r.onload = () => setAvatarPreview(r.result as string);
-    r.readAsDataURL(file);
-  };
-
-  const save = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
+  const load = async () => {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
+    const [{ data: prof }, { data: prods }] = await Promise.all([
+      supabase.from("profiles").select("*").eq("id", u.user.id).maybeSingle(),
+      supabase
+        .from("products")
+        .select("id,name,price_fcfa,promo_price_fcfa,quantity,moq,category,images,published,sold_out,dropshipping")
+        .eq("owner_id", u.user.id)
+        .order("created_at", { ascending: false }),
+    ]);
+    setProfile((prof as Profile | null) ?? null);
+    setProducts((prods as Product[] | null) ?? []);
+    supabase.rpc("get_seller_stats", { p_seller_id: u.user.id }).then(({ data }) =>
+      setStats((data as Stats | null) ?? null),
+    );
+    setLoading(false);
+  };
 
-    let finalAvatar = avatarUrl;
-    if (avatarFile) {
-      try {
-        finalAvatar = await uploadAvatar(avatarFile, u.user.id);
-      } catch (err) {
-        setSaving(false);
-        return toast.error(err instanceof Error ? err.message : "Erreur photo");
-      }
-    }
+  useEffect(() => {
+    load();
+  }, []);
 
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        full_name: name,
-        shop_name: shopName,
-        phone,
-        whatsapp,
-        city,
-        role,
-        bio,
-        avatar_url: finalAvatar || null,
-      })
-      .eq("id", u.user.id);
-    setSaving(false);
+  const toggle = async (p: Product, field: "published" | "sold_out" | "dropshipping", val: boolean) => {
+    const payload =
+      field === "published" ? { published: val } : field === "sold_out" ? { sold_out: val } : { dropshipping: val };
+    const { error } = await supabase.from("products").update(payload).eq("id", p.id);
     if (error) return toast.error(error.message);
-    setAvatarUrl(finalAvatar || "");
-    setAvatarFile(null);
-    setAvatarPreview("");
-    toast.success("Profil mis à jour");
+    toast.success("Produit mis à jour");
+    load();
+  };
+
+  const remove = async (p: Product) => {
+    if (!confirm(`Supprimer « ${p.name} » ?`)) return;
+    const { error } = await supabase.from("products").delete().eq("id", p.id);
+    if (error) return toast.error(error.message);
+    toast.success("Produit supprimé");
+    load();
   };
 
   const logout = async () => {
@@ -122,24 +112,26 @@ function ProfilePage() {
     navigate({ to: "/" });
   };
 
-  const displayAvatar = avatarPreview || avatarUrl;
-  const displayName = shopName || name || email || "Mon profil";
-  const initials = displayName
-    .split(/\s+/)
-    .map((s) => s[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const displayName = profile?.shop_name || profile?.full_name || user?.email || "Mon profil";
+  const initials = (displayName || "U").split(/\s+/).map((s) => s[0]).join("").slice(0, 2).toUpperCase();
+  const city = profile?.city;
+  const online = (products ?? []).filter((p) => p.published).length;
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <div className="mx-auto max-w-2xl px-4 py-10">
-          <div className="h-8 w-48 shimmer bg-muted rounded" />
+        <div className="mx-auto max-w-4xl px-4 py-10">
+          <div className="flex items-center gap-5">
+            <div className="h-24 w-24 rounded-full shimmer bg-muted" />
+            <div className="space-y-3">
+              <div className="h-6 w-48 shimmer bg-muted rounded" />
+              <div className="h-4 w-32 shimmer bg-muted rounded" />
+            </div>
+          </div>
         </div>
         <MobileFooter />
-      <MobileNav />
+        <MobileNav />
       </div>
     );
   }
@@ -148,195 +140,139 @@ function ProfilePage() {
     <div className="min-h-screen bg-background">
       <Header />
 
-      {/* ===== Profile hero card ===== */}
-      <section className="border-b border-border bg-gradient-to-b from-card to-background">
-        <div className="mx-auto max-w-2xl px-4 sm:px-6 pt-8 pb-10">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="grid h-16 w-16 place-items-center rounded-2xl bg-volt text-volt-foreground text-xl font-bold font-display shadow-lg shadow-volt/30 overflow-hidden">
-                {displayAvatar ? (
-                  <img src={displayAvatar} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <span>{initials}</span>
-                )}
-              </div>
-              <label
-                htmlFor="avatar-upload"
-                className="absolute -bottom-1 -right-1 grid h-6 w-6 cursor-pointer place-items-center rounded-full bg-foreground text-background border-2 border-background"
-                aria-label="Changer la photo"
-              >
-                <Camera className="h-3 w-3" />
-              </label>
-              <input
-                id="avatar-upload"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={onAvatarChange}
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-bold tracking-tight font-display truncate">
-                {displayName}
-              </h1>
-              <p className="mt-0.5 text-sm text-muted-foreground inline-flex items-center gap-1.5 truncate">
-                <Mail className="h-3.5 w-3.5 shrink-0" /> {email}
-              </p>
-              {city && (
-                <p className="mt-0.5 text-xs text-muted-foreground inline-flex items-center gap-1">
-                  <MapPin className="h-3 w-3" /> {city}
-                </p>
+      {/* ===== En-tête façon Instagram ===== */}
+      <section className="border-b border-border">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 py-8">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+            <div className="grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-full bg-volt text-2xl font-bold text-volt-foreground">
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span>{initials}</span>
               )}
-              <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[11px] font-medium">
-                <Package className="h-3 w-3" /> {productCount} produit{productCount > 1 ? "s" : ""} en ligne
+            </div>
+
+            <div className="flex-1">
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="font-display text-2xl font-bold tracking-tight truncate">{displayName}</h1>
+                <Link to="/profile/edit">
+                  <Button variant="outline" size="sm">Modifier le profil</Button>
+                </Link>
+              </div>
+
+              <div className="mt-4 grid max-w-md grid-cols-4 gap-4 text-center sm:text-left">
+                <Stat value={online} label="Produits" />
+                <Stat value={stats?.total_views ?? 0} label="Vues" />
+                <Stat value={stats?.total_contacts ?? 0} label="Contacts" />
+                <Stat value={stats?.total_favorites ?? 0} label="Favoris" />
+              </div>
+            </div>
+          </div>
+
+          {/* Bio */}
+          <div className="mt-6 space-y-1.5 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">{profile?.full_name || "Vendeur"}</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-volt/15 px-2 py-0.5 text-[11px] font-semibold text-volt">
+                <CheckCircle2 className="h-3 w-3" /> Vérifié
+              </span>
+            </div>
+            {profile?.bio && <p className="whitespace-pre-line text-muted-foreground leading-relaxed">{profile.bio}</p>}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-muted-foreground">
+              {city && (
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5" /> {COUNTRY_FLAGS[countryOfCity(city)] ?? ""} {city}
+                </span>
+              )}
+              {profile?.whatsapp && (
+                <span className="inline-flex items-center gap-1.5">
+                  <MessageCircle className="h-3.5 w-3.5" /> {profile.whatsapp}
+                </span>
+              )}
+              {profile?.phone && (
+                <span className="inline-flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5" /> {profile.phone}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5" /> {user?.email}
               </span>
             </div>
           </div>
         </div>
       </section>
 
-      <div className="mx-auto max-w-2xl px-4 sm:px-6 py-8 space-y-8">
-        <form onSubmit={save} className="space-y-6">
-          {/* ===== Boutique / profil public ===== */}
-          <div>
-            <h2 className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground inline-flex items-center gap-1.5">
-              <Store className="h-3.5 w-3.5" /> Boutique &amp; profil public
-            </h2>
-            <div className="mt-3 space-y-4 rounded-2xl border border-border bg-card p-5">
-              <div className="space-y-1.5">
-                <Label>Nom de la boutique / marque</Label>
-                <Input
-                  value={shopName}
-                  onChange={(e) => setShopName(e.target.value)}
-                  placeholder="Ex: Pharma Boutique, GlowStore..."
-                />
-                <p className="text-xs text-muted-foreground">
-                  C'est ce nom qui apparaîtra sur vos fiches produits.
-                </p>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Photo de profil / logo</Label>
-                <div className="flex items-center gap-4">
-                  <div className="grid h-14 w-14 place-items-center rounded-xl overflow-hidden border border-border bg-muted">
-                    {displayAvatar ? (
-                      <img src={displayAvatar} alt="" className="h-full w-full object-cover" />
+      {/* ===== Produits (Mon stock déplacé ici) ===== */}
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight">Mes produits ({products?.length ?? 0})</h2>
+          <Link to="/dashboard/new">
+            <Button variant="volt" size="sm"><Package className="mr-1 h-4 w-4" /> Ajouter</Button>
+          </Link>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Publiez, dé-publiez, passez en dropshipping ou modifiez vos produits ici.
+        </p>
+
+        {products === null ? (
+          <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => <div key={i} className="aspect-square rounded-2xl shimmer bg-muted" />)}
+          </div>
+        ) : products.length === 0 ? (
+          <div className="mt-5 grid place-items-center py-16 text-center border border-dashed border-border rounded-3xl bg-muted/30">
+            <Package className="h-10 w-10 text-muted-foreground" />
+            <h3 className="mt-4 text-lg font-semibold">Aucun produit</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Listez votre premier produit pour le vendre en gros ou en dropshipping.</p>
+            <Link to="/dashboard/new" className="mt-4"><Button variant="volt">Ajouter un produit</Button></Link>
+          </div>
+        ) : (
+          <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {products.map((p) => {
+              const hasPromo = p.promo_price_fcfa && p.promo_price_fcfa < p.price_fcfa;
+              return (
+                <div key={p.id} className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+                  <Link to="/product/$id" params={{ id: p.id }} className="relative block aspect-square bg-muted">
+                    {p.images[0] ? (
+                      <img src={p.images[0]} alt={p.name} className="h-full w-full object-cover" />
                     ) : (
-                      <Store className="h-6 w-6 text-muted-foreground" />
+                      <div className="grid h-full place-items-center text-muted-foreground"><Package className="h-10 w-10" /></div>
                     )}
+                    {p.dropshipping && (
+                      <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-background/90 px-1.5 py-0.5 text-[10px] font-semibold text-volt">
+                        <Zap className="h-2.5 w-2.5" /> Dropshipping
+                      </span>
+                    )}
+                  </Link>
+                  <div className="p-3">
+                    <p className="line-clamp-1 font-semibold text-sm">{p.name}</p>
+                    <p className="text-xs text-muted-foreground">{formatFCFA(hasPromo ? p.promo_price_fcfa! : p.price_fcfa)}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-1">
+                      <StatusChip on={p.published} onLabel="En ligne" offLabel="Dépublié" onToggle={(v) => toggle(p, "published", v)} />
+                      <StatusChip on={p.sold_out} onLabel="Épuisé" offLabel="Dispo" onToggle={(v) => toggle(p, "sold_out", v)} tone="destructive" />
+                      <StatusChip on={p.dropshipping} onLabel="DS" offLabel="Gros" onToggle={(v) => toggle(p, "dropshipping", v)} tone="volt" />
+                    </div>
+                    <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
+                      <Link to="/dashboard/edit/$id" params={{ id: p.id }} className="inline-flex items-center gap-1 text-xs font-medium hover:text-primary">
+                        <Pencil className="h-3 w-3" /> Modifier
+                      </Link>
+                      <button onClick={() => remove(p)} className="text-muted-foreground hover:text-destructive" aria-label="Supprimer">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
-                  <label className="cursor-pointer">
-                    <span className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium hover:bg-accent">
-                      <Camera className="h-4 w-4" /> {avatarUrl || avatarFile ? "Changer" : "Ajouter"}
-                    </span>
-                    <input type="file" accept="image/*" className="hidden" onChange={onAvatarChange} />
-                  </label>
-                  {(avatarUrl || avatarFile) && (
-                    <button
-                      type="button"
-                      onClick={() => { setAvatarUrl(""); setAvatarFile(null); setAvatarPreview(""); }}
-                      className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-                    >
-                      Retirer
-                    </button>
-                  )}
                 </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label>À propos (bio)</Label>
-                <Textarea
-                  rows={3}
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="Décrivez votre activité, vos produits, votre zone de livraison..."
-                />
-              </div>
-            </div>
+              );
+            })}
           </div>
+        )}
 
-          {/* ===== Identité ===== */}
-          <div>
-            <h2 className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground inline-flex items-center gap-1.5">
-              <UserRound className="h-3.5 w-3.5" /> Identité
-            </h2>
-            <div className="mt-3 space-y-4 rounded-2xl border border-border bg-card p-5">
-              <div className="space-y-1.5">
-                <Label>Nom complet / entreprise</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} required />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Profil</Label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="form-select"
-                >
-                  <option value="fournisseur">Fournisseur</option>
-                  <option value="revendeur">Revendeur</option>
-                  <option value="both">Les deux</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* ===== Contact ===== */}
-          <div>
-            <h2 className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground inline-flex items-center gap-1.5">
-              <MessageCircle className="h-3.5 w-3.5" /> Contact
-            </h2>
-            <div className="mt-3 space-y-4 rounded-2xl border border-border bg-card p-5">
-              <div className="space-y-1.5">
-                <Label className="inline-flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5" /> Téléphone
-                </Label>
-                <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="inline-flex items-center gap-1.5">
-                  <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
-                </Label>
-                <Input
-                  type="tel"
-                  placeholder="+221..."
-                  value={whatsapp}
-                  onChange={(e) => setWhatsapp(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="inline-flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5" /> Pays / Ville
-                </Label>
-                <select
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  className="form-select"
-                >
-                  <option value="">Choisir...</option>
-                  {Object.entries(WEST_AFRICA_LOCATIONS).map(([country, cities]) => (
-                    <optgroup key={country} label={country}>
-                      {cities.map((c) => (
-                        <option key={`${country}-${c}`} value={c}>{c}</option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <Button type="submit" variant="volt" className="h-12 w-full text-base font-semibold" disabled={saving}>
-            {saving ? "Enregistrement..." : "Enregistrer les modifications"}
-          </Button>
-        </form>
-
-        {/* Logout — set apart, full-width destructive style */}
-        <div className="pt-4 border-t border-dashed border-border">
+        {/* Logout */}
+        <div className="mt-8 border-t border-dashed border-border pt-6">
           <button
-            type="button"
             onClick={logout}
-            className="w-full flex items-center justify-center gap-2 h-12 rounded-xl border border-border bg-card text-sm font-medium text-muted-foreground hover:text-destructive hover:border-destructive/50 transition"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-medium text-muted-foreground hover:border-destructive/50 hover:text-destructive"
           >
-            <LogOut className="h-4 w-4" />
-            Se déconnecter
+            <LogOut className="h-4 w-4" /> Se déconnecter
           </button>
         </div>
       </div>
@@ -344,5 +280,39 @@ function ProfilePage() {
       <MobileFooter />
       <MobileNav />
     </div>
+  );
+}
+
+function Stat({ value, label }: { value: number; label: string }) {
+  return (
+    <div>
+      <div className="text-lg font-bold">{value}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+function StatusChip({
+  on,
+  onLabel,
+  offLabel,
+  onToggle,
+  tone = "default",
+}: {
+  on: boolean;
+  onLabel: string;
+  offLabel: string;
+  onToggle: (next: boolean) => void;
+  tone?: "default" | "destructive" | "volt";
+}) {
+  const color =
+    tone === "destructive" ? "bg-destructive/15 text-destructive" : tone === "volt" ? "bg-volt/15 text-volt" : "bg-secondary text-foreground";
+  return (
+    <button
+      onClick={() => onToggle(!on)}
+      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${on ? color : "bg-muted text-muted-foreground"}`}
+    >
+      {on ? onLabel : offLabel}
+    </button>
   );
 }
