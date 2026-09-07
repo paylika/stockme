@@ -40,7 +40,7 @@ export function AppSidebar() {
     },
     {
       to: user ? "/dashboard/new" : "/auth",
-      label: "Vendre",
+      label: "Publier",
       icon: IconSell,
       search: user ? undefined : { redirect: "/dashboard/new", mode: "signup" as const },
       match: "/dashboard/new",

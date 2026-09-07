@@ -28,7 +28,7 @@ export function Footer() {
             <li><Link to="/" className="text-muted-foreground transition-colors hover:text-foreground">Parcourir le stock</Link></li>
             <li><Link to="/browse" className="text-muted-foreground transition-colors hover:text-foreground">Rechercher</Link></li>
             <li><Link to="/auth" className="text-muted-foreground transition-colors hover:text-foreground">Créer un compte</Link></li>
-            <li><Link to="/dashboard" className="text-muted-foreground transition-colors hover:text-foreground">Vendre du stock</Link></li>
+            <li><Link to="/dashboard" className="text-muted-foreground transition-colors hover:text-foreground">Publier du stock</Link></li>
           </ul>
         </div>
 

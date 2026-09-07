@@ -20,7 +20,7 @@ export function MobileNav() {
     },
     {
       to: user ? "/dashboard/new" : "/auth",
-      label: "Vendre",
+      label: "Publier",
       icon: IconSell,
       primary: true,
       search: user ? undefined : { redirect: "/dashboard/new", mode: "signup" },
