@@ -13,7 +13,7 @@ import {
   Cell,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/stockme-client";
-import { countryOfCity, COUNTRY_FLAGS } from "@/lib/constants";
+import { countryOfCity } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
 import { Eye, MessageCircle, Heart } from "lucide-react";
 import {
@@ -24,7 +24,6 @@ import {
   IconGlobe,
   IconPin,
   IconTrend,
-  IconClock,
   IconAdmin,
 } from "@/components/icons";
 
@@ -72,7 +71,32 @@ type SellerDetail = {
   trend: { day: string; value: number }[];
 };
 
-type PlatformStats = { views: number; contacts: number; favorites: number };
+type Overview = {
+  period: string;
+  totals: {
+    users: number;
+    products: number;
+    published_products: number;
+    active_sellers: number;
+    sellers: number;
+    views: number;
+    contacts: number;
+    favorites: number;
+    stock_value: number;
+    promos: number;
+    avg_products_per_seller: number;
+  };
+  period_stats: {
+    new_users: number;
+    new_products: number;
+    views: number;
+    contacts: number;
+    conversion_rate: number;
+  };
+  trend: { day: string; signups: number; views: number; contacts: number }[];
+  contacts_by_country: { country: string | null; value: number }[];
+  top_categories: { name: string; value: number }[];
+};
 
 export const Route = createFileRoute("/_admin/admin")({
   component: AdminDashboard,
@@ -83,8 +107,9 @@ const PALETTE = ["#1F3D8F", "#F0A836", "#2E63C9", "#E4852B", "#5B8DEF", "#C56A1E
 function AdminDashboard() {
   const [profiles, setProfiles] = useState<Profile[] | null>(null);
   const [products, setProducts] = useState<Product[] | null>(null);
-  const [platform, setPlatform] = useState<PlatformStats>({ views: 0, contacts: 0, favorites: 0 });
   const [mounted, setMounted] = useState(false);
+  const [period, setPeriod] = useState<"week" | "month" | "year">("month");
+  const [overview, setOverview] = useState<Overview | null>(null);
   const [sellerStats, setSellerStats] = useState<Record<string, SellerStat>>({});
   const [selectedSeller, setSelectedSeller] = useState<string>("");
   const [selectedDetail, setSelectedDetail] = useState<SellerDetail | null>(null);
@@ -105,9 +130,13 @@ function AdminDashboard() {
       setProfiles((profs ?? []) as Profile[]);
       setProducts((prods ?? []) as Product[]);
     })();
-    // KPIs plateforme (vues/contacts/favoris)
-    supabase.rpc("get_platform_stats", {}).then(({ data }) => setPlatform((data as PlatformStats | null) ?? { views: 0, contacts: 0, favorites: 0 }));
   }, []);
+
+  useEffect(() => {
+    supabase.rpc("get_admin_overview", { p_period: period }).then(({ data }) =>
+      setOverview((data as Overview | null) ?? null),
+    );
+  }, [period]);
 
   useEffect(() => {
     supabase.rpc("get_all_seller_stats", {}).then(({ data }) => {
@@ -126,9 +155,12 @@ function AdminDashboard() {
     });
   }, [selectedSeller]);
 
-  const loading = profiles === null || products === null;
+  const loading = profiles === null || products === null || overview === null;
   const profs = profiles ?? [];
   const prods = products ?? [];
+  const t = overview?.totals;
+  const ps = overview?.period_stats;
+  const periodLabel = period === "week" ? "7 derniers jours" : period === "month" ? "30 derniers jours" : "12 derniers mois";
 
   const ownerName = useMemo(() => {
     const m = new Map<string, string>();
@@ -136,14 +168,7 @@ function AdminDashboard() {
     return m;
   }, [profs]);
 
-  const stats = useMemo(() => {
-    const now = Date.now();
-    const weekAgo = now - 7 * 864e5;
-    const stockValue = prods.reduce(
-      (s, p) => s + (p.promo_price_fcfa && p.promo_price_fcfa < p.price_fcfa ? p.promo_price_fcfa : p.price_fcfa) * (p.quantity || 0),
-      0,
-    );
-    const activePromos = prods.filter((p) => p.promo_price_fcfa && p.promo_price_fcfa < p.price_fcfa).length;
+  const geo = useMemo(() => {
     const countries = new Set<string>();
     const cities = new Set<string>();
     for (const p of prods) {
@@ -154,34 +179,8 @@ function AdminDashboard() {
       if (u.city) cities.add(u.city);
       countries.add(countryOfCity(u.city));
     }
-    const newUsers = profs.filter((u) => new Date(u.created_at).getTime() > weekAgo).length;
-    const newProducts = prods.filter((p) => new Date(p.created_at).getTime() > weekAgo).length;
-    return {
-      users: profs.length,
-      products: prods.length,
-      stockValue,
-      activePromos,
-      countries: countries.size,
-      cities: cities.size,
-      newUsers,
-      newProducts,
-    };
+    return { countries: countries.size, cities: cities.size };
   }, [profs, prods]);
-
-  const byCategory = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const p of prods) m.set(p.category, (m.get(p.category) ?? 0) + 1);
-    return [...m.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-  }, [prods]);
-
-  const byCountry = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const p of prods) {
-      const c = countryOfCity(p.city);
-      m.set(c, (m.get(c) ?? 0) + 1);
-    }
-    return [...m.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-  }, [prods]);
 
   const topCities = useMemo(() => {
     const m = new Map<string, number>();
@@ -192,59 +191,80 @@ function AdminDashboard() {
       .slice(0, 8);
   }, [prods]);
 
-  const signups = useMemo(() => {
-    const weeks: { name: string; value: number }[] = [];
-    const now = new Date();
-    for (let i = 7; i >= 0; i--) {
-      const end = new Date(now.getTime() - i * 7 * 864e5);
-      const start = end.getTime() - 7 * 864e5;
-      const count = profs.filter((u) => {
-        const t = new Date(u.created_at).getTime();
-        return t > start && t <= end.getTime();
-      }).length;
-      weeks.push({ name: `S-${i}`, value: count });
-    }
-    return weeks;
-  }, [profs]);
-
   return (
     <div>
-      {/* En-tête */}
+      {/* En-tête + période */}
       <div className="flex items-center gap-2">
         <IconAdmin className="h-5 w-5 text-volt" />
         <p className="text-[11px] font-semibold tracking-[0.2em] uppercase text-muted-foreground">Administration</p>
       </div>
       <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
         <h1 className="font-display text-2xl sm:text-4xl font-bold tracking-tight">Pilotage StockMe</h1>
-        <span className="text-xs text-muted-foreground">
-          Mise à jour {new Date().toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" })}
-        </span>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs text-muted-foreground">
+            Mise à jour {new Date().toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" })}
+          </span>
+          <PeriodSwitcher value={period} onChange={setPeriod} />
+        </div>
       </div>
 
       {/* ===== KPIs ===== */}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <Kpi icon={IconUsers} label="Utilisateurs" value={loading ? "…" : stats.users} accent="primary" hint={loading ? "" : `+${stats.newUsers} cette semaine`} />
-        <Kpi icon={IconStock} label="Produits" value={loading ? "…" : stats.products} accent="primary" hint={loading ? "" : `+${stats.newProducts} cette semaine`} />
-        <Kpi icon={IconCoins} label="Valeur du stock" value={loading ? "…" : formatFCFA(stats.stockValue)} accent="volt" small />
-        <Kpi icon={IconFlame} label="Promos actives" value={loading ? "…" : stats.activePromos} accent="volt" />
-        <Kpi icon={Eye} label="Vues produits" value={platform.views} accent="primary" />
-        <Kpi icon={MessageCircle} label="Contacts" value={platform.contacts} accent="volt" />
-        <Kpi icon={Heart} label="Favoris" value={platform.favorites} accent="primary" />
-        <Kpi icon={IconGlobe} label="Pays / Villes" value={loading ? "…" : `${stats.countries} / ${stats.cities}`} accent="volt" small />
+        <Kpi icon={IconUsers} label="Utilisateurs" value={loading ? "…" : t?.users} accent="primary" hint={loading ? "" : `+${ps?.new_users ?? 0} · ${periodLabel}`} />
+        <Kpi icon={IconStock} label="Produits en ligne" value={loading ? "…" : t?.published_products} accent="primary" hint={loading ? "" : `+${ps?.new_products ?? 0} produits · ${periodLabel}`} />
+        <Kpi icon={IconCoins} label="Valeur du stock" value={loading ? "…" : formatFCFA(t?.stock_value ?? 0)} accent="volt" small />
+        <Kpi icon={IconUsers} label="Vendeurs actifs" value={loading ? "…" : t?.active_sellers} accent="primary" hint={loading ? "" : `sur ${t?.sellers ?? 0} vendeurs`} />
+        <Kpi icon={Eye} label="Vues (période)" value={loading ? "…" : ps?.views} accent="primary" />
+        <Kpi icon={MessageCircle} label="Contacts (période)" value={loading ? "…" : ps?.contacts} accent="volt" />
+        <Kpi icon={Heart} label="Favoris" value={loading ? "…" : t?.favorites} accent="primary" />
+        <Kpi icon={IconTrend} label="Taux de contact" value={loading ? "…" : `${ps?.conversion_rate ?? 0}%`} accent="volt" />
+        <Kpi icon={IconGlobe} label="Pays / Villes" value={loading ? "…" : `${geo.countries} / ${geo.cities}`} accent="primary" small />
+        <Kpi icon={IconFlame} label="Promos actives" value={loading ? "…" : t?.promos} accent="volt" />
+        <Kpi icon={IconStock} label="Moy. produits/vendeur" value={loading ? "…" : t?.avg_products_per_seller} accent="primary" small />
       </div>
 
       {/* ===== Graphiques ===== */}
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <ChartCard title="Produits par catégorie" icon={IconStock}>
-          {mounted && byCategory.length > 0 && (
+        <ChartCard title={`Inscriptions & activité · ${periodLabel}`} icon={IconTrend}>
+          {mounted && overview && overview.trend.length > 0 && (
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={byCategory} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+              <AreaChart data={overview.trend} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="gSignup" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#7C3AED" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#7C3AED" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="gViews" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#1F3D8F" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#1F3D8F" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="gContacts" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#F0A836" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#F0A836" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="day" tick={{ fontSize: 10 }} stroke="var(--muted-foreground)" />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
+                <Tooltip content={<TipBox />} />
+                <Area type="monotone" dataKey="signups" stroke="#7C3AED" strokeWidth={2} fill="url(#gSignup)" />
+                <Area type="monotone" dataKey="views" stroke="#1F3D8F" strokeWidth={2} fill="url(#gViews)" />
+                <Area type="monotone" dataKey="contacts" stroke="#F0A836" strokeWidth={2} fill="url(#gContacts)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+
+        <ChartCard title="Produits par catégorie" icon={IconStock}>
+          {mounted && overview && overview.top_categories.length > 0 && (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={overview.top_categories} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-25} textAnchor="end" height={60} stroke="var(--muted-foreground)" />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
                 <Tooltip content={<TipBox />} cursor={{ fill: "color-mix(in oklab, var(--primary) 8%, transparent)" }} />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                  {byCategory.map((_, i) => (
+                  {overview.top_categories.map((_, i) => (
                     <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
                   ))}
                 </Bar>
@@ -253,15 +273,15 @@ function AdminDashboard() {
           )}
         </ChartCard>
 
-        <ChartCard title="Répartition internationale" icon={IconGlobe}>
-          {mounted && byCountry.length > 0 && (
+        <ChartCard title="Contacts par pays" icon={IconGlobe}>
+          {mounted && overview && overview.contacts_by_country.length > 0 && (
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart layout="vertical" data={byCountry} margin={{ top: 4, right: 16, left: 8, bottom: 0 }}>
+              <BarChart layout="vertical" data={overview.contacts_by_country} margin={{ top: 4, right: 16, left: 8, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                 <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={90} stroke="var(--muted-foreground)" />
-                <Tooltip content={<TipBox />} cursor={{ fill: "color-mix(in oklab, var(--primary) 8%, transparent)" }} />
-                <Bar dataKey="value" radius={[0, 6, 6, 0]} fill="#1F3D8F" />
+                <YAxis type="category" dataKey="country" tick={{ fontSize: 11 }} width={100} stroke="var(--muted-foreground)" />
+                <Tooltip content={<TipBox />} cursor={{ fill: "color-mix(in oklab, var(--volt) 12%, transparent)" }} />
+                <Bar dataKey="value" radius={[0, 6, 6, 0]} fill="#F0A836" isAnimationActive />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -277,26 +297,6 @@ function AdminDashboard() {
                 <Tooltip content={<TipBox />} cursor={{ fill: "color-mix(in oklab, var(--volt) 12%, transparent)" }} />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]} fill="#F0A836" />
               </BarChart>
-            </ResponsiveContainer>
-          )}
-        </ChartCard>
-
-        <ChartCard title="Inscriptions (8 semaines)" icon={IconTrend}>
-          {mounted && (
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={signups} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gradSignup" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#1F3D8F" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#1F3D8F" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
-                <Tooltip content={<TipBox />} />
-                <Area type="monotone" dataKey="value" stroke="#1F3D8F" strokeWidth={2} fill="url(#gradSignup)" />
-              </AreaChart>
             </ResponsiveContainer>
           )}
         </ChartCard>
@@ -479,6 +479,35 @@ function MiniStat({ label, value }: { label: string; value: string }) {
     <div className="rounded-lg border border-border bg-background/50 p-3">
       <div className="text-[11px] text-muted-foreground">{label}</div>
       <div className="mt-0.5 text-lg font-bold tracking-tight">{value}</div>
+    </div>
+  );
+}
+
+function PeriodSwitcher({
+  value,
+  onChange,
+}: {
+  value: "week" | "month" | "year";
+  onChange: (v: "week" | "month" | "year") => void;
+}) {
+  const opts = [
+    { id: "week", label: "Semaine" },
+    { id: "month", label: "Mois" },
+    { id: "year", label: "Année" },
+  ] as const;
+  return (
+    <div className="inline-flex items-center rounded-xl border border-border bg-card p-1">
+      {opts.map((o) => (
+        <button
+          key={o.id}
+          onClick={() => onChange(o.id)}
+          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+            value === o.id ? "bg-volt text-volt-foreground" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
     </div>
   );
 }

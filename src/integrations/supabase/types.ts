@@ -244,6 +244,37 @@ export type Database = {
           favorites: number
         }
       }
+      get_admin_overview: {
+        Args: {
+          p_period?: string
+        }
+        Returns: {
+          period: string
+          totals: {
+            users: number
+            products: number
+            published_products: number
+            active_sellers: number
+            sellers: number
+            views: number
+            contacts: number
+            favorites: number
+            stock_value: number
+            promos: number
+            avg_products_per_seller: number
+          }
+          period_stats: {
+            new_users: number
+            new_products: number
+            views: number
+            contacts: number
+            conversion_rate: number
+          }
+          trend: { day: string; signups: number; views: number; contacts: number }[]
+          contacts_by_country: { country: string | null; value: number }[]
+          top_categories: { name: string; value: number }[]
+        }
+      }
     }
     Enums: {
       app_role: "admin" | "user"
