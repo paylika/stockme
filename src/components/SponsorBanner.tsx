@@ -1,12 +1,13 @@
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 type Props = {
   badge?: string;
   title: string;
-  description: string;
+  description?: string;
   ctaLabel: string;
   href: string;
-  icon?: React.ComponentType<{ className?: string }>;
+  logoSrc: string;
+  logoAlt?: string;
 };
 
 export function SponsorBanner({
@@ -15,41 +16,37 @@ export function SponsorBanner({
   description,
   ctaLabel,
   href,
-  icon: Icon = ShieldCheck,
+  logoSrc,
+  logoAlt = "",
 }: Props) {
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="group relative block overflow-hidden rounded-3xl border border-foreground/15 bg-foreground text-background p-5 sm:p-7 transition hover:border-foreground/40"
+      className="group flex items-center gap-3 rounded-2xl border border-border bg-card px-3 py-2.5 transition hover:border-foreground/30 hover:shadow-sm sm:gap-4 sm:px-4 sm:py-3"
     >
-      {/* Halo de marque */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-50"
-        style={{
-          background:
-            "radial-gradient(560px 220px at 92% 5%, color-mix(in oklab, var(--volt) 55%, transparent), transparent 60%), radial-gradient(520px 200px at 0% 100%, color-mix(in oklab, var(--primary) 55%, transparent), transparent 62%)",
-        }}
+      <img
+        src={logoSrc}
+        alt={logoAlt}
+        loading="lazy"
+        className="h-11 w-11 shrink-0 rounded-xl object-contain"
       />
-      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
-        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-volt text-volt-foreground shadow-lg shadow-volt/30">
-          <Icon className="h-6 w-6" />
-        </span>
 
-        <div className="min-w-0 flex-1">
-          <span className="inline-flex items-center rounded-full border border-background/25 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-background/70">
-            {badge}
-          </span>
-          <h3 className="mt-1.5 font-display text-lg font-bold tracking-tight sm:text-xl">{title}</h3>
-          <p className="mt-1 text-sm leading-relaxed text-background/70">{description}</p>
-        </div>
-
-        <span className="inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-full bg-volt px-5 text-sm font-bold text-volt-foreground transition group-hover:brightness-110">
-          {ctaLabel}
-          <ArrowRight className="h-4 w-4" />
+      <div className="min-w-0 flex-1">
+        <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          {badge}
         </span>
+        <p className="mt-1 line-clamp-1 text-sm font-semibold">{title}</p>
+        {description && (
+          <p className="mt-0.5 hidden line-clamp-1 text-xs text-muted-foreground sm:block">{description}</p>
+        )}
       </div>
+
+      <span className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full bg-volt px-3.5 text-xs font-bold text-volt-foreground transition group-hover:brightness-110">
+        {ctaLabel}
+        <ArrowRight className="h-3.5 w-3.5" />
+      </span>
     </a>
   );
 }
