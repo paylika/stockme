@@ -33,6 +33,7 @@ import {
 } from "@/lib/constants";
 import { toast } from "sonner";
 import { buildSeoHead } from "@/lib/seo";
+import { Eye, EyeOff } from "lucide-react";
 import { IconCheck, IconChevronDown } from "@/components/icons";
 import logoUrl from "@/assets/stockme-logo.png";
 
@@ -61,10 +62,12 @@ function AuthPage() {
   // login
   const [lEmail, setLEmail] = useState("");
   const [lPwd, setLPwd] = useState("");
+  const [showLoginPwd, setShowLoginPwd] = useState(false);
 
   // signup
   const [sEmail, setSEmail] = useState("");
   const [sPwd, setSPwd] = useState("");
+  const [showSignupPwd, setShowSignupPwd] = useState(false);
   const [sName, setSName] = useState("");
   const [sCountry, setSCountry] = useState("Sénégal");
   const [countryOpen, setCountryOpen] = useState(false);
@@ -340,15 +343,25 @@ function AuthPage() {
 
                   <div className="space-y-1.5">
                     <Label htmlFor="sp">Mot de passe</Label>
-                    <Input
-                      id="sp"
-                      type="password"
-                      className="h-11"
-                      required
-                      minLength={6}
-                      value={sPwd}
-                      onChange={(e) => setSPwd(e.target.value)}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="sp"
+                        type={showSignupPwd ? "text" : "password"}
+                        className="h-11 pr-11"
+                        required
+                        minLength={6}
+                        value={sPwd}
+                        onChange={(e) => setSPwd(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSignupPwd((v) => !v)}
+                        aria-label={showSignupPwd ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                        className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        {showSignupPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                     <p className="text-xs text-muted-foreground">6 caractères minimum.</p>
                   </div>
 
@@ -383,14 +396,24 @@ function AuthPage() {
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="lp">Mot de passe</Label>
-                    <Input
-                      id="lp"
-                      type="password"
-                      className="h-11"
-                      required
-                      value={lPwd}
-                      onChange={(e) => setLPwd(e.target.value)}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="lp"
+                        type={showLoginPwd ? "text" : "password"}
+                        className="h-11 pr-11"
+                        required
+                        value={lPwd}
+                        onChange={(e) => setLPwd(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowLoginPwd((v) => !v)}
+                        aria-label={showLoginPwd ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                        className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        {showLoginPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                   <Button type="submit" variant="volt" className="h-12 w-full text-base font-semibold" disabled={loading}>
                     {loading ? "..." : "Se connecter"}
