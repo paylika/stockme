@@ -15,7 +15,7 @@ import {
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { countryOfCity } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
-import { Eye, MessageCircle, Heart } from "lucide-react";
+import { Eye, Heart, MessageCircle, UserPlus, Users } from "lucide-react";
 import {
   IconUsers,
   IconStock,
@@ -81,6 +81,7 @@ type Overview = {
     sellers: number;
     views: number;
     contacts: number;
+    visits: number;
     favorites: number;
     stock_value: number;
     promos: number;
@@ -91,12 +92,55 @@ type Overview = {
     new_products: number;
     views: number;
     contacts: number;
+    visits: number;
+    signup_rate: number;
     conversion_rate: number;
   };
-  trend: { day: string; signups: number; views: number; contacts: number }[];
+  trend: { day: string; signups: number; views: number; contacts: number; visits: number }[];
   contacts_by_country: { country: string | null; value: number }[];
   top_categories: { name: string; value: number }[];
 };
+
+type Preset = "today" | "yesterday" | "week" | "month" | "year" | "custom";
+
+const toDateInput = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+function computeRange(preset: Preset, customStart: string, customEnd: string) {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  if (preset === "today") {
+    return { startISO: startOfToday.toISOString(), endISO: now.toISOString(), unit: "hour", label: "Aujourd'hui" };
+  }
+  if (preset === "yesterday") {
+    const yStart = new Date(startOfToday.getTime() - 864e5);
+    return { startISO: yStart.toISOString(), endISO: startOfToday.toISOString(), unit: "hour", label: "Hier" };
+  }
+  if (preset === "custom") {
+    const s = new Date(`${customStart}T00:00:00`);
+    const e = new Date(`${customEnd}T23:59:59`);
+    const days = Math.round((e.getTime() - s.getTime()) / 864e5);
+    return {
+      startISO: s.toISOString(),
+      endISO: e.toISOString(),
+      unit: days > 62 ? "month" : "day",
+      label: `Du ${customStart} au ${customEnd}`,
+    };
+  }
+  const span = preset === "week" ? 7 : preset === "month" ? 30 : 365;
+  const start = new Date(now.getTime() - span * 864e5);
+  return {
+    startISO: start.toISOString(),
+    endISO: now.toISOString(),
+    unit: preset === "year" ? "month" : "day",
+    label: preset === "week" ? "7 derniers jours" : preset === "month" ? "30 derniers jours" : "12 derniers mois",
+  };
+}
 
 export const Route = createFileRoute("/_admin/admin")({
   component: AdminDashboard,
@@ -108,7 +152,9 @@ function AdminDashboard() {
   const [profiles, setProfiles] = useState<Profile[] | null>(null);
   const [products, setProducts] = useState<Product[] | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [period, setPeriod] = useState<"week" | "month" | "year">("month");
+  const [preset, setPreset] = useState<Preset>("month");
+  const [customStart, setCustomStart] = useState(() => toDateInput(new Date(Date.now() - 6 * 864e5)));
+  const [customEnd, setCustomEnd] = useState(() => toDateInput(new Date()));
   const [overview, setOverview] = useState<Overview | null>(null);
   const [sellerStats, setSellerStats] = useState<Record<string, SellerStat>>({});
   const [selectedSeller, setSelectedSeller] = useState<string>("");
@@ -132,11 +178,13 @@ function AdminDashboard() {
     })();
   }, []);
 
+  const range = useMemo(() => computeRange(preset, customStart, customEnd), [preset, customStart, customEnd]);
+
   useEffect(() => {
-    supabase.rpc("get_admin_overview", { p_period: period }).then(({ data }) =>
-      setOverview((data as Overview | null) ?? null),
-    );
-  }, [period]);
+    supabase
+      .rpc("get_admin_overview", { p_start: range.startISO, p_end: range.endISO, p_unit: range.unit })
+      .then(({ data }) => setOverview((data as Overview | null) ?? null));
+  }, [range.startISO, range.endISO, range.unit]);
 
   useEffect(() => {
     supabase.rpc("get_all_seller_stats", {}).then(({ data }) => {
@@ -160,7 +208,7 @@ function AdminDashboard() {
   const prods = products ?? [];
   const t = overview?.totals;
   const ps = overview?.period_stats;
-  const periodLabel = period === "week" ? "7 derniers jours" : period === "month" ? "30 derniers jours" : "12 derniers mois";
+  const periodLabel = range.label;
 
   const ownerName = useMemo(() => {
     const m = new Map<string, string>();
@@ -204,28 +252,37 @@ function AdminDashboard() {
           <span className="text-xs text-muted-foreground">
             Mise à jour {new Date().toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" })}
           </span>
-          <PeriodSwitcher value={period} onChange={setPeriod} />
+          <PeriodSwitcher
+            preset={preset}
+            onChange={setPreset}
+            customStart={customStart}
+            customEnd={customEnd}
+            onCustomStart={setCustomStart}
+            onCustomEnd={setCustomEnd}
+          />
         </div>
       </div>
 
       {/* ===== KPIs ===== */}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <Kpi icon={IconUsers} label="Utilisateurs" value={loading ? "…" : t?.users} accent="primary" hint={loading ? "" : `+${ps?.new_users ?? 0} · ${periodLabel}`} />
-        <Kpi icon={IconStock} label="Produits en ligne" value={loading ? "…" : t?.published_products} accent="primary" hint={loading ? "" : `+${ps?.new_products ?? 0} produits · ${periodLabel}`} />
+        <Kpi icon={Users} label="Visiteurs" value={loading ? "…" : ps?.visits} accent="primary" hint={periodLabel} />
+        <Kpi icon={MessageCircle} label="Contacts" value={loading ? "…" : ps?.contacts} accent="volt" hint={periodLabel} />
+        <Kpi icon={UserPlus} label="Comptes créés" value={loading ? "…" : ps?.new_users} accent="primary" hint={periodLabel} />
+        <Kpi icon={IconTrend} label="Taux d'inscription" value={loading ? "…" : `${ps?.signup_rate ?? 0}%`} accent="volt" hint="inscrits / visiteurs" />
+        <Kpi icon={Eye} label="Vues produits" value={loading ? "…" : ps?.views} accent="primary" hint={periodLabel} />
+        <Kpi icon={IconTrend} label="Taux de contact" value={loading ? "…" : `${ps?.conversion_rate ?? 0}%`} accent="volt" hint="contacts / vues" />
+        <Kpi icon={IconStock} label="Produits publiés" value={loading ? "…" : ps?.new_products} accent="primary" hint={periodLabel} />
+        <Kpi icon={IconUsers} label="Utilisateurs (total)" value={loading ? "…" : t?.users} accent="primary" />
+        <Kpi icon={IconUsers} label="Vendeurs actifs" value={loading ? "…" : t?.active_sellers} accent="volt" hint={loading ? "" : `sur ${t?.sellers ?? 0} vendeurs`} />
         <Kpi icon={IconCoins} label="Valeur du stock" value={loading ? "…" : formatFCFA(t?.stock_value ?? 0)} accent="volt" small />
-        <Kpi icon={IconUsers} label="Vendeurs actifs" value={loading ? "…" : t?.active_sellers} accent="primary" hint={loading ? "" : `sur ${t?.sellers ?? 0} vendeurs`} />
-        <Kpi icon={Eye} label="Vues (période)" value={loading ? "…" : ps?.views} accent="primary" />
-        <Kpi icon={MessageCircle} label="Contacts (période)" value={loading ? "…" : ps?.contacts} accent="volt" />
         <Kpi icon={Heart} label="Favoris" value={loading ? "…" : t?.favorites} accent="primary" />
-        <Kpi icon={IconTrend} label="Taux de contact" value={loading ? "…" : `${ps?.conversion_rate ?? 0}%`} accent="volt" />
-        <Kpi icon={IconGlobe} label="Pays / Villes" value={loading ? "…" : `${geo.countries} / ${geo.cities}`} accent="primary" small />
         <Kpi icon={IconFlame} label="Promos actives" value={loading ? "…" : t?.promos} accent="volt" />
-        <Kpi icon={IconStock} label="Moy. produits/vendeur" value={loading ? "…" : t?.avg_products_per_seller} accent="primary" small />
+        <Kpi icon={IconGlobe} label="Pays / Villes" value={loading ? "…" : `${geo.countries} / ${geo.cities}`} accent="primary" small />
       </div>
 
       {/* ===== Graphiques ===== */}
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <ChartCard title={`Inscriptions & activité · ${periodLabel}`} icon={IconTrend}>
+        <ChartCard title={`Trafic & activité · ${periodLabel}`} icon={IconTrend}>
           {mounted && overview && overview.trend.length > 0 && (
             <ResponsiveContainer width="100%" height={260}>
               <AreaChart data={overview.trend} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
@@ -242,11 +299,16 @@ function AdminDashboard() {
                     <stop offset="0%" stopColor="#F0A836" stopOpacity={0.3} />
                     <stop offset="100%" stopColor="#F0A836" stopOpacity={0} />
                   </linearGradient>
+                  <linearGradient id="gVisits" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10B981" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#10B981" stopOpacity={0} />
+                  </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="day" tick={{ fontSize: 10 }} stroke="var(--muted-foreground)" />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
                 <Tooltip content={<TipBox />} />
+                <Area type="monotone" dataKey="visits" stroke="#10B981" strokeWidth={2} fill="url(#gVisits)" />
                 <Area type="monotone" dataKey="signups" stroke="#7C3AED" strokeWidth={2} fill="url(#gSignup)" />
                 <Area type="monotone" dataKey="views" stroke="#1F3D8F" strokeWidth={2} fill="url(#gViews)" />
                 <Area type="monotone" dataKey="contacts" stroke="#F0A836" strokeWidth={2} fill="url(#gContacts)" />
@@ -484,30 +546,63 @@ function MiniStat({ label, value }: { label: string; value: string }) {
 }
 
 function PeriodSwitcher({
-  value,
+  preset,
   onChange,
+  customStart,
+  customEnd,
+  onCustomStart,
+  onCustomEnd,
 }: {
-  value: "week" | "month" | "year";
-  onChange: (v: "week" | "month" | "year") => void;
+  preset: Preset;
+  onChange: (v: Preset) => void;
+  customStart: string;
+  customEnd: string;
+  onCustomStart: (v: string) => void;
+  onCustomEnd: (v: string) => void;
 }) {
-  const opts = [
-    { id: "week", label: "Semaine" },
-    { id: "month", label: "Mois" },
-    { id: "year", label: "Année" },
-  ] as const;
+  const opts: { id: Preset; label: string }[] = [
+    { id: "today", label: "Aujourd'hui" },
+    { id: "yesterday", label: "Hier" },
+    { id: "week", label: "7 j" },
+    { id: "month", label: "30 j" },
+    { id: "year", label: "12 mois" },
+    { id: "custom", label: "Personnalisé" },
+  ];
   return (
-    <div className="inline-flex items-center rounded-xl border border-border bg-card p-1">
-      {opts.map((o) => (
-        <button
-          key={o.id}
-          onClick={() => onChange(o.id)}
-          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-            value === o.id ? "bg-volt text-volt-foreground" : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          {o.label}
-        </button>
-      ))}
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="inline-flex flex-wrap items-center rounded-xl border border-border bg-card p-1">
+        {opts.map((o) => (
+          <button
+            key={o.id}
+            onClick={() => onChange(o.id)}
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+              preset === o.id ? "bg-volt text-volt-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+      {preset === "custom" && (
+        <div className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-2 py-1.5">
+          <input
+            type="date"
+            value={customStart}
+            max={customEnd}
+            onChange={(e) => onCustomStart(e.target.value)}
+            className="h-8 rounded-lg border border-input bg-background px-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <span className="text-xs text-muted-foreground">→</span>
+          <input
+            type="date"
+            value={customEnd}
+            min={customStart}
+            max={toDateInput(new Date())}
+            onChange={(e) => onCustomEnd(e.target.value)}
+            className="h-8 rounded-lg border border-input bg-background px-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
+      )}
     </div>
   );
 }

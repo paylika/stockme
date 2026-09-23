@@ -244,12 +244,20 @@ export type Database = {
           favorites: number
         }
       }
+      log_site_visit: {
+        Args: {
+          p_path?: string | null
+          p_country?: string | null
+        }
+        Returns: undefined
+      }
       get_admin_overview: {
         Args: {
-          p_period?: string
+          p_start: string
+          p_end: string
+          p_unit?: string
         }
         Returns: {
-          period: string
           totals: {
             users: number
             products: number
@@ -258,6 +266,7 @@ export type Database = {
             sellers: number
             views: number
             contacts: number
+            visits: number
             favorites: number
             stock_value: number
             promos: number
@@ -268,9 +277,11 @@ export type Database = {
             new_products: number
             views: number
             contacts: number
+            visits: number
+            signup_rate: number
             conversion_rate: number
           }
-          trend: { day: string; signups: number; views: number; contacts: number }[]
+          trend: { day: string; signups: number; views: number; contacts: number; visits: number }[]
           contacts_by_country: { country: string | null; value: number }[]
           top_categories: { name: string; value: number }[]
         }

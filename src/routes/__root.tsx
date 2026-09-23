@@ -12,6 +12,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { JsonLd } from "@/components/JsonLd";
+import { supabase } from "@/integrations/supabase/stockme-client";
+import { useEffect } from "react";
 import {
   buildSeoHead,
   defaultImage,
@@ -104,9 +106,26 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   // En mode admin, on ne montre pas la sidebar StockMe (l'admin a sa propre sidebar).
   const routeMatches = useRouterState({ select: (r) => r.matches });
+  const pathname = useRouterState({ select: (r) => r.location.pathname });
   const isAdminLayout = routeMatches.some(
     (m) => m.route?.id === "/_admin" || m.route?.id?.startsWith("/_admin/"),
   );
+
+  // Comptage des visites (pages publiques uniquement, 1× par page et par session)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const isPublic =
+      pathname === "/" ||
+      pathname.startsWith("/browse") ||
+      pathname.startsWith("/dropshipping") ||
+      pathname.startsWith("/product") ||
+      pathname.startsWith("/legal");
+    if (!isPublic) return;
+    const key = `stockme:visited:${pathname}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    supabase.rpc("log_site_visit", { p_path: pathname }).then(() => {});
+  }, [pathname]);
 
   return (
     <QueryClientProvider client={queryClient}>
