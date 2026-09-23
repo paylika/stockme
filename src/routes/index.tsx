@@ -6,6 +6,7 @@ import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ProductCard, type ListingProduct } from "@/components/ProductCard";
+import { SponsorBanner } from "@/components/SponsorBanner";
 import { buildSeoHead } from "@/lib/seo";
 import { CATEGORIES, WEST_AFRICA_LOCATIONS } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
@@ -168,6 +169,17 @@ function Index() {
           </div>
         </div>
       )}
+
+      {/* ============ ENCART SPONSORISÉ ============ */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 pt-6 sm:pt-8">
+        <SponsorBanner
+          badge="Sponsorisé · XaalisPay"
+          title="Encaissez avant de livrer avec XaalisPay"
+          description="Paiement sécurisé Wave & Orange Money : le client paie d'abord (séquestre), vous livrez, vous êtes payé. Fini les commandes fantômes et les faux rendez-vous."
+          ctaLabel="Découvrir XaalisPay"
+          href="https://www.xaalispay.com/"
+        />
+      </section>
 
       {/* ============ PROMO STRIP ============ */}
       {promos.length > 0 && !hasFilters && (
