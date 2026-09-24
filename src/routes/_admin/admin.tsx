@@ -15,7 +15,7 @@ import {
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { countryOfCity } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
-import { Eye, Heart, MessageCircle, UserPlus, Users } from "lucide-react";
+import { Eye, Heart, MessageCircle, Package, UserPlus, Users } from "lucide-react";
 import {
   IconUsers,
   IconStock,
@@ -50,6 +50,7 @@ type Product = {
   zone: string | null;
   owner_id: string;
   created_at: string;
+  images: string[];
 };
 
 type SellerStat = {
@@ -170,7 +171,7 @@ function AdminDashboard() {
         supabase.from("profiles").select("*").order("created_at", { ascending: false }),
         supabase
           .from("products")
-          .select("id,name,category,price_fcfa,promo_price_fcfa,quantity,moq,city,zone,owner_id,created_at")
+          .select("id,name,category,price_fcfa,promo_price_fcfa,quantity,moq,city,zone,owner_id,created_at,images")
           .order("created_at", { ascending: false }),
       ]);
       setProfiles((profs ?? []) as Profile[]);
@@ -457,8 +458,24 @@ function AdminDashboard() {
               const hasPromo = p.promo_price_fcfa && p.promo_price_fcfa < p.price_fcfa;
               return (
                 <tr key={p.id} className="border-t border-border hover:bg-muted/30">
-                  <td className="px-4 py-3 font-medium max-w-[220px] truncate">
-                    <Link to="/product/$id" params={{ id: p.id }} className="hover:text-primary">{p.name}</Link>
+                  <td className="px-4 py-3 font-medium max-w-[240px]">
+                    <div className="flex items-center gap-3">
+                      {p.images?.[0] ? (
+                        <img
+                          src={p.images[0]}
+                          alt=""
+                          loading="lazy"
+                          className="h-11 w-11 shrink-0 rounded-lg border border-border object-cover"
+                        />
+                      ) : (
+                        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
+                          <Package className="h-4 w-4" />
+                        </span>
+                      )}
+                      <Link to="/product/$id" params={{ id: p.id }} className="truncate hover:text-primary">
+                        {p.name}
+                      </Link>
+                    </div>
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground">{p.category}</td>
                   <td className="px-4 py-3 text-right font-semibold whitespace-nowrap">
