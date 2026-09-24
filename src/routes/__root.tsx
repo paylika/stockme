@@ -108,9 +108,12 @@ function RootComponent() {
   // En mode admin, on ne montre pas la sidebar StockMe (l'admin a sa propre sidebar).
   const routeMatches = useRouterState({ select: (r) => r.matches });
   const pathname = useRouterState({ select: (r) => r.location.pathname });
-  const isAdminLayout = routeMatches.some(
-    (m) => m.route?.id === "/_admin" || m.route?.id?.startsWith("/_admin/"),
-  );
+  const isAdminLayout = routeMatches.some((m) => {
+    // `routeId` est la propriété publique et fiable (contrairement à `route`,
+    // absent de certains matches pendant le rendu serveur).
+    const rid = (m as { routeId?: string }).routeId ?? "";
+    return rid === "/_admin" || rid.startsWith("/_admin/");
+  });
 
   // Comptage des visites (pages publiques uniquement, 1× par page et par session)
   useEffect(() => {

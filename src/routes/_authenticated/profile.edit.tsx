@@ -72,7 +72,7 @@ function ProfileEdit() {
     let finalAvatar = avatarUrl;
     if (avatarFile) {
       try {
-        finalAvatar = await uploadAvatar(avatarFile, u.user.id);
+        finalAvatar = await uploadAvatar(avatarFile, u.user.id, avatarUrl);
       } catch (err) {
         setSaving(false);
         return toast.error(err instanceof Error ? err.message : "Erreur photo");

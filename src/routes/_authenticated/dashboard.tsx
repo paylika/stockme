@@ -7,7 +7,7 @@ import { MobileFooter } from "@/components/MobileFooter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatFCFA } from "@/lib/format";
-import { Edit2, MapPin, Package, Pencil, Plus, Save, Trash2, X } from "lucide-react";
+import { AlertTriangle, Edit2, MapPin, Package, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 type P = {
@@ -148,6 +148,15 @@ function Dashboard() {
                     <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                       <MapPin className="h-3 w-3" /> {p.city} · {p.category}
                     </p>
+                    {(!p.images || p.images.length === 0) && (
+                      <Link
+                        to="/dashboard/edit/$id"
+                        params={{ id: p.id }}
+                        className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-volt/15 px-2.5 py-1 text-[11px] font-semibold text-volt"
+                      >
+                        <AlertTriangle className="h-3 w-3" /> Photo manquante — ajoutez-en une
+                      </Link>
+                    )}
                     <div className="mt-3 flex items-center justify-between">
                       <span className="font-bold">{formatFCFA(p.price_fcfa)}</span>
                       {editing === p.id ? (

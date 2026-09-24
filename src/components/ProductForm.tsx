@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -150,31 +150,38 @@ export function ProductForm({
         return false;
       }
       if (file.size > MAX_PHOTO_SIZE) {
-        toast.error(`${file.name} est trop lourde (max 15 Mo).`);
+        toast.error(`${file.name} est trop lourde (max 15 Mo). Choisissez une photo plus légère.`);
         return false;
       }
       return true;
     });
 
     if (arr.length === 0) return;
-    setImages((prev) => [...prev, ...arr.map((f) => ({ file: f, preview: "" }))]);
-    arr.forEach((f) => {
-      const r = new FileReader();
-      r.onload = () => {
-        const p = r.result as string;
-        setImages((prev) =>
-          prev.map((img) =>
-            img.file === f && !img.preview ? { ...img, preview: p } : img,
-          ),
-        );
-      };
-      r.readAsDataURL(f);
-    });
+    // Aperçu via object URL : beaucoup plus léger en mémoire que les data URL
+    // (5 photos de 15 Mo en base64 faisaient planter l'onglet sur mobile).
+    const added: FormImage[] = arr.map((f) => ({ file: f, preview: URL.createObjectURL(f) }));
+    setImages((prev) => [...prev, ...added]);
   };
 
   const removeImage = (i: number) => {
-    setImages((prev) => prev.filter((_, j) => j !== i));
+    setImages((prev) => {
+      const target = prev[i];
+      if (target?.file && target.preview.startsWith("blob:")) URL.revokeObjectURL(target.preview);
+      return prev.filter((_, j) => j !== i);
+    });
   };
+
+  // Libère la mémoire des aperçus quand on quitte la page.
+  const imagesRef = useRef(images);
+  imagesRef.current = images;
+  useEffect(
+    () => () => {
+      imagesRef.current.forEach((img) => {
+        if (img.file && img.preview.startsWith("blob:")) URL.revokeObjectURL(img.preview);
+      });
+    },
+    [],
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -301,7 +308,9 @@ export function ProductForm({
             </label>
           )}
         </div>
-        <p className="text-xs text-muted-foreground">Ajoutez 1 à 5 photos nettes du produit.</p>
+        <p className="text-xs text-muted-foreground">
+          Ajoutez 1 à 5 photos nettes du produit. Elles sont <strong className="text-foreground">compressées automatiquement</strong> avant l'envoi : la publication fonctionne même avec une connexion lente.
+        </p>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">

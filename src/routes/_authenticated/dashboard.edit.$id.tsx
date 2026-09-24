@@ -5,7 +5,9 @@ import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
 import { ProductForm, ProductFormInitial, ProductFormValues } from "@/components/ProductForm";
-import { uploadImages } from "@/lib/image-upload";
+import { PhotoFailurePanel } from "@/components/PhotoFailurePanel";
+import { uploadImagesResilient, type UploadFailure } from "@/lib/image-upload";
+import { requireUserId } from "@/lib/current-user";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/dashboard/edit/$id")({
@@ -18,12 +20,19 @@ function EditProduct() {
   const [product, setProduct] = useState<ProductFormInitial | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploadingStatus, setUploadingStatus] = useState("");
+  const [pending, setPending] = useState<{ urls: string[]; files: File[]; failures: UploadFailure[] } | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     let cancel = false;
     (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) {
+      let userId: string | null = null;
+      try {
+        userId = await requireUserId();
+      } catch {
+        userId = null;
+      }
+      if (!userId) {
         navigate({ to: "/auth", search: { redirect: `/dashboard/edit/${id}`, mode: "login" } });
         return;
       }
@@ -33,7 +42,7 @@ function EditProduct() {
         .eq("id", id)
         .maybeSingle();
       if (cancel) return;
-      if (error || !data || data.owner_id !== u.user.id) {
+      if (error || !data || data.owner_id !== userId) {
         toast.error("Produit introuvable ou accès non autorisé");
         navigate({ to: "/dashboard" });
         return;
@@ -64,10 +73,11 @@ function EditProduct() {
   }, [id]);
 
   const submit = async (values: ProductFormValues) => {
-    const { data: u } = await supabase.auth.getUser();
-    if (!u.user) throw new Error("Reconnectez-vous pour modifier le produit.");
+    const userId = await requireUserId("Reconnectez-vous pour modifier le produit.");
 
-    const urls = await uploadImages(values.newFiles, u.user.id, setUploadingStatus);
+    // Les photos ne bloquent jamais l'enregistrement : les images déjà en ligne
+    // sont conservées, et une photo qui échoue peut être renvoyée juste après.
+    const { urls, failures } = await uploadImagesResilient(values.newFiles, userId, setUploadingStatus);
     setUploadingStatus("Enregistrement...");
     const images = [...values.existingImages, ...urls];
 
@@ -95,11 +105,55 @@ function EditProduct() {
     if (error) throw new Error(error.message);
 
     if (values.whatsapp) {
-      await supabase.from("profiles").update({ whatsapp: values.whatsapp }).eq("id", u.user.id);
+      await supabase.from("profiles").update({ whatsapp: values.whatsapp }).eq("id", userId);
+    }
+
+    setUploadingStatus("");
+
+    if (failures.length > 0) {
+      const failedNames = new Set(failures.map((f) => f.fileName));
+      setPending({
+        urls: values.existingImages,
+        files: values.newFiles.filter((f) => failedNames.has(f.name)),
+        failures,
+      });
+      toast.warning("Produit mis à jour. Une photo au moins n'a pas pu être envoyée — renvoyez-la ci-dessous.");
+      return;
     }
 
     toast.success("Produit mis à jour !");
     navigate({ to: "/dashboard" });
+  };
+
+  const retryPhotos = async () => {
+    if (!pending) return;
+    setRetrying(true);
+    try {
+      const userId = await requireUserId("Reconnectez-vous pour renvoyer la photo.");
+
+      const { urls, failures } = await uploadImagesResilient(pending.files, userId, setUploadingStatus);
+      const allImages = [...pending.urls, ...urls];
+
+      if (urls.length > 0) {
+        const { error } = await supabase.from("products").update({ images: allImages }).eq("id", id);
+        if (error) throw new Error(error.message);
+      }
+
+      if (failures.length === 0) {
+        toast.success("Photo(s) ajoutée(s) au produit !");
+        navigate({ to: "/dashboard" });
+        return;
+      }
+
+      const stillFailed = new Set(failures.map((f) => f.fileName));
+      setPending({ ...pending, urls: allImages, files: pending.files.filter((f) => stillFailed.has(f.name)), failures });
+      toast.error("L'envoi a encore échoué. Réessayez dans un instant.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erreur pendant l'envoi");
+    } finally {
+      setUploadingStatus("");
+      setRetrying(false);
+    }
   };
 
   if (loading || !product) {
@@ -127,6 +181,19 @@ function EditProduct() {
         <p className="mt-1 text-sm text-muted-foreground">
           Mettez à jour les informations, photos, prix et statut.
         </p>
+
+        {pending && (
+          <div className="mt-4">
+            <PhotoFailurePanel
+              failures={pending.failures}
+              published
+              retrying={retrying}
+              status={uploadingStatus}
+              onRetry={retryPhotos}
+              productId={id}
+            />
+          </div>
+        )}
 
         <div className="mt-6 sm:mt-8">
           <ProductForm
