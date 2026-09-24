@@ -9,13 +9,11 @@ import { ProductCard, type ListingProduct } from "@/components/ProductCard";
 import { SponsorBanner } from "@/components/SponsorBanner";
 import { buildSeoHead } from "@/lib/seo";
 import { CATEGORIES, WEST_AFRICA_LOCATIONS } from "@/lib/constants";
-import { formatFCFA } from "@/lib/format";
 import {
   IconBox as Package,
   IconClose as X,
   IconArrow as ArrowRight,
   IconStore as Store,
-  IconFlame as Flame,
 } from "@/components/icons";
 
 type Filters = { country?: string; city?: string; category?: string; q?: string };
@@ -116,11 +114,6 @@ function Index() {
   const clearAll = () => navigate({ search: {} });
   const hasFilters = !!(search.country || search.city || search.category || search.q);
 
-  const promos = useMemo(
-    () => (items ?? []).filter((p) => p.promo_price_fcfa && p.promo_price_fcfa < p.price_fcfa).slice(0, 6),
-    [items],
-  );
-
   const countries = useMemo(() => Object.keys(WEST_AFRICA_LOCATIONS).sort((a, b) => a.localeCompare(b, "fr")), []);
   const availableCities = useMemo(() => {
     if (search.country && WEST_AFRICA_LOCATIONS[search.country]) {
@@ -211,27 +204,6 @@ function Index() {
           logoAlt="XaalisPay"
         />
       </section>
-
-      {/* ============ PROMO STRIP ============ */}
-      {promos.length > 0 && !hasFilters && (
-        <section className="mx-auto max-w-7xl px-4 sm:px-6 pt-6 sm:pt-8">
-          <div className="flex items-end justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Flame className="h-4 w-4 text-volt" />
-              <h2 className="text-sm sm:text-base font-bold tracking-tight uppercase">Promotions</h2>
-            </div>
-          </div>
-          <div className="-mx-4 sm:mx-0 overflow-x-auto no-scrollbar">
-            <div className="flex gap-3 sm:gap-4 px-4 sm:px-0 snap-x snap-mandatory">
-              {promos.map((p) => (
-                <div key={p.id} className="w-[70%] sm:w-64 shrink-0 snap-start">
-                  <ProductCard product={p} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* ============ PRODUCT GRID ============ */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10">
