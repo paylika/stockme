@@ -3,7 +3,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { CATEGORIES, WEST_AFRICA_LOCATIONS, CITY_ZONES } from "@/lib/constants";
+import {
+  CATEGORIES,
+  WEST_AFRICA_LOCATIONS,
+  WEST_AFRICA_COUNTRIES,
+  CITY_ZONES,
+  CITY_TO_COUNTRY,
+  SENEGAL_REGIONS,
+  SENEGAL_REGION_NAMES,
+} from "@/lib/constants";
 import { ImagePlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { MAX_PHOTOS, MAX_PHOTO_SIZE } from "@/lib/image-upload";
@@ -73,6 +81,13 @@ export function ProductForm({
   const [description, setDescription] = useState(initial?.description ?? "");
   const [category, setCategory] = useState(initial?.category ?? "");
   const [city, setCity] = useState(initial?.city ?? "");
+  const [country, setCountry] = useState<string>(
+    () => (initial?.city ? CITY_TO_COUNTRY[initial.city] : undefined) ?? "Sénégal",
+  );
+  const [region, setRegion] = useState<string>(() => {
+    const c = initial?.city ?? "";
+    return SENEGAL_REGION_NAMES.find((r) => SENEGAL_REGIONS[r]?.includes(c)) ?? "";
+  });
   const [zone, setZone] = useState(initial?.zone ?? "");
   const [price, setPrice] = useState<number | "">(initial?.price_fcfa ?? "");
   const [promoPrice, setPromoPrice] = useState<number | "">(
@@ -101,6 +116,13 @@ export function ProductForm({
   }, [city]);
 
   const zones = city ? (CITY_ZONES[city] ?? []) : [];
+
+  const isSenegal = country === "Sénégal";
+  const cityOptions = isSenegal
+    ? region
+      ? SENEGAL_REGIONS[region] ?? []
+      : Array.from(new Set(Object.values(SENEGAL_REGIONS).flat())).sort((a, b) => a.localeCompare(b, "fr"))
+    : WEST_AFRICA_LOCATIONS[country] ?? [];
 
   const toggleSize = (s: string) =>
     setSizes((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
@@ -291,14 +313,48 @@ export function ProductForm({
           </select>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="city">Pays / Ville *</Label>
-          <select id="city" required value={city} onChange={(e) => setCity(e.target.value)} className="form-select">
-            <option value="">Choisir...</option>
-            {Object.entries(WEST_AFRICA_LOCATIONS).map(([country, cities]) => (
-              <optgroup key={country} label={country}>
-                {cities.map((c) => <option key={`${country}-${c}`} value={c}>{c}</option>)}
-              </optgroup>
-            ))}
+          <Label htmlFor="country">Pays *</Label>
+          <select
+            id="country"
+            required
+            value={country}
+            onChange={(e) => { setCountry(e.target.value); setRegion(""); setCity(""); }}
+            className="form-select"
+          >
+            {WEST_AFRICA_COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        {isSenegal && (
+          <div className="space-y-1.5">
+            <Label htmlFor="region">Région *</Label>
+            <select
+              id="region"
+              required
+              value={region}
+              onChange={(e) => { setRegion(e.target.value); setCity(""); }}
+              className="form-select"
+            >
+              <option value="">Choisir...</option>
+              {SENEGAL_REGION_NAMES.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+        )}
+        <div className="space-y-1.5">
+          <Label htmlFor="city">{isSenegal ? "Ville / Commune *" : "Ville *"}</Label>
+          <select
+            id="city"
+            required
+            value={city}
+            disabled={isSenegal && !region}
+            onChange={(e) => setCity(e.target.value)}
+            className="form-select disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <option value="">{isSenegal && !region ? "Choisir la région d'abord" : "Choisir..."}</option>
+            {city && !cityOptions.includes(city) && <option value={city}>{city}</option>}
+            {cityOptions.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
       </div>
