@@ -40,7 +40,7 @@ function AdminLayout() {
     <div className="min-h-screen bg-background">
       {/* Barre admin dédiée */}
       <header className="sticky top-0 z-40 border-b border-border bg-primary text-primary-foreground">
-        <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:px-6">
+        <div className="mx-auto flex h-14 max-w-[1700px] items-center gap-3 px-4 sm:px-6 lg:px-8">
           <Link to="/admin" className="flex items-center gap-2">
             <img src={logoUrl} alt="StockMe" className="h-8 w-8 rounded-lg bg-background/10 object-contain p-0.5" />
             <span className="font-display text-base font-semibold tracking-tight">
@@ -71,7 +71,7 @@ function AdminLayout() {
 
       {/* Navigation admin (mobile) */}
       <nav className="border-b border-border bg-background md:hidden">
-        <div className="mx-auto max-w-7xl overflow-x-auto no-scrollbar px-3">
+        <div className="mx-auto max-w-[1700px] overflow-x-auto no-scrollbar px-3">
           <div className="flex items-center gap-1 py-2">
             {ADMIN_NAV.map((it) => {
               const active = pathname === it.match || pathname.startsWith(it.match + "/");
@@ -93,10 +93,11 @@ function AdminLayout() {
         </div>
       </nav>
 
-      <div className="mx-auto flex max-w-7xl">
+      {/* Console large : les tableaux admin ont besoin de place */}
+      <div className="mx-auto flex max-w-[1700px]">
         {/* Sidebar admin (remplace la sidebar StockMe) */}
         <AdminSidebar />
-        <main className="flex-1 min-w-0 px-4 sm:px-6 py-6 sm:py-10">
+        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           <Outlet />
         </main>
       </div>

@@ -8,13 +8,17 @@ import { formatFCFA } from "@/lib/format";
 import { toast } from "sonner";
 import {
   ChevronDown,
+  Eye,
+  EyeOff,
   MessageCircle,
   Package,
   Search,
   Shield,
   ShieldCheck,
   ShieldOff,
+  Trash2,
   Users as UsersIcon,
+  Zap,
 } from "lucide-react";
 
 type AdminUser = {
@@ -32,13 +36,20 @@ type AdminUser = {
 type UserProduct = {
   id: string;
   name: string;
+  category: string;
+  city: string;
   price_fcfa: number;
   promo_price_fcfa: number | null;
   quantity: number;
+  moq: number;
   images: string[];
   published: boolean;
   sold_out: boolean;
+  dropshipping: boolean;
   created_at: string;
+  views: number;
+  contacts: number;
+  favorites: number;
 };
 
 export const Route = createFileRoute("/_admin/users")({
@@ -49,6 +60,7 @@ function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [q, setQ] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [busyProduct, setBusyProduct] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [productsByUser, setProductsByUser] = useState<Record<string, UserProduct[] | "loading">>({});
 
@@ -69,11 +81,13 @@ function AdminUsersPage() {
     setExpanded(u.id);
     if (productsByUser[u.id]) return;
     setProductsByUser((prev) => ({ ...prev, [u.id]: "loading" }));
-    const { data } = await supabase
-      .from("products")
-      .select("id,name,price_fcfa,promo_price_fcfa,quantity,images,published,sold_out,created_at")
-      .eq("owner_id", u.id)
-      .order("created_at", { ascending: false });
+    // Tous les produits du vendeur (publiés ou non) + leurs statistiques.
+    const { data, error } = await supabase.rpc("admin_list_user_products", { p_user_id: u.id });
+    if (error) {
+      toast.error(error.message);
+      setProductsByUser((prev) => ({ ...prev, [u.id]: [] }));
+      return;
+    }
     setProductsByUser((prev) => ({ ...prev, [u.id]: (data as UserProduct[] | null) ?? [] }));
   };
 
@@ -100,6 +114,39 @@ function AdminUsersPage() {
     load();
   };
 
+  // ===== Accès complet admin sur un produit =====
+  const patchProduct = async (
+    userId: string,
+    p: UserProduct,
+    patch: Record<string, unknown>,
+    message: string,
+  ) => {
+    setBusyProduct(p.id);
+    const { error } = await supabase.rpc("admin_update_product", { p_id: p.id, p_patch: patch });
+    setBusyProduct(null);
+    if (error) return toast.error(error.message);
+    toast.success(message);
+    setProductsByUser((prev) => {
+      const list = prev[userId];
+      if (!list || list === "loading") return prev;
+      return { ...prev, [userId]: list.map((x) => (x.id === p.id ? ({ ...x, ...patch } as UserProduct) : x)) };
+    });
+  };
+
+  const deleteProduct = async (userId: string, p: UserProduct) => {
+    if (!confirm(`Supprimer définitivement « ${p.name} » ?\nCette action est irréversible.`)) return;
+    setBusyProduct(p.id);
+    const { error } = await supabase.rpc("admin_delete_product", { p_id: p.id });
+    setBusyProduct(null);
+    if (error) return toast.error(error.message);
+    toast.success("Produit supprimé");
+    setProductsByUser((prev) => {
+      const list = prev[userId];
+      if (!list || list === "loading") return prev;
+      return { ...prev, [userId]: list.filter((x) => x.id !== p.id) };
+    });
+  };
+
   const admins = (filtered ?? []).filter((u) => u.is_admin);
 
   return (
@@ -115,8 +162,8 @@ function AdminUsersPage() {
         </span>
       </div>
 
-      <div className="mt-6 relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="relative mt-6 max-w-md">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -126,16 +173,16 @@ function AdminUsersPage() {
       </div>
 
       <div className="mt-6 overflow-x-auto rounded-2xl border border-border bg-card">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[1020px] text-sm">
           <thead className="bg-muted/50 text-[11px] uppercase tracking-wider text-muted-foreground">
             <tr>
-              <th className="text-left px-4 py-3">Nom</th>
-              <th className="text-left px-4 py-3 hidden sm:table-cell">Email</th>
-              <th className="text-left px-4 py-3 hidden md:table-cell">Téléphone</th>
-              <th className="text-left px-4 py-3 hidden lg:table-cell">Ville</th>
-              <th className="text-left px-4 py-3 hidden md:table-cell">Inscrit le</th>
-              <th className="text-left px-4 py-3">Accès</th>
-              <th className="text-right px-4 py-3">Action</th>
+              <th className="px-4 py-3 text-left">Nom</th>
+              <th className="px-4 py-3 text-left">Email</th>
+              <th className="px-4 py-3 text-left">Téléphone</th>
+              <th className="px-4 py-3 text-left">Ville</th>
+              <th className="px-4 py-3 text-left">Inscrit le</th>
+              <th className="px-4 py-3 text-left">Accès</th>
+              <th className="px-4 py-3 text-right">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -150,7 +197,7 @@ function AdminUsersPage() {
                     <button
                       onClick={() => toggleExpand(u)}
                       aria-expanded={expanded === u.id}
-                      title="Voir les produits publiés"
+                      title="Voir et gérer les produits de ce vendeur"
                       className="inline-flex items-center gap-1.5 text-left hover:text-primary"
                     >
                       <ChevronDown
@@ -158,11 +205,11 @@ function AdminUsersPage() {
                           expanded === u.id ? "rotate-180" : ""
                         }`}
                       />
-                      <span className="truncate">{u.full_name || "—"}</span>
+                      <span className="whitespace-nowrap">{u.full_name || "—"}</span>
                     </button>
                   </td>
-                  <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground truncate max-w-[220px]">{u.email || "—"}</td>
-                  <td className="px-4 py-3 hidden md:table-cell whitespace-nowrap">
+                  <td className="px-4 py-3 text-muted-foreground">{u.email || "—"}</td>
+                  <td className="whitespace-nowrap px-4 py-3">
                     {u.phone || u.whatsapp ? (
                       <div className="flex flex-col gap-0.5 text-xs">
                         {u.phone && <span className="text-muted-foreground">{u.phone}</span>}
@@ -179,10 +226,10 @@ function AdminUsersPage() {
                       </div>
                     ) : "—"}
                   </td>
-                  <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground whitespace-nowrap">
+                  <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
                     {COUNTRY_FLAGS[countryOfCity(u.city)] ?? ""} {u.city || "—"}
                   </td>
-                  <td className="px-4 py-3 hidden md:table-cell text-xs text-muted-foreground whitespace-nowrap">
+                  <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
                     {new Date(u.created_at).toLocaleDateString("fr-FR")}
                   </td>
                   <td className="px-4 py-3">
@@ -225,51 +272,131 @@ function AdminUsersPage() {
 
                 {expanded === u.id && (
                   <tr className="border-t border-border bg-muted/20">
-                    <td colSpan={7} className="px-4 py-4">
+                    <td colSpan={7} className="px-4 py-5">
                       {(() => {
                         const list = productsByUser[u.id];
                         if (!list || list === "loading") {
                           return <p className="text-xs text-muted-foreground">Chargement des produits…</p>;
                         }
                         if (list.length === 0) {
-                          return <p className="text-xs text-muted-foreground">Aucun produit publié.</p>;
+                          return <p className="text-xs text-muted-foreground">Aucun produit pour ce vendeur.</p>;
                         }
+                        const online = list.filter((p) => p.published).length;
                         return (
                           <>
-                            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                              {list.length} produit{list.length > 1 ? "s" : ""} publié{list.length > 1 ? "s" : ""}
+                            <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                              {list.length} produit{list.length > 1 ? "s" : ""} · {online} en ligne — vous pouvez tout gérer ici
                             </p>
-                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                               {list.map((p) => {
                                 const promo = p.promo_price_fcfa && p.promo_price_fcfa < p.price_fcfa;
+                                const busy = busyProduct === p.id;
                                 return (
-                                  <Link
-                                    key={p.id}
-                                    to="/product/$id"
-                                    params={{ id: p.id }}
-                                    className="flex items-center gap-3 rounded-xl border border-border bg-card p-2 transition hover:border-foreground/30"
-                                  >
-                                    {p.images?.[0] ? (
-                                      <img src={p.images[0]} alt="" loading="lazy" className="h-11 w-11 shrink-0 rounded-lg object-cover" />
-                                    ) : (
-                                      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
-                                        <Package className="h-4 w-4" />
-                                      </span>
-                                    )}
-                                    <div className="min-w-0 flex-1">
-                                      <p className="truncate text-xs font-semibold">{p.name}</p>
-                                      <p className="text-[11px] text-muted-foreground">
-                                        {formatFCFA(promo ? p.promo_price_fcfa! : p.price_fcfa)} · {p.quantity} en stock
-                                      </p>
-                                      <div className="mt-1 flex items-center gap-1.5 text-[10px]">
-                                        <span className="text-muted-foreground">
-                                          {new Date(p.created_at).toLocaleDateString("fr-FR")}
-                                        </span>
-                                        {!p.published && <span className="rounded-full bg-secondary px-1.5 py-0.5">Dépublié</span>}
-                                        {p.sold_out && <span className="rounded-full bg-destructive/15 px-1.5 py-0.5 text-destructive">Épuisé</span>}
+                                  <div key={p.id} className="rounded-xl border border-border bg-card p-3">
+                                    <div className="flex gap-3">
+                                      <Link
+                                        to="/product/$id"
+                                        params={{ id: p.id }}
+                                        className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-muted"
+                                      >
+                                        {p.images?.[0] ? (
+                                          <img src={p.images[0]} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                        ) : (
+                                          <span className="grid h-full w-full place-items-center text-muted-foreground">
+                                            <Package className="h-4 w-4" />
+                                          </span>
+                                        )}
+                                      </Link>
+                                      <div className="min-w-0 flex-1">
+                                        <Link
+                                          to="/product/$id"
+                                          params={{ id: p.id }}
+                                          className="block truncate text-sm font-semibold hover:text-primary"
+                                          title={p.name}
+                                        >
+                                          {p.name}
+                                        </Link>
+                                        <p className="text-[11px] text-muted-foreground">
+                                          {formatFCFA(promo ? p.promo_price_fcfa! : p.price_fcfa)}
+                                          {" · "}{p.quantity} en stock{p.moq > 1 ? ` · MOQ ${p.moq}` : ""}
+                                        </p>
+                                        <p className="mt-0.5 text-[10px] text-muted-foreground">
+                                          {new Date(p.created_at).toLocaleDateString("fr-FR")} · {p.views} vue(s) · {p.contacts} contact(s)
+                                          {p.favorites > 0 ? ` · ${p.favorites} favori(s)` : ""}
+                                        </p>
+                                        <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px]">
+                                          <span className={`rounded-full px-1.5 py-0.5 font-semibold ${p.published ? "bg-success/15 text-success" : "bg-secondary text-muted-foreground"}`}>
+                                            {p.published ? "En ligne" : "Dépublié"}
+                                          </span>
+                                          <span className={`rounded-full px-1.5 py-0.5 ${p.sold_out ? "bg-destructive/15 text-destructive" : "bg-secondary text-muted-foreground"}`}>
+                                            {p.sold_out ? "Épuisé" : "Disponible"}
+                                          </span>
+                                          {p.dropshipping && (
+                                            <span className="inline-flex items-center gap-0.5 rounded-full bg-volt/15 px-1.5 py-0.5 font-semibold text-volt">
+                                              <Zap className="h-2.5 w-2.5" /> Dropshipping
+                                            </span>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
-                                  </Link>
+
+                                    <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-border pt-2">
+                                      <button
+                                        type="button"
+                                        disabled={busy}
+                                        onClick={() =>
+                                          patchProduct(
+                                            u.id,
+                                            p,
+                                            { published: !p.published },
+                                            p.published ? "Produit dépublié" : "Produit publié",
+                                          )
+                                        }
+                                        className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-[11px] font-medium transition hover:bg-accent disabled:opacity-50"
+                                      >
+                                        {p.published ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                                        {p.published ? "Dépublier" : "Publier"}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={busy}
+                                        onClick={() =>
+                                          patchProduct(
+                                            u.id,
+                                            p,
+                                            { sold_out: !p.sold_out },
+                                            p.sold_out ? "Produit remis en stock" : "Produit marqué épuisé",
+                                          )
+                                        }
+                                        className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-[11px] font-medium transition hover:bg-accent disabled:opacity-50"
+                                      >
+                                        <Package className="h-3 w-3" />
+                                        {p.sold_out ? "Remettre en stock" : "Marquer épuisé"}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={busy}
+                                        onClick={() => {
+                                          const raw = prompt(`Nouveau stock pour « ${p.name} » :`, String(p.quantity));
+                                          if (raw === null) return;
+                                          const n = parseInt(raw, 10);
+                                          if (isNaN(n) || n < 0) return toast.error("Stock invalide");
+                                          patchProduct(u.id, p, { quantity: n }, "Stock mis à jour");
+                                        }}
+                                        className="rounded-lg border border-border px-2 py-1 text-[11px] font-medium transition hover:bg-accent disabled:opacity-50"
+                                      >
+                                        Stock
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={busy}
+                                        onClick={() => deleteProduct(u.id, p)}
+                                        className="ml-auto inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground transition hover:border-destructive/50 hover:text-destructive disabled:opacity-50"
+                                      >
+                                        <Trash2 className="h-3 w-3" /> Supprimer
+                                      </button>
+                                    </div>
+                                  </div>
                                 );
                               })}
                             </div>

@@ -481,6 +481,42 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_update_product: {
+        Args: {
+          p_id: string
+          p_patch: Record<string, unknown>
+        }
+        Returns: Record<string, unknown>
+      }
+      admin_delete_product: {
+        Args: {
+          p_id: string
+        }
+        Returns: undefined
+      }
+      admin_list_user_products: {
+        Args: {
+          p_user_id: string
+        }
+        Returns: {
+          id: string
+          name: string
+          category: string
+          city: string
+          price_fcfa: number
+          promo_price_fcfa: number | null
+          quantity: number
+          moq: number
+          images: string[]
+          published: boolean
+          sold_out: boolean
+          dropshipping: boolean
+          created_at: string
+          views: number
+          contacts: number
+          favorites: number
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "user"

@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { IntensityGauge, computeIntensity } from "@/components/IntensityGauge";
 import { JsonLd } from "@/components/JsonLd";
 import { buildSeoHead, productLd, breadcrumbLd } from "@/lib/seo";
-import { countryOfCity } from "@/lib/constants";
+import { countryOfCity, isAdminEmail } from "@/lib/constants";
 import { ArrowLeft, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Eye, Heart, Lock, MapPin, MessageCircle, Package, Phone, Share2, ShieldCheck, Store, Zap } from "lucide-react";
 import { toast } from "sonner";
 
@@ -266,8 +266,8 @@ function ProductPage() {
     );
   }
 
-  // Produit dépublié : accessible uniquement à son propriétaire.
-  if (!product.published && user?.id !== product.owner_id) {
+  // Produit dépublié : accessible au propriétaire et aux admins (modération).
+  if (!product.published && user?.id !== product.owner_id && !isAdminEmail(user?.email)) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
