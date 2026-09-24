@@ -11,7 +11,7 @@ import { IntensityGauge, computeIntensity } from "@/components/IntensityGauge";
 import { JsonLd } from "@/components/JsonLd";
 import { buildSeoHead, productLd, breadcrumbLd } from "@/lib/seo";
 import { countryOfCity } from "@/lib/constants";
-import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, Eye, Heart, Lock, MapPin, MessageCircle, Package, Phone, Share2, ShieldCheck, Store, Zap } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Eye, Heart, Lock, MapPin, MessageCircle, Package, Phone, Share2, ShieldCheck, Store, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 type Product = {
@@ -110,6 +110,7 @@ function ProductPage() {
   const [activeImg, setActiveImg] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isFav, setIsFav] = useState(false);
+  const [descOpen, setDescOpen] = useState(false);
   const [sellerStats, setSellerStats] = useState<SellerStats | null>(null);
   const viewerCountryRef = useRef<string | null>(null);
 
@@ -407,14 +408,7 @@ function ProductPage() {
               </div>
             </div>
 
-            {product.description && (
-              <div className="mt-6">
-                <h2 className="text-sm font-semibold tracking-wider uppercase text-muted-foreground">Description</h2>
-                <p className="mt-2 text-sm leading-relaxed whitespace-pre-line">{product.description}</p>
-              </div>
-            )}
-
-            <h2 className="mt-8 text-sm font-semibold tracking-wider uppercase text-muted-foreground">À propos du vendeur</h2>
+            <h2 className="mt-5 text-sm font-semibold tracking-wider uppercase text-muted-foreground">À propos du vendeur</h2>
             <div className="mt-3 rounded-2xl border border-border p-5 bg-card shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -501,6 +495,27 @@ function ProductPage() {
                 </div>
               )}
             </div>
+
+            {product.description && (
+              <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
+                <button
+                  type="button"
+                  onClick={() => setDescOpen((v) => !v)}
+                  aria-expanded={descOpen}
+                  className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition hover:bg-muted/40"
+                >
+                  <span className="text-sm font-semibold">Description</span>
+                  <ChevronDown
+                    className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${descOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+                {descOpen && (
+                  <p className="px-5 pb-5 text-sm leading-relaxed whitespace-pre-line text-muted-foreground">
+                    {product.description}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
