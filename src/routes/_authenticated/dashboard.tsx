@@ -7,7 +7,7 @@ import { MobileFooter } from "@/components/MobileFooter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatFCFA } from "@/lib/format";
-import { AlertTriangle, Edit2, MapPin, Package, Pencil, Plus, Save, Trash2, X } from "lucide-react";
+import { AlertTriangle, Camera, Edit2, MapPin, Package, Pencil, Plus, Save, Trash2, UserRound, X } from "lucide-react";
 import { StatusSwitch } from "@/components/StatusSwitch";
 import { toast } from "sonner";
 
@@ -34,16 +34,23 @@ function Dashboard() {
   const [items, setItems] = useState<P[] | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [qty, setQty] = useState<number>(0);
+  const [seller, setSeller] = useState<{ shop_name: string | null; full_name: string | null; avatar_url: string | null } | null>(null);
 
   const load = async () => {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
-    const { data } = await supabase
-      .from("products")
-      .select("id,name,price_fcfa,quantity,moq,city,category,images,published,sold_out,dropshipping")
-      .eq("owner_id", u.user.id)
-      .order("created_at", { ascending: false });
+    const [{ data }, { data: prof }] = await Promise.all([
+      supabase
+        .from("products")
+        .select("id,name,price_fcfa,quantity,moq,city,category,images,published,sold_out,dropshipping")
+        .eq("owner_id", u.user.id)
+        .order("created_at", { ascending: false }),
+      supabase.from("profiles").select("shop_name,full_name,avatar_url").eq("id", u.user.id).maybeSingle(),
+    ]);
     setItems((data ?? []) as P[]);
+    setSeller(
+      (prof as { shop_name: string | null; full_name: string | null; avatar_url: string | null } | null) ?? null,
+    );
   };
 
   useEffect(() => { load(); }, []);
@@ -87,15 +94,36 @@ function Dashboard() {
 
   if (pathname !== "/dashboard") return <Outlet />;
 
+  const sellerName = seller?.shop_name || seller?.full_name || "Ma boutique";
+  const initials = sellerName.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-10">
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium tracking-[0.18em] uppercase text-muted-foreground">Espace fournisseur</p>
-            <h1 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">Mon stock</h1>
-            <p className="mt-1 text-muted-foreground">{items?.length ?? 0} produit(s) en ligne</p>
+          <div className="flex items-center gap-4">
+            {/* Photo de profil du vendeur dans son espace */}
+            <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full bg-volt text-lg font-bold text-volt-foreground">
+              {seller?.avatar_url ? (
+                <img src={seller.avatar_url} alt={seller.shop_name || seller.full_name || "Ma boutique"} className="h-full w-full object-cover" />
+              ) : (
+                <span>{initials}</span>
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-medium tracking-[0.18em] uppercase text-muted-foreground">Espace fournisseur</p>
+              <h1 className="mt-1 text-3xl sm:text-4xl font-bold tracking-tight">{sellerName}</h1>
+              <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                <span>{items?.length ?? 0} produit(s) en ligne</span>
+                <Link to="/profile" className="inline-flex items-center gap-1 hover:text-foreground">
+                  <UserRound className="h-3.5 w-3.5" /> Mon profil
+                </Link>
+                <Link to="/profile/edit" className="inline-flex items-center gap-1 hover:text-foreground">
+                  <Camera className="h-3.5 w-3.5" /> {seller?.avatar_url ? "Changer ma photo" : "Ajouter ma photo"}
+                </Link>
+              </p>
+            </div>
           </div>
           <Link to="/dashboard/new">
             <Button variant="volt" className="h-11"><Plus className="h-4 w-4 mr-1" /> Ajouter un produit</Button>

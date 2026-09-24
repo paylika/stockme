@@ -28,6 +28,7 @@ import { Route as LegalConfidentialiteRouteImport } from './routes/legal.confide
 import { Route as LegalCookiesRouteImport } from './routes/legal.cookies'
 import { Route as LegalMentionsRouteImport } from './routes/legal.mentions'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
+import { Route as VendeurIdRouteImport } from './routes/vendeur.$id'
 import { Route as AuthenticatedDashboardNewRouteImport } from './routes/_authenticated/dashboard.new'
 import { Route as AuthenticatedProfileEditRouteImport } from './routes/_authenticated/profile.edit'
 import { Route as AuthenticatedDashboardEditIdRouteImport } from './routes/_authenticated/dashboard.edit.$id'
@@ -125,6 +126,11 @@ const ProductIdRoute = ProductIdRouteImport.update({
   path: '/product/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VendeurIdRoute = VendeurIdRouteImport.update({
+  id: '/vendeur/$id',
+  path: '/vendeur/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedDashboardNewRoute =
   AuthenticatedDashboardNewRouteImport.update({
     id: '/new',
@@ -162,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/mentions': typeof LegalMentionsRoute
   '/product/$id': typeof ProductIdRoute
+  '/vendeur/$id': typeof VendeurIdRoute
   '/dashboard/new': typeof AuthenticatedDashboardNewRoute
   '/profile/edit': typeof AuthenticatedProfileEditRoute
   '/dashboard/edit/$id': typeof AuthenticatedDashboardEditIdRoute
@@ -184,6 +191,7 @@ export interface FileRoutesByTo {
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/mentions': typeof LegalMentionsRoute
   '/product/$id': typeof ProductIdRoute
+  '/vendeur/$id': typeof VendeurIdRoute
   '/dashboard/new': typeof AuthenticatedDashboardNewRoute
   '/profile/edit': typeof AuthenticatedProfileEditRoute
   '/dashboard/edit/$id': typeof AuthenticatedDashboardEditIdRoute
@@ -209,6 +217,7 @@ export interface FileRoutesById {
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/mentions': typeof LegalMentionsRoute
   '/product/$id': typeof ProductIdRoute
+  '/vendeur/$id': typeof VendeurIdRoute
   '/_authenticated/dashboard/new': typeof AuthenticatedDashboardNewRoute
   '/_authenticated/profile/edit': typeof AuthenticatedProfileEditRoute
   '/_authenticated/dashboard/edit/$id': typeof AuthenticatedDashboardEditIdRoute
@@ -233,6 +242,7 @@ export interface FileRouteTypes {
     | '/legal/cookies'
     | '/legal/mentions'
     | '/product/$id'
+    | '/vendeur/$id'
     | '/dashboard/new'
     | '/profile/edit'
     | '/dashboard/edit/$id'
@@ -255,6 +265,7 @@ export interface FileRouteTypes {
     | '/legal/cookies'
     | '/legal/mentions'
     | '/product/$id'
+    | '/vendeur/$id'
     | '/dashboard/new'
     | '/profile/edit'
     | '/dashboard/edit/$id'
@@ -279,6 +290,7 @@ export interface FileRouteTypes {
     | '/legal/cookies'
     | '/legal/mentions'
     | '/product/$id'
+    | '/vendeur/$id'
     | '/_authenticated/dashboard/new'
     | '/_authenticated/profile/edit'
     | '/_authenticated/dashboard/edit/$id'
@@ -293,6 +305,7 @@ export interface RootRouteChildren {
   DropshippingRoute: typeof DropshippingRoute
   LegalRoute: typeof LegalRouteWithChildren
   ProductIdRoute: typeof ProductIdRoute
+  VendeurIdRoute: typeof VendeurIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -430,6 +443,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/vendeur/$id': {
+      id: '/vendeur/$id'
+      path: '/vendeur/$id'
+      fullPath: '/vendeur/$id'
+      preLoaderRoute: typeof VendeurIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/dashboard/new': {
       id: '/_authenticated/dashboard/new'
       path: '/new'
@@ -538,6 +558,7 @@ const rootRouteChildren: RootRouteChildren = {
   DropshippingRoute: DropshippingRoute,
   LegalRoute: LegalRouteWithChildren,
   ProductIdRoute: ProductIdRoute,
+  VendeurIdRoute: VendeurIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

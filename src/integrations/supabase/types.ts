@@ -517,6 +517,21 @@ export type Database = {
           favorites: number
         }[]
       }
+      get_public_seller: {
+        Args: {
+          p_seller_id: string
+        }
+        Returns: {
+          id: string
+          shop_name: string | null
+          full_name: string | null
+          avatar_url: string | null
+          city: string | null
+          bio: string | null
+          created_at: string
+          products_count: number
+        } | null
+      }
     }
     Enums: {
       app_role: "admin" | "user"

@@ -22,7 +22,17 @@ type Product = {
   published: boolean; sold_out: boolean; dropshipping: boolean;
   sizes: string[]; colors: string[]; weight_grams: number | null;
 };
-type Profile = { full_name: string | null; whatsapp: string | null; phone: string | null; city: string | null; shop_name: string | null };
+type Profile = { full_name: string | null; whatsapp: string | null; phone: string | null; city: string | null; shop_name: string | null; avatar_url?: string | null };
+type PublicSeller = {
+  id: string;
+  shop_name: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+  city: string | null;
+  bio: string | null;
+  created_at: string;
+  products_count: number;
+};
 type Similar = {
   id: string; name: string; price_fcfa: number; promo_price_fcfa: number | null;
   city: string; zone: string | null; images: string[]; sold_out: boolean;
@@ -111,6 +121,7 @@ function ProductPage() {
   ) : null;
   const [product, setProduct] = useState<Product | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [seller, setSeller] = useState<PublicSeller | null>(null);
   const [similar, setSimilar] = useState<Similar[]>([]);
   const [activeImg, setActiveImg] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -129,12 +140,28 @@ function ProductPage() {
       const p = data as Product | null;
       setProduct(p);
       if (p) {
-        const [{ data: prof }, { data: sim }] = await Promise.all([
-          supabase.from("profiles").select("full_name,whatsapp,phone,city,shop_name").eq("id", p.owner_id).maybeSingle(),
+        const [{ data: prof }, { data: sim }, { data: pub }] = await Promise.all([
+          supabase.from("profiles").select("full_name,whatsapp,phone,city,shop_name,avatar_url").eq("id", p.owner_id).maybeSingle(),
           supabase.rpc("get_similar_products", { p_product_id: p.id, p_limit: 8 }),
+          // Profil public (fonctionne même pour un visiteur non connecté)
+          supabase.rpc("get_public_seller", { p_seller_id: p.owner_id }),
         ]);
         if (!cancel) {
-          setProfile(prof as Profile | null);
+          const publicSeller = (pub as PublicSeller | null) ?? null;
+          setSeller(publicSeller);
+          setProfile(
+            (prof as Profile | null) ??
+              (publicSeller
+                ? {
+                    full_name: publicSeller.full_name,
+                    shop_name: publicSeller.shop_name,
+                    city: publicSeller.city,
+                    avatar_url: publicSeller.avatar_url,
+                    whatsapp: null,
+                    phone: null,
+                  }
+                : null),
+          );
           setSimilar((sim as Similar[] | null) ?? []);
         }
         // Statistiques réelles du vendeur (insignes)
@@ -446,12 +473,47 @@ function ProductPage() {
             <h2 className="mt-5 text-sm font-semibold tracking-wider uppercase text-muted-foreground">À propos du vendeur</h2>
             <div className="mt-3 rounded-2xl border border-border p-5 bg-card shadow-sm">
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-xs text-muted-foreground">Fournisseur</div>
-                  <div className="font-semibold">{profile?.shop_name || profile?.full_name || "Vendeur"}</div>
-                  <span className="mt-1 inline-flex items-center gap-1 text-xs text-volt font-medium">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Vérifié
-                  </span>
+                <div className="flex min-w-0 items-center gap-3">
+                  <Link
+                    to="/vendeur/$id"
+                    params={{ id: product.owner_id }}
+                    aria-label="Voir la boutique du vendeur"
+                    className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-full bg-volt text-base font-bold text-volt-foreground"
+                  >
+                    {profile?.avatar_url ? (
+                      <img src={profile.avatar_url} alt={profile.shop_name || profile.full_name || "Vendeur"} className="h-full w-full object-cover" />
+                    ) : (
+                      <span>
+                        {(profile?.shop_name || profile?.full_name || "V")
+                          .split(/\s+/)
+                          .map((w) => w[0])
+                          .join("")
+                          .slice(0, 2)
+                          .toUpperCase()}
+                      </span>
+                    )}
+                  </Link>
+                  <div className="min-w-0">
+                    <div className="text-xs text-muted-foreground">Fournisseur</div>
+                    <Link
+                      to="/vendeur/$id"
+                      params={{ id: product.owner_id }}
+                      className="block truncate font-semibold hover:text-primary"
+                      title="Voir tous ses produits"
+                    >
+                      {profile?.shop_name || profile?.full_name || "Vendeur"}
+                    </Link>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-volt">
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Vérifié
+                      </span>
+                      {profile?.city && (
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                          <MapPin className="h-3 w-3" /> {profile.city}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 {stats ? (
                   <IntensityGauge value={intensity} size={110} />
@@ -459,6 +521,17 @@ function ProductPage() {
                   <div className="h-16 w-16 rounded-full shimmer bg-muted" />
                 )}
               </div>
+
+              <Link
+                to="/vendeur/$id"
+                params={{ id: product.owner_id }}
+                className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border text-sm font-semibold transition hover:bg-accent"
+              >
+                <Store className="h-4 w-4" /> Voir la boutique
+                {typeof seller?.products_count === "number" && seller.products_count > 0
+                  ? ` (${seller.products_count})`
+                  : ""}
+              </Link>
 
               {stats && (
                 <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
