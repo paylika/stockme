@@ -5,11 +5,14 @@ import { Header } from "@/components/Header";
 import { MobileFooter } from "@/components/MobileFooter";
 import { MobileNav } from "@/components/MobileNav";
 import { ProductCard, type ListingProduct } from "@/components/ProductCard";
+import { Button } from "@/components/ui/button";
 import { JsonLd } from "@/components/JsonLd";
 import { VerifiedBadge, VerifiedBadgeGold } from "@/components/VerifiedBadge";
 import { buildSeoHead, breadcrumbLd, SITE_URL } from "@/lib/seo";
 import { COUNTRY_FLAGS, countryOfCity } from "@/lib/constants";
-import { ArrowLeft, Eye, Heart, MapPin, MessageCircle, Package, Store } from "lucide-react";
+import { whatsappLink } from "@/lib/format";
+import { toast } from "sonner";
+import { ArrowLeft, Copy, Eye, Heart, MapPin, MessageCircle, Package, Phone, Store } from "lucide-react";
 
 const formatCount = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n));
 
@@ -24,6 +27,8 @@ type PublicSeller = {
   products_count: number;
   is_verified?: boolean;
   verified_until?: string | null;
+  phone?: string | null;
+  whatsapp?: string | null;
 };
 
 type SellerStats = {
@@ -44,10 +49,25 @@ export const Route = createFileRoute("/vendeur/$id")({
     if (!seller) {
       const { data: prof } = await supabase
         .from("profiles")
-        .select("id,shop_name,full_name,avatar_url,city,bio,created_at")
+        .select("id,shop_name,full_name,avatar_url,city,bio,created_at,phone,whatsapp")
         .eq("id", params.id)
         .maybeSingle();
       if (prof) seller = { ...(prof as Omit<PublicSeller, "products_count">), products_count: 0 };
+    }
+
+    // 3) Dernier repli : le WhatsApp du produit est public — on l'utilise pour
+    //    que le contact du vendeur soit TOUJOURS affiché sur sa boutique.
+    if (!seller?.whatsapp && !seller?.phone) {
+      const { data: prod } = await supabase
+        .from("products")
+        .select("whatsapp")
+        .eq("owner_id", params.id)
+        .eq("published", true)
+        .not("whatsapp", "is", null)
+        .limit(1)
+        .maybeSingle();
+      const wa = (prod as { whatsapp: string | null } | null)?.whatsapp ?? null;
+      if (wa) seller = { ...(seller ?? ({ id: params.id } as PublicSeller)), whatsapp: wa };
     }
 
     return { seller };
@@ -104,6 +124,15 @@ function SellerPage() {
     .toUpperCase();
   const country = seller?.city ? countryOfCity(seller.city) : null;
   const online = products?.length ?? seller?.products_count ?? 0;
+  // Contact du vendeur, affiché en évidence pour éviter que les acheteurs
+  // contactent le support StockMe en croyant joindre le vendeur.
+  const sellerContact = (seller?.whatsapp || seller?.phone || "").trim() || null;
+  const waLink = sellerContact
+    ? whatsappLink(
+        sellerContact,
+        `Bonjour ${seller?.shop_name || seller?.full_name || ""}, je vous contacte via StockMe au sujet de vos produits.`,
+      )
+    : "#";
 
   return (
     <div className="min-h-screen bg-background">
@@ -177,6 +206,55 @@ function SellerPage() {
                 <Stat icon={<MessageCircle className="h-3.5 w-3.5" />} value={stats?.total_contacts ?? 0} label="Contacts" />
                 <Stat icon={<Heart className="h-3.5 w-3.5" />} value={stats?.total_favorites ?? 0} label="Favoris" />
               </div>
+
+              {/* ===== Contact direct du vendeur (bien visible) ===== */}
+              {sellerContact && (
+                <div className="mt-6 rounded-2xl border border-volt/40 bg-volt/10 p-4 sm:p-5">
+                  <div className="flex flex-wrap items-start gap-3">
+                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-volt text-volt-foreground">
+                      <MessageCircle className="h-5 w-5" />
+                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                        Numéro du vendeur — contact direct
+                      </p>
+                      <p className="mt-0.5 text-xl font-bold tracking-tight">{sellerContact}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                        C'est bien le numéro de <strong className="text-foreground">{displayName}</strong>. StockMe ne
+                        vend pas ces produits et ne reçoit pas les commandes : écrivez directement au vendeur.
+                      </p>
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <a href={waLink} target="_blank" rel="noopener noreferrer">
+                          <Button variant="volt" className="h-11">
+                            <MessageCircle className="mr-1.5 h-4 w-4" /> Écrire sur WhatsApp
+                          </Button>
+                        </a>
+                        <a href={`tel:${sellerContact}`}>
+                          <Button variant="outline" className="h-11">
+                            <Phone className="mr-1.5 h-4 w-4" /> Appeler
+                          </Button>
+                        </a>
+                        <Button
+                          variant="outline"
+                          className="h-11"
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(sellerContact);
+                              toast.success("Numéro du vendeur copié");
+                            } catch {
+                              toast.error("Copie impossible");
+                            }
+                          }}
+                        >
+                          <Copy className="mr-1.5 h-4 w-4" /> Copier
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

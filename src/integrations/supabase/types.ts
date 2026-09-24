@@ -546,6 +546,8 @@ export type Database = {
           products_count: number
           is_verified: boolean
           verified_until: string | null
+          phone: string | null
+          whatsapp: string | null
         } | null
       }
       get_verified_sellers: {

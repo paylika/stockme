@@ -13,6 +13,10 @@ export function MobileFooter() {
           <h4 className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground mb-3">
             Contact
           </h4>
+          <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
+            Support StockMe uniquement — ce n'est pas le numéro d'un vendeur. Pour joindre un vendeur, ouvrez sa
+            boutique depuis l'annonce.
+          </p>
           <ul className="space-y-2.5">
             <li>
               <a href={`tel:+${WHATSAPP_DIGITS}`} className="flex items-center gap-2 text-foreground">
@@ -21,7 +25,7 @@ export function MobileFooter() {
             </li>
             <li>
               <a href={`https://wa.me/${WHATSAPP_DIGITS}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-foreground">
-                <MessageCircle className="h-4 w-4 text-volt" /> WhatsApp
+                <MessageCircle className="h-4 w-4 text-volt" /> WhatsApp support StockMe
               </a>
             </li>
             <li className="flex items-center gap-2 text-muted-foreground break-all">

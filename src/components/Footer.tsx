@@ -46,7 +46,11 @@ export function Footer() {
         {/* Contact */}
         <div>
           <h4 className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground">Contact</h4>
-          <ul className="mt-4 space-y-2.5 text-sm">
+          <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+            Support StockMe uniquement — ce n'est pas le numéro d'un vendeur. Pour joindre un vendeur, ouvrez sa
+            boutique depuis l'annonce.
+          </p>
+          <ul className="mt-3 space-y-2.5 text-sm">
             <li>
               <a href={`mailto:${CONTACT_EMAIL}`} className="inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground">
                 <Mail className="h-3.5 w-3.5 shrink-0" /> {CONTACT_EMAIL}
@@ -54,7 +58,7 @@ export function Footer() {
             </li>
             <li>
               <a href={`https://wa.me/${WHATSAPP_DIGITS}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground">
-                <MessageCircle className="h-3.5 w-3.5 shrink-0" /> WhatsApp
+                <MessageCircle className="h-3.5 w-3.5 shrink-0" /> WhatsApp support StockMe
               </a>
             </li>
             <li>

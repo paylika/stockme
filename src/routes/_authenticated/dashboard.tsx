@@ -7,7 +7,7 @@ import { MobileFooter } from "@/components/MobileFooter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatFCFA } from "@/lib/format";
-import { AlertTriangle, Camera, Edit2, MapPin, Package, Pencil, Plus, Save, Trash2, UserRound, X } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Camera, Edit2, MapPin, Package, Pencil, Plus, Save, Trash2, UserRound, X } from "lucide-react";
 import { StatusSwitch } from "@/components/StatusSwitch";
 import { toast } from "sonner";
 
@@ -34,7 +34,7 @@ function Dashboard() {
   const [items, setItems] = useState<P[] | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [qty, setQty] = useState<number>(0);
-  const [seller, setSeller] = useState<{ shop_name: string | null; full_name: string | null; avatar_url: string | null } | null>(null);
+  const [seller, setSeller] = useState<{ shop_name: string | null; full_name: string | null; avatar_url: string | null; verified: boolean; verified_until: string | null } | null>(null);
 
   const load = async () => {
     const { data: u } = await supabase.auth.getUser();
@@ -45,11 +45,12 @@ function Dashboard() {
         .select("id,name,price_fcfa,quantity,moq,city,category,images,published,sold_out,dropshipping")
         .eq("owner_id", u.user.id)
         .order("created_at", { ascending: false }),
-      supabase.from("profiles").select("shop_name,full_name,avatar_url").eq("id", u.user.id).maybeSingle(),
+      supabase.from("profiles").select("shop_name,full_name,avatar_url,verified,verified_until").eq("id", u.user.id).maybeSingle(),
     ]);
     setItems((data ?? []) as P[]);
     setSeller(
-      (prof as { shop_name: string | null; full_name: string | null; avatar_url: string | null } | null) ?? null,
+      (prof as { shop_name: string | null; full_name: string | null; avatar_url: string | null; verified: boolean; verified_until: string | null } | null) ??
+        null,
     );
   };
 
@@ -96,6 +97,8 @@ function Dashboard() {
 
   const sellerName = seller?.shop_name || seller?.full_name || "Ma boutique";
   const initials = sellerName.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  const isVerified =
+    !!seller?.verified && (!seller.verified_until || new Date(seller.verified_until) > new Date());
 
   return (
     <div className="min-h-screen bg-background">
@@ -129,6 +132,25 @@ function Dashboard() {
             <Button variant="volt" className="h-11"><Plus className="h-4 w-4 mr-1" /> Ajouter un produit</Button>
           </Link>
         </div>
+
+        {/* Nudge : la vérification est le principal levier de confiance */}
+        {seller && !isVerified && (
+          <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-volt/40 bg-volt/10 p-4">
+            <BadgeCheck className="h-6 w-6 shrink-0 text-primary" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold">Votre boutique n'est pas encore vérifiée</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                Le badge <strong className="text-foreground">Fournisseur vérifié</strong> s'affiche sur toutes vos
+                cartes produit et sur votre boutique — c'est le premier critère de confiance des acheteurs.
+              </p>
+            </div>
+            <Link to="/profile">
+              <Button variant="volt" className="h-11">
+                Vérifier ma boutique — 2 000 FCFA
+              </Button>
+            </Link>
+          </div>
+        )}
 
         <div className="mt-8">
           {items === null ? (
