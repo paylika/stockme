@@ -445,13 +445,14 @@ function AdminDashboard() {
               <th className="text-right px-4 py-3 hidden sm:table-cell">Stock</th>
               <th className="text-left px-4 py-3 hidden md:table-cell">Ville</th>
               <th className="text-left px-4 py-3 hidden lg:table-cell">Vendeur</th>
+              <th className="text-left px-4 py-3 hidden md:table-cell">Publié le</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">Chargement…</td></tr>
+              <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Chargement…</td></tr>
             ) : prods.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">Aucun produit</td></tr>
+              <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Aucun produit</td></tr>
             ) : prods.slice(0, 12).map((p) => {
               const hasPromo = p.promo_price_fcfa && p.promo_price_fcfa < p.price_fcfa;
               return (
@@ -467,6 +468,9 @@ function AdminDashboard() {
                   <td className="px-4 py-3 text-right hidden sm:table-cell text-muted-foreground">{p.quantity}</td>
                   <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">{p.zone || p.city || "—"}</td>
                   <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground truncate max-w-[160px]">{ownerName.get(p.owner_id) || "—"}</td>
+                  <td className="px-4 py-3 hidden md:table-cell text-muted-foreground text-xs whitespace-nowrap">
+                    {new Date(p.created_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}
+                  </td>
                 </tr>
               );
             })}

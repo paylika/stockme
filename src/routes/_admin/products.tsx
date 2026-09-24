@@ -97,15 +97,16 @@ function AdminProductsPage() {
               <th className="text-left px-4 py-3 hidden lg:table-cell">Catégorie</th>
               <th className="text-right px-4 py-3">Prix</th>
               <th className="text-right px-4 py-3 hidden sm:table-cell">Stock</th>
+              <th className="text-left px-4 py-3 hidden md:table-cell">Publié le</th>
               <th className="text-left px-4 py-3">Statut</th>
               <th className="text-right px-4 py-3">Actions</th>
             </tr>
           </thead>
           <tbody>
             {products === null ? (
-              <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Chargement…</td></tr>
+              <tr><td colSpan={8} className="px-4 py-6 text-center text-muted-foreground">Chargement…</td></tr>
             ) : products.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Aucun produit</td></tr>
+              <tr><td colSpan={8} className="px-4 py-6 text-center text-muted-foreground">Aucun produit</td></tr>
             ) : products.map((p) => {
               const hasPromo = p.promo_price_fcfa && p.promo_price_fcfa < p.price_fcfa;
               return (
@@ -120,6 +121,9 @@ function AdminProductsPage() {
                     {hasPromo && <span className="ml-1 text-[10px] font-bold text-volt">PROMO</span>}
                   </td>
                   <td className="px-4 py-3 text-right hidden sm:table-cell text-muted-foreground">{p.quantity}</td>
+                  <td className="px-4 py-3 hidden md:table-cell text-muted-foreground text-xs whitespace-nowrap">
+                    {new Date(p.created_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     {p.sold_out ? (
                       <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-semibold text-destructive">Épuisé</span>
