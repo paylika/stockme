@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
 import { Button } from "@/components/ui/button";
+import { usePaymentsStatus } from "@/lib/features";
 import { formatFCFA } from "@/lib/format";
 import { CheckCircle2, Clock, XCircle } from "lucide-react";
 
@@ -43,6 +44,7 @@ export const Route = createFileRoute("/paiement/retour")({
 
 function PaymentReturn() {
   const { intent: intentId, status: callbackStatus } = Route.useSearch();
+  const payments = usePaymentsStatus();
   const [intent, setIntent] = useState<Intent | null>(null);
   const [loading, setLoading] = useState(true);
   const [tries, setTries] = useState(0);
@@ -89,7 +91,19 @@ function PaymentReturn() {
     <div className="min-h-screen bg-background">
       <Header />
       <div className="mx-auto max-w-lg px-4 py-10 sm:px-6 sm:py-16">
-        {loading ? (
+        {!payments.loading && !payments.enabled ? (
+          <div className="text-center">
+            <Clock className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h1 className="mt-4 text-2xl font-bold">Paiement en ligne bientôt disponible</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Le paiement automatique est en cours d'activation. En attendant, la vérification de votre boutique se
+              fait par Wave ou Orange Money, directement depuis votre profil.
+            </p>
+            <Link to="/profile" className="mt-6 inline-block">
+              <Button variant="volt" className="h-11">Voir mon compte</Button>
+            </Link>
+          </div>
+        ) : loading ? (
           <div className="text-center text-sm text-muted-foreground">Vérification du paiement…</div>
         ) : !intentId || (!intent && !cancelled) ? (
           <div className="text-center">
