@@ -6,6 +6,7 @@ import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
 import { ProductForm, ProductFormValues } from "@/components/ProductForm";
 import { PhotoFailurePanel } from "@/components/PhotoFailurePanel";
+import { Button } from "@/components/ui/button";
 import { uploadImagesResilient, type UploadFailure } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
 import { toast } from "sonner";

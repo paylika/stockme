@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatFCFA } from "@/lib/format";
 import { AlertTriangle, Edit2, MapPin, Package, Pencil, Plus, Save, Trash2, X } from "lucide-react";
+import { StatusSwitch } from "@/components/StatusSwitch";
 import { toast } from "sonner";
 
 type P = {
@@ -175,29 +176,35 @@ function Dashboard() {
                     </div>
 
                     {/* Statut + actions rapides */}
-                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-3">
-                      <StatusToggle
+                    <div className="mt-3 space-y-1.5 border-t border-border pt-3">
+                      <StatusSwitch
+                        label="En ligne"
+                        hint={p.published ? "Visible par les acheteurs" : "Masqué du catalogue"}
                         checked={p.published}
                         onChange={(v) => togglePublished(p, v)}
-                        label={p.published ? "Publié" : "Dépublié"}
+                        actionLabel={p.published ? "Masquer ce produit du catalogue" : "Mettre ce produit en ligne"}
                       />
-                      <StatusToggle
-                        checked={p.sold_out}
-                        onChange={(v) => toggleSoldOut(p, v)}
-                        label="Épuisé"
-                        tone="destructive"
+                      <StatusSwitch
+                        label="Disponible"
+                        hint={p.sold_out ? "Marqué épuisé" : "En stock"}
+                        checked={!p.sold_out}
+                        onChange={(v) => toggleSoldOut(p, !v)}
+                        actionLabel={p.sold_out ? "Marquer ce produit comme disponible" : "Marquer ce produit comme épuisé"}
                       />
-                      <StatusToggle
-                        checked={p.dropshipping}
-                        onChange={(v) => toggleDropshipping(p, v)}
+                      <StatusSwitch
                         label="Dropshipping"
+                        hint={p.dropshipping ? "Livraison sur commande" : "Vente en gros (lots)"}
+                        checked={p.dropshipping}
+                        tone="volt"
+                        onChange={(v) => toggleDropshipping(p, v)}
+                        actionLabel={p.dropshipping ? "Repasser en vente en gros" : "Passer ce produit en dropshipping"}
                       />
                       <Link
                         to="/dashboard/edit/$id"
                         params={{ id: p.id }}
-                        className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium text-foreground hover:text-primary"
+                        className="mt-1 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-border text-[13px] font-semibold hover:bg-accent"
                       >
-                        <Pencil className="h-3 w-3" /> Modifier
+                        <Pencil className="h-3.5 w-3.5" /> Modifier le produit
                       </Link>
                     </div>
                   </div>
@@ -210,31 +217,5 @@ function Dashboard() {
       <MobileFooter />
       <MobileNav />
     </div>
-  );
-}
-
-function StatusToggle({
-  checked,
-  onChange,
-  label,
-  tone = "default",
-}: {
-  checked: boolean;
-  onChange: (next: boolean) => void;
-  label: string;
-  tone?: "default" | "destructive";
-}) {
-  const on = tone === "destructive" ? "bg-destructive" : "bg-volt";
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-    >
-      <span className={`relative h-4 w-7 rounded-full transition ${checked ? on : "bg-muted"}`}>
-        <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-background shadow transition-all ${checked ? "left-3.5" : "left-0.5"}`} />
-      </span>
-      <span className={checked ? "font-semibold text-foreground" : ""}>{label}</span>
-    </button>
   );
 }
