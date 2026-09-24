@@ -6,7 +6,7 @@ import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ProductCard, type ListingProduct } from "@/components/ProductCard";
-import { SponsorBanner } from "@/components/SponsorBanner";
+import { SponsorCarousel } from "@/components/SponsorCarousel";
 import { Trophy } from "lucide-react";
 import { buildSeoHead } from "@/lib/seo";
 import { CATEGORIES, WEST_AFRICA_LOCATIONS } from "@/lib/constants";
@@ -213,17 +213,9 @@ function Index() {
         </div>
       )}
 
-      {/* ============ ENCART SPONSORISÉ ============ */}
+      {/* ============ ENCART SPONSORISÉ (carrousel) ============ */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pt-4 sm:pt-6">
-        <SponsorBanner
-          badge="Sponsorisé · XaalisPay"
-          title="Encaissez avant de livrer avec XaalisPay"
-          description="Le client paie d'abord (séquestre Wave & Orange Money), vous livrez, vous êtes payé."
-          ctaLabel="Découvrir"
-          href="https://www.xaalispay.com/"
-          logoSrc="/partners/xaalispay-mark.png"
-          logoAlt="XaalisPay"
-        />
+        <SponsorCarousel />
       </section>
 
       {/* ============ POTENTIEL PRODUIT WINNER ============ */}

@@ -6,8 +6,9 @@ type Props = {
   description?: string;
   ctaLabel: string;
   href: string;
-  logoSrc: string;
+  logoSrc?: string;
   logoAlt?: string;
+  icon?: React.ComponentType<{ className?: string }>;
 };
 
 export function SponsorBanner({
@@ -18,6 +19,7 @@ export function SponsorBanner({
   href,
   logoSrc,
   logoAlt = "",
+  icon: Icon,
 }: Props) {
   return (
     <a
@@ -27,12 +29,19 @@ export function SponsorBanner({
       className="group flex flex-col gap-3 rounded-2xl border border-border bg-card p-3 transition hover:border-foreground/30 hover:shadow-sm sm:flex-row sm:items-center sm:gap-4 sm:p-3.5"
     >
       <div className="flex min-w-0 items-center gap-3 sm:flex-1">
-        <img
-          src={logoSrc}
-          alt={logoAlt}
-          loading="lazy"
-          className="h-10 w-10 shrink-0 rounded-xl object-contain sm:h-11 sm:w-11"
-        />
+        {logoSrc ? (
+          <img
+            src={logoSrc}
+            alt={logoAlt}
+            loading="lazy"
+            className="h-10 w-10 shrink-0 rounded-xl object-contain sm:h-11 sm:w-11"
+          />
+        ) : Icon ? (
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-volt/15 text-volt sm:h-11 sm:w-11">
+            <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
+          </span>
+        ) : null}
+
         <div className="min-w-0 flex-1">
           <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             {badge}
