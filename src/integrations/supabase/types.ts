@@ -403,6 +403,16 @@ export type Database = {
           p_provider_ref: string
           p_amount?: number | null
           p_payload?: Record<string, unknown> | null
+          p_subscription_ref?: string | null
+        }
+        Returns: Record<string, unknown>
+      }
+      subscription_renew: {
+        Args: {
+          p_provider: string
+          p_subscription_ref: string
+          p_amount?: number | null
+          p_payload?: Record<string, unknown> | null
         }
         Returns: Record<string, unknown>
       }

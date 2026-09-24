@@ -46,11 +46,32 @@ export const Route = createFileRoute("/api/pay/webhook/$provider")({
         }
 
         const supabase = serviceClient(serviceKey);
+
+        // ---- Échéance mensuelle d'un abonnement (carte enregistrée) ----
+        if (check.kind === "subscription_invoice") {
+          if (!check.subscriptionRef) {
+            return Response.json({ ok: true, ignored: true, reason: "no_subscription_ref" });
+          }
+          const { data, error } = await supabase.rpc("subscription_renew", {
+            p_provider: provider.name,
+            p_subscription_ref: check.subscriptionRef,
+            p_amount: check.amount ?? null,
+            p_payload: (check.payload ?? null) as never,
+          });
+          if (error) {
+            console.error("[pay/webhook] subscription_renew:", error.message);
+            return Response.json({ error: error.message }, { status: 500 });
+          }
+          return Response.json({ ok: true, renewed: data });
+        }
+
+        // ---- Paiement unique (recharge, boost, 1re échéance d'abonnement) ----
         const { data, error } = await supabase.rpc("payment_mark_paid", {
           p_provider: provider.name,
           p_provider_ref: check.providerRef,
           p_amount: check.amount ?? null,
           p_payload: (check.payload ?? null) as never,
+          p_subscription_ref: check.subscriptionRef ?? null,
         });
 
         if (error) {

@@ -21,10 +21,12 @@ export type CreatePaymentInput = {
   successUrl: string;
   cancelUrl: string;
   customerEmail?: string | null;
+  /** Abonnement mensuel (carte enregistrée) — ignoré par le mobile money. */
+  recurring?: "month" | null;
 };
 
 export type CreatePaymentResult = {
-  /** Identifiant chez le fournisseur (transaction_id Stripe session id…). */
+  /** Identifiant chez le fournisseur (transaction_id, session Stripe…). */
   providerRef: string;
   /** URL vers laquelle rediriger le payeur. */
   checkoutUrl: string;
@@ -39,6 +41,10 @@ export type WebhookVerification = {
   providerRef?: string;
   /** Statut normalisé. */
   status?: "paid" | "failed" | "expired" | "ignored";
+  /** Nature de l'événement : paiement unique, ou échéance d'abonnement. */
+  kind?: "payment" | "subscription_invoice";
+  /** Référence de l'abonnement (Stripe `sub_…`) pour les renouvellements. */
+  subscriptionRef?: string | null;
   amount?: number | null;
   payload?: unknown;
   reason?: string;

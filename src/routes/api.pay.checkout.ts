@@ -89,6 +89,8 @@ export const Route = createFileRoute("/api/pay/checkout")({
             successUrl: `${origin}/paiement/retour?intent=${intentId}&status=ok`,
             cancelUrl: `${origin}/paiement/retour?intent=${intentId}&status=cancel`,
             customerEmail: userData.user.email ?? null,
+            // Carte + abonnement → vrai prélèvement mensuel automatique.
+            recurring: purpose === "subscription" && method === "card" ? "month" : null,
           });
 
           // 3) On garde la référence du fournisseur pour que le webhook retrouve la commande

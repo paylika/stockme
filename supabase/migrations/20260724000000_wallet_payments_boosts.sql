@@ -168,7 +168,8 @@ CREATE OR REPLACE FUNCTION public.payment_mark_paid(
   p_provider text,
   p_provider_ref text,
   p_amount int DEFAULT NULL,
-  p_payload jsonb DEFAULT NULL
+  p_payload jsonb DEFAULT NULL,
+  p_subscription_ref text DEFAULT NULL
 )
 RETURNS json
 LANGUAGE plpgsql
@@ -200,7 +201,14 @@ BEGIN
   END IF;
 
   UPDATE public.payment_intents
-     SET status = 'paid', paid_at = now(), provider_payload = coalesce(p_payload, provider_payload)
+     SET status = 'paid',
+         paid_at = now(),
+         provider_payload = coalesce(p_payload, provider_payload),
+         -- Abonnement par carte : on mémorise la référence pour que les
+         -- prochaines échéances retrouvent le vendeur.
+         metadata = CASE WHEN p_subscription_ref IS NOT NULL
+                         THEN metadata || jsonb_build_object('subscription_ref', p_subscription_ref)
+                         ELSE metadata END
    WHERE id = v_intent.id;
 
   -- ---- Effet 1 : rechargement du portefeuille ----
@@ -248,7 +256,7 @@ BEGIN
 END;
 $$;
 -- Réservé au serveur (clé de service) : jamais exposé au navigateur.
-REVOKE EXECUTE ON FUNCTION public.payment_mark_paid(text, text, int, jsonb) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.payment_mark_paid(text, text, int, jsonb, text) FROM PUBLIC, anon, authenticated;
 
 -- ------------------------------------------------------------------
 -- 6. Portefeuille du vendeur (solde + derniers mouvements + campagnes)
