@@ -22,7 +22,7 @@ const SLIDES = [
   },
 ] as const;
 
-const ROTATE_MS = 20000; // 20 secondes
+const ROTATE_MS = 10000; // 10 secondes
 
 export function SponsorCarousel() {
   const [index, setIndex] = useState(0);
