@@ -14,10 +14,10 @@ const SLIDES = [
   },
   {
     badge: "Annonce StockMe",
-    title: "Votre produit ici pour seulement 1 000 FCFA",
-    description: "Gagnez en visibilité dès aujourd'hui : votre produit mis en avant sur l'accueil. Contactez-nous !",
+    title: "Votre annonce ici pour seulement 500 FCFA / jour",
+    description: "Gagnez en visibilité dès aujourd'hui : votre annonce mise en avant sur l'accueil. Contactez-nous !",
     ctaLabel: "Contacter",
-    href: "https://wa.me/221786635331?text=Bonjour%20StockMe%2C%20je%20souhaite%20mettre%20mon%20produit%20en%20avant%20sur%20l%27accueil.",
+    href: "https://wa.me/221786635331?text=Bonjour%20StockMe%2C%20je%20souhaite%20mettre%20mon%20annonce%20en%20avant%20sur%20l%27accueil.",
     icon: Megaphone,
   },
 ] as const;
