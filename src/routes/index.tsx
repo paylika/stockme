@@ -43,6 +43,16 @@ export const Route = createFileRoute("/")({
 
 type Product = ListingProduct;
 
+const PAGE_SIZE = 24;
+const SORTS = [
+  { id: "pertinence", label: "Pertinence" },
+  { id: "nouveau", label: "Nouveautés" },
+  { id: "populaire", label: "Populaires" },
+  { id: "promo", label: "Promos" },
+  { id: "prix_asc", label: "Prix ↑" },
+  { id: "prix_desc", label: "Prix ↓" },
+] as const;
+
 
 
 function Index() {
@@ -50,36 +60,55 @@ function Index() {
   const navigate = useNavigate({ from: "/" });
   const [items, setItems] = useState<Product[] | null>(null);
   const [q, setQ] = useState(search.q ?? "");
+  const [sort, setSort] = useState("pertinence");
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     setQ(search.q ?? "");
   }, [search.q]);
 
+  const fetchPage = async (offset: number) => {
+    const cities = search.city
+      ? null
+      : search.country && WEST_AFRICA_LOCATIONS[search.country]
+      ? WEST_AFRICA_LOCATIONS[search.country]
+      : null;
+    const { data } = await supabase.rpc("get_ranked_products", {
+      p_sort: sort,
+      p_limit: PAGE_SIZE,
+      p_offset: offset,
+      p_city: search.city ?? null,
+      p_cities: cities,
+      p_category: search.category ?? null,
+      p_q: search.q ?? null,
+    });
+    return (data as Product[] | null) ?? [];
+  };
+
   useEffect(() => {
     let cancel = false;
     setItems(null);
+    setHasMore(false);
     (async () => {
-      let query = supabase
-        .from("products")
-        .select("id,name,category,price_fcfa,promo_price_fcfa,quantity,moq,city,zone,images,sold_out")
-        .eq("published", true)
-        .eq("dropshipping", false)
-        .order("created_at", { ascending: false })
-        .limit(60);
-      if (search.city) {
-        query = query.eq("city", search.city);
-      } else if (search.country && WEST_AFRICA_LOCATIONS[search.country]) {
-        query = query.in("city", WEST_AFRICA_LOCATIONS[search.country]);
-      }
-      if (search.category) query = query.eq("category", search.category);
-      if (search.q) query = query.ilike("name", `%${search.q}%`);
-      const { data } = await query;
-      if (!cancel) setItems((data as Product[] | null) ?? []);
+      const list = await fetchPage(0);
+      if (cancel) return;
+      setItems(list);
+      setHasMore(list.length === PAGE_SIZE);
     })();
     return () => {
       cancel = true;
     };
-  }, [search.country, search.city, search.category, search.q]);
+  }, [search.country, search.city, search.category, search.q, sort]);
+
+  const loadMore = async () => {
+    if (!items || loadingMore) return;
+    setLoadingMore(true);
+    const list = await fetchPage(items.length);
+    setItems((prev) => [...(prev ?? []), ...list]);
+    setHasMore(list.length === PAGE_SIZE);
+    setLoadingMore(false);
+  };
 
 
   const update = (patch: Partial<Filters>) =>
@@ -216,8 +245,28 @@ function Index() {
                 ? "Chargement…"
                 : items.length === 0
                 ? "Aucun résultat"
-                : `${items.length} produit${items.length > 1 ? "s" : ""} disponible${items.length > 1 ? "s" : ""}`}
+                : `${items.length} produit${items.length > 1 ? "s" : ""} affiché${items.length > 1 ? "s" : ""}`}
             </h2>
+          </div>
+        </div>
+
+        {/* Onglets de tri */}
+        <div className="mb-4 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-2">
+            {SORTS.map((s) => {
+              const active = sort === s.id;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => setSort(s.id)}
+                  className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+                    active ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {s.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -230,11 +279,24 @@ function Index() {
         ) : items.length === 0 ? (
           <EmptyState onClear={clearAll} />
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
-            {items.map((p, i) => (
-              <ProductCard key={p.id} product={p} delayMs={i * 45} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+              {items.map((p, i) => (
+                <ProductCard key={p.id} product={p} delayMs={(i % PAGE_SIZE) * 40} />
+              ))}
+            </div>
+            {hasMore && (
+              <div className="mt-8 flex justify-center">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="h-11 rounded-full border border-border bg-card px-6 text-sm font-semibold transition hover:bg-accent disabled:opacity-60"
+                >
+                  {loadingMore ? "Chargement…" : "Charger plus de produits"}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </section>
 

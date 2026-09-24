@@ -1,0 +1,102 @@
+
+-- ============================================================
+-- Flux de produits classé (algo "Pertinence") + pagination
+--   p_sort : 'pertinence' | 'nouveau' | 'populaire' | 'promo' | 'prix_asc' | 'prix_desc'
+--   Score = popularité (contacts/vues/favoris) + fraîcheur décroissante
+--           + tendance (activité 7j) + bonus promo − pénalité épuisé
+--   Équité : en "pertinence", on entrelace les vendeurs (rang par vendeur)
+--            pour éviter qu'un seul vendeur monopolise le haut du flux.
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.get_ranked_products(
+  p_sort text DEFAULT 'pertinence',
+  p_limit int DEFAULT 24,
+  p_offset int DEFAULT 0,
+  p_city text DEFAULT NULL,
+  p_cities text[] DEFAULT NULL,
+  p_category text DEFAULT NULL,
+  p_q text DEFAULT NULL
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v json;
+BEGIN
+  WITH base AS (
+    SELECT p.id, p.name, p.category, p.price_fcfa, p.promo_price_fcfa, p.quantity, p.moq,
+           p.city, p.zone, p.images, p.sold_out, p.dropshipping, p.owner_id, p.created_at,
+           extract(epoch FROM (now() - p.created_at)) / 86400.0 AS age_days
+    FROM public.products p
+    WHERE p.published = true
+      AND p.dropshipping = false
+      AND (p_city IS NULL OR p.city = p_city)
+      AND (p_cities IS NULL OR p.city = ANY(p_cities))
+      AND (p_category IS NULL OR p.category = p_category)
+      AND (p_q IS NULL OR p.name ILIKE '%' || p_q || '%')
+  ),
+  ev AS (
+    SELECT e.product_id,
+      count(*) FILTER (WHERE e.event = 'contact' AND e.created_at >= now() - interval '30 days') AS contacts_30,
+      count(*) FILTER (WHERE e.event = 'view' AND e.created_at >= now() - interval '30 days') AS views_30,
+      count(*) FILTER (WHERE e.created_at >= now() - interval '7 days') AS events_7,
+      count(*) FILTER (WHERE e.event = 'contact') AS contacts_total
+    FROM public.product_events e
+    WHERE e.product_id IN (SELECT id FROM base)
+    GROUP BY e.product_id
+  ),
+  fv AS (
+    SELECT f.product_id, count(*) AS favorites
+    FROM public.favorites f
+    WHERE f.product_id IN (SELECT id FROM base)
+    GROUP BY f.product_id
+  ),
+  scored AS (
+    SELECT b.*,
+      coalesce(ev.contacts_30, 0) AS contacts_30,
+      coalesce(ev.views_30, 0) AS views_30,
+      coalesce(ev.events_7, 0) AS events_7,
+      coalesce(ev.contacts_total, 0) AS contacts_total,
+      coalesce(fv.favorites, 0) AS favorites,
+      (
+        3 * ln(1 + coalesce(ev.contacts_30, 0))
+        + 1.5 * ln(1 + coalesce(ev.views_30, 0))
+        + 2 * ln(1 + coalesce(fv.favorites, 0))
+        + 15 * exp(-b.age_days / 10.0)
+        + 1.5 * ln(1 + coalesce(ev.events_7, 0))
+        + (CASE WHEN b.promo_price_fcfa IS NOT NULL AND b.promo_price_fcfa < b.price_fcfa THEN 10 ELSE 0 END)
+        - (CASE WHEN b.sold_out THEN 20 ELSE 0 END)
+      ) AS score
+    FROM base b
+    LEFT JOIN ev ON ev.product_id = b.id
+    LEFT JOIN fv ON fv.product_id = b.id
+  ),
+  ranked AS (
+    SELECT s.*,
+      coalesce(promo_price_fcfa, price_fcfa) AS eff_price,
+      (CASE WHEN promo_price_fcfa IS NOT NULL AND promo_price_fcfa < price_fcfa THEN 1 ELSE 0 END) AS is_promo,
+      row_number() OVER (PARTITION BY owner_id ORDER BY score DESC, created_at DESC) AS seller_rank
+    FROM scored s
+  )
+  SELECT coalesce(json_agg(row_to_json(t)), '[]'::json) INTO v FROM (
+    SELECT id, name, category, price_fcfa, promo_price_fcfa, quantity, moq, city, zone, images,
+           sold_out, dropshipping, round(score::numeric, 2) AS score,
+           contacts_total, views_30, favorites
+    FROM ranked
+    ORDER BY
+      CASE WHEN p_sort = 'nouveau' THEN created_at END DESC NULLS LAST,
+      CASE WHEN p_sort = 'populaire' THEN contacts_total END DESC NULLS LAST,
+      CASE WHEN p_sort = 'promo' THEN is_promo END DESC NULLS LAST,
+      CASE WHEN p_sort = 'prix_asc' THEN eff_price END ASC NULLS LAST,
+      CASE WHEN p_sort = 'prix_desc' THEN eff_price END DESC NULLS LAST,
+      CASE WHEN p_sort = 'pertinence' THEN seller_rank END ASC NULLS LAST,
+      CASE WHEN p_sort = 'pertinence' THEN score END DESC NULLS LAST,
+      created_at DESC
+    LIMIT greatest(p_limit, 1) OFFSET greatest(p_offset, 0)
+  ) t;
+  RETURN v;
+END;
+$$;
+REVOKE EXECUTE ON FUNCTION public.get_ranked_products(text, int, int, text, text[], text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_ranked_products(text, int, int, text, text[], text, text) TO anon, authenticated;
