@@ -48,8 +48,8 @@ const PAGE_SIZE = 24;
 /** Positions sponsorisées dans la grille (index 1 et 2 = cartes n°2 et n°3). */
 const SPONSOR_SLOTS = [1, 2];
 const SORTS = [
-  { id: "pertinence", label: "Pertinence" },
   { id: "nouveau", label: "Nouveautés" },
+  { id: "pertinence", label: "Pertinence" },
   { id: "populaire", label: "Populaires" },
   { id: "promo", label: "Promos" },
   { id: "prix_asc", label: "Prix ↑" },
@@ -63,7 +63,9 @@ function Index() {
   const navigate = useNavigate({ from: "/" });
   const [items, setItems] = useState<Product[] | null>(null);
   const [q, setQ] = useState(search.q ?? "");
-  const [sort, setSort] = useState("pertinence");
+  // Par défaut : les nouveautés. « Pertinence » remonterait les mêmes produits
+  // que la section « Potentiel produit Winner » (effet de répétition).
+  const [sort, setSort] = useState("nouveau");
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [winners, setWinners] = useState<Product[] | null>(null);
