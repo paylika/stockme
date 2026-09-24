@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { uploadImage } from "@/lib/image-upload";
 import { formatFCFA } from "@/lib/format";
 import { ctr as computeCtr } from "@/lib/ad-tracking";
+import { isMissingFunction } from "@/lib/db-errors";
 import { toast } from "sonner";
 import {
   BarChart3,
@@ -80,6 +81,7 @@ function adStatus(a: Ad) {
 function AdminAdsPage() {
   const [ads, setAds] = useState<Ad[] | null>(null);
   const [stats, setStats] = useState<Record<string, AdStat>>({});
+  const [statsMissing, setStatsMissing] = useState(false);
   const [productNames, setProductNames] = useState<Record<string, string>>({});
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [vendorProducts, setVendorProducts] = useState<VendorProduct[]>([]);
@@ -115,7 +117,8 @@ function AdminAdsPage() {
     }
 
     // Performances (impressions / clics) — réservé aux admins.
-    const { data: st } = await supabase.rpc("get_ad_stats", {});
+    const { data: st, error: statsError } = await supabase.rpc("get_ad_stats", {});
+    setStatsMissing(!!statsError && isMissingFunction(statsError.message));
     const byId: Record<string, AdStat> = {};
     ((st as AdStat[] | null) ?? []).forEach((s) => { byId[s.ad_id] = s; });
     setStats(byId);
@@ -255,6 +258,13 @@ function AdminAdsPage() {
       </div>
 
       {/* ===== Performances globales ===== */}
+      {statsMissing && (
+        <p className="mt-4 rounded-xl border border-volt/40 bg-volt/10 px-3 py-2 text-xs">
+          Les statistiques d'annonces ne sont pas encore actives en base : collez le script
+          <span className="font-semibold"> 20260715000000_ad_tracking_and_slots.sql</span> dans Supabase (SQL Editor → Run),
+          puis rechargez cette page.
+        </p>
+      )}
       <div className="mt-4 grid grid-cols-3 gap-3">
         <PerfCard
           icon={Eye}

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/stockme-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { COUNTRY_FLAGS, countryOfCity } from "@/lib/constants";
+import { explainDbError } from "@/lib/db-errors";
 import { formatFCFA } from "@/lib/format";
 import { toast } from "sonner";
 import {
@@ -84,7 +85,7 @@ function AdminUsersPage() {
     // Tous les produits du vendeur (publiés ou non) + leurs statistiques.
     const { data, error } = await supabase.rpc("admin_list_user_products", { p_user_id: u.id });
     if (error) {
-      toast.error(error.message);
+      toast.error(explainDbError(error.message, "20260718000000_admin_products_full_access.sql"));
       setProductsByUser((prev) => ({ ...prev, [u.id]: [] }));
       return;
     }
@@ -124,7 +125,7 @@ function AdminUsersPage() {
     setBusyProduct(p.id);
     const { error } = await supabase.rpc("admin_update_product", { p_id: p.id, p_patch: patch });
     setBusyProduct(null);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(explainDbError(error.message, "20260718000000_admin_products_full_access.sql"));
     toast.success(message);
     setProductsByUser((prev) => {
       const list = prev[userId];
@@ -138,7 +139,7 @@ function AdminUsersPage() {
     setBusyProduct(p.id);
     const { error } = await supabase.rpc("admin_delete_product", { p_id: p.id });
     setBusyProduct(null);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(explainDbError(error.message, "20260718000000_admin_products_full_access.sql"));
     toast.success("Produit supprimé");
     setProductsByUser((prev) => {
       const list = prev[userId];
