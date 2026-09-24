@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { AdminButton } from "@/components/AdminButton";
 import logoUrl from "@/assets/stockme-logo.png";
 
 export function Header() {
@@ -16,6 +17,7 @@ export function Header() {
           </span>
         </Link>
         <div className="flex-1" />
+        <AdminButton />
       </div>
     </header>
   );

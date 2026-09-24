@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { AdminButton } from "@/components/AdminButton";
 import logoUrl from "@/assets/stockme-logo.png";
 import {
   IconPin as MapPin,
@@ -37,13 +38,14 @@ export function SiteHeader({
     <header className="border-b border-border bg-background">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-3 sm:pt-4 pb-3">
         {/* Logo (mobile) — sur desktop le logo est dans la sidebar */}
-        <div className="md:hidden mb-2.5">
+        <div className="md:hidden mb-2.5 flex items-center justify-between gap-3">
           <Link to="/" className="inline-flex items-center gap-2.5">
             <img src={logoUrl} alt="StockMe" className="h-8 w-8 object-contain rounded-lg" />
             <span className="text-base font-display font-medium tracking-tight">
               Stock<span className="font-bold">Me</span>
             </span>
           </Link>
+          <AdminButton />
         </div>
 
         {/* Barre de recherche */}
