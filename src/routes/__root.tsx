@@ -12,6 +12,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { JsonLd } from "@/components/JsonLd";
+import { WhatsAppGroupPopup } from "@/components/WhatsAppGroupPopup";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { useEffect } from "react";
 import {
@@ -139,6 +140,7 @@ function RootComponent() {
           </SidebarInset>
         </SidebarProvider>
       )}
+      {!isAdminLayout && <WhatsAppGroupPopup />}
       <JsonLd data={organizationLd()} />
       <JsonLd data={webSiteLd()} />
       <Toaster richColors position="top-right" />
