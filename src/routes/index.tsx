@@ -63,12 +63,12 @@ function Index() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [winners, setWinners] = useState<Product[] | null>(null);
+  const [winnerRot, setWinnerRot] = useState(() => Math.floor(Math.random() * 8));
 
   useEffect(() => {
-    // "Potentiel Winner" : on réutilise la fonction de classement déjà en place
-    // (aucune migration supplémentaire requise). On trie par contacts + vues.
+    // "Potentiel Winner" : pool des produits les plus sollicités (contacts + vues).
     supabase
-      .rpc("get_ranked_products", { p_sort: "populaire", p_limit: 16, p_offset: 0 })
+      .rpc("get_ranked_products", { p_sort: "populaire", p_limit: 20, p_offset: 0 })
       .then(({ data }) => {
         const list = ((data as (Product & { contacts_total?: number; views_30?: number })[] | null) ?? []).map((p) => ({
           ...p,
@@ -78,10 +78,23 @@ function Index() {
         const engaged = list
           .filter((p) => (p.contacts ?? 0) + (p.views ?? 0) > 0)
           .sort((a, b) => ((b.contacts ?? 0) * 3 + (b.views ?? 0)) - ((a.contacts ?? 0) * 3 + (a.views ?? 0)))
-          .slice(0, 8);
+          .slice(0, 16);
         setWinners(engaged);
       });
   }, []);
+
+  // Rotation : on décale l'ordre régulièrement pour que tous les produits aient leur chance.
+  useEffect(() => {
+    const t = window.setInterval(() => setWinnerRot((r) => r + 1), 7000);
+    return () => window.clearInterval(t);
+  }, []);
+
+  const winnerList = useMemo(() => {
+    if (!winners || winners.length === 0) return [];
+    const n = winners.length;
+    const start = ((winnerRot % n) + n) % n;
+    return [...winners.slice(start), ...winners.slice(0, start)].slice(0, 8);
+  }, [winners, winnerRot]);
 
   useEffect(() => {
     setQ(search.q ?? "");
@@ -219,7 +232,7 @@ function Index() {
       </section>
 
       {/* ============ POTENTIEL PRODUIT WINNER ============ */}
-      {winners && winners.length > 0 && !hasFilters && (
+      {winnerList.length > 0 && !hasFilters && (
         <section className="mx-auto max-w-7xl px-4 sm:px-6 pt-6 sm:pt-8">
           <div className="mb-3 flex items-center gap-2">
             <Trophy className="h-4 w-4 text-volt" />
@@ -228,7 +241,7 @@ function Index() {
           </div>
           <div className="-mx-4 sm:mx-0 overflow-x-auto no-scrollbar">
             <div className="flex gap-3 sm:gap-4 px-4 sm:px-0 snap-x snap-mandatory">
-              {winners.map((p, i) => (
+              {winnerList.map((p, i) => (
                 <div key={p.id} className="w-[70%] sm:w-64 shrink-0 snap-start">
                   <ProductCard product={p} delayMs={i * 40} />
                 </div>
