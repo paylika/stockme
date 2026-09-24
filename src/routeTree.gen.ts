@@ -17,6 +17,7 @@ import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as DropshippingRouteImport } from './routes/dropshipping'
 import { Route as LegalRouteImport } from './routes/legal'
 import { Route as AdminAdminRouteImport } from './routes/_admin/admin'
+import { Route as AdminAdsRouteImport } from './routes/_admin/ads'
 import { Route as AdminProductsRouteImport } from './routes/_admin/products'
 import { Route as AdminUsersRouteImport } from './routes/_admin/users'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -67,6 +68,11 @@ const LegalRoute = LegalRouteImport.update({
 const AdminAdminRoute = AdminAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAdsRoute = AdminAdsRouteImport.update({
+  id: '/ads',
+  path: '/ads',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminProductsRoute = AdminProductsRouteImport.update({
@@ -145,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
   '/admin': typeof AdminAdminRoute
+  '/ads': typeof AdminAdsRoute
   '/products': typeof AdminProductsRoute
   '/users': typeof AdminUsersRoute
   '/dashboard': typeof AuthenticatedDashboardRouteWithChildren
@@ -166,6 +173,7 @@ export interface FileRoutesByTo {
   '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
   '/admin': typeof AdminAdminRoute
+  '/ads': typeof AdminAdsRoute
   '/products': typeof AdminProductsRoute
   '/users': typeof AdminUsersRoute
   '/dashboard': typeof AuthenticatedDashboardRouteWithChildren
@@ -190,6 +198,7 @@ export interface FileRoutesById {
   '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
   '/_admin/admin': typeof AdminAdminRoute
+  '/_admin/ads': typeof AdminAdsRoute
   '/_admin/products': typeof AdminProductsRoute
   '/_admin/users': typeof AdminUsersRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRouteWithChildren
@@ -213,6 +222,7 @@ export interface FileRouteTypes {
     | '/dropshipping'
     | '/legal'
     | '/admin'
+    | '/ads'
     | '/products'
     | '/users'
     | '/dashboard'
@@ -234,6 +244,7 @@ export interface FileRouteTypes {
     | '/dropshipping'
     | '/legal'
     | '/admin'
+    | '/ads'
     | '/products'
     | '/users'
     | '/dashboard'
@@ -257,6 +268,7 @@ export interface FileRouteTypes {
     | '/dropshipping'
     | '/legal'
     | '/_admin/admin'
+    | '/_admin/ads'
     | '/_admin/products'
     | '/_admin/users'
     | '/_authenticated/dashboard'
@@ -339,6 +351,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminAdminRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/ads': {
+      id: '/_admin/ads'
+      path: '/ads'
+      fullPath: '/ads'
+      preLoaderRoute: typeof AdminAdsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/_admin/products': {
@@ -437,12 +456,14 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminAdminRoute: typeof AdminAdminRoute
+  AdminAdsRoute: typeof AdminAdsRoute
   AdminProductsRoute: typeof AdminProductsRoute
   AdminUsersRoute: typeof AdminUsersRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAdminRoute: AdminAdminRoute,
+  AdminAdsRoute: AdminAdsRoute,
   AdminProductsRoute: AdminProductsRoute,
   AdminUsersRoute: AdminUsersRoute,
 }

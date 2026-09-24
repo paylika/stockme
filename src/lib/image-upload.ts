@@ -115,6 +115,21 @@ export async function uploadImages(
   return urls;
 }
 
+/** Upload d'une image générique (annonce, bannière…) sous le dossier de l'utilisateur. */
+export async function uploadImage(file: File, userId: string, prefix = "img"): Promise<string> {
+  const blob = await compressImage(file);
+  const ext = blob.type === "image/jpeg" ? "jpg" : file.name.split(".").pop() || "jpg";
+  const path = `${userId}/${prefix}-${uid()}.${ext}`;
+  const { error } = await supabase.storage.from("product-images").upload(path, blob, {
+    contentType: blob.type || "image/jpeg",
+    cacheControl: "3600",
+    upsert: true,
+  });
+  if (error) throw error;
+  const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+  return data.publicUrl;
+}
+
 /** Upload d'une image de profil (avatar/logo) sous un chemin stable par utilisateur. Renvoie l'URL publique. */
 export async function uploadAvatar(file: File, userId: string): Promise<string> {
   const blob = await compressImage(file);

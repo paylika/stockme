@@ -181,6 +181,54 @@ export type Database = {
         }
         Relationships: []
       }
+      ads: {
+        Row: {
+          active: boolean
+          created_at: string
+          cta_label: string | null
+          description: string | null
+          ends_at: string | null
+          href: string | null
+          id: string
+          image_url: string | null
+          kind: string
+          product_id: string | null
+          starts_at: string
+          title: string | null
+          weight: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          cta_label?: string | null
+          description?: string | null
+          ends_at?: string | null
+          href?: string | null
+          id?: string
+          image_url?: string | null
+          kind: string
+          product_id?: string | null
+          starts_at?: string
+          title?: string | null
+          weight?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          cta_label?: string | null
+          description?: string | null
+          ends_at?: string | null
+          href?: string | null
+          id?: string
+          image_url?: string | null
+          kind?: string
+          product_id?: string | null
+          starts_at?: string
+          title?: string | null
+          weight?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -366,6 +414,29 @@ export type Database = {
           contacts: number
           views: number
           favorites: number
+        }[]
+      }
+      get_active_ads: {
+        Args: Record<string, never>
+        Returns: {
+          id: string
+          kind: string
+          title: string | null
+          description: string | null
+          image_url: string | null
+          cta_label: string | null
+          href: string | null
+          weight: number
+          starts_at: string
+          ends_at: string | null
+          product_id: string | null
+          product_name: string | null
+          product_images: string[] | null
+          product_city: string | null
+          price_fcfa: number | null
+          promo_price_fcfa: number | null
+          dropshipping: boolean | null
+          sold_out: boolean | null
         }[]
       }
     }

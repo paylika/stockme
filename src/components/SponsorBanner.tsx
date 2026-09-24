@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 
 type Props = {
@@ -21,13 +22,10 @@ export function SponsorBanner({
   logoAlt = "",
   icon: Icon,
 }: Props) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group flex flex-col gap-3 rounded-2xl border border-border bg-card p-3 transition hover:border-foreground/30 hover:shadow-sm sm:flex-row sm:items-center sm:gap-4 sm:p-3.5"
-    >
+  const isInternal = href.startsWith("/");
+
+  const inner = (
+    <>
       <div className="flex min-w-0 items-center gap-3 sm:flex-1">
         {logoSrc ? (
           <img
@@ -57,6 +55,24 @@ export function SponsorBanner({
         {ctaLabel}
         <ArrowRight className="h-3.5 w-3.5" />
       </span>
+    </>
+  );
+
+  const className =
+    "group flex flex-col gap-3 rounded-2xl border border-border bg-card p-3 transition hover:border-foreground/30 hover:shadow-sm sm:flex-row sm:items-center sm:gap-4 sm:p-3.5";
+
+  // Lien interne (ex: fiche produit) → navigation client
+  if (isInternal) {
+    return (
+      <Link to={href as never} className={className}>
+        {inner}
+      </Link>
+    );
+  }
+
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+      {inner}
     </a>
   );
 }

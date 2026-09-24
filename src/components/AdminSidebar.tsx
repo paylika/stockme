@@ -1,9 +1,10 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Package, Users } from "lucide-react";
+import { LayoutDashboard, Megaphone, Package, Users } from "lucide-react";
 
 export const ADMIN_NAV = [
   { to: "/admin", label: "Pilotage", icon: LayoutDashboard, match: "/admin" },
   { to: "/products", label: "Produits", icon: Package, match: "/products" },
+  { to: "/ads", label: "Annonces", icon: Megaphone, match: "/ads" },
   { to: "/users", label: "Utilisateurs & accès", icon: Users, match: "/users" },
 ] as const;
 
