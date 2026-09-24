@@ -65,9 +65,22 @@ function Index() {
   const [winners, setWinners] = useState<Product[] | null>(null);
 
   useEffect(() => {
+    // "Potentiel Winner" : on réutilise la fonction de classement déjà en place
+    // (aucune migration supplémentaire requise). On trie par contacts + vues.
     supabase
-      .rpc("get_winner_products", { p_limit: 8 })
-      .then(({ data }) => setWinners((data as Product[] | null) ?? []));
+      .rpc("get_ranked_products", { p_sort: "populaire", p_limit: 16, p_offset: 0 })
+      .then(({ data }) => {
+        const list = ((data as (Product & { contacts_total?: number; views_30?: number })[] | null) ?? []).map((p) => ({
+          ...p,
+          contacts: p.contacts_total ?? 0,
+          views: p.views_30 ?? 0,
+        }));
+        const engaged = list
+          .filter((p) => (p.contacts ?? 0) + (p.views ?? 0) > 0)
+          .sort((a, b) => ((b.contacts ?? 0) * 3 + (b.views ?? 0)) - ((a.contacts ?? 0) * 3 + (a.views ?? 0)))
+          .slice(0, 8);
+        setWinners(engaged);
+      });
   }, []);
 
   useEffect(() => {
