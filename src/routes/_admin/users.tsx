@@ -36,7 +36,7 @@ type AdminUser = {
   is_admin: boolean;
 };
 
-type BadgeState = { verified: boolean; verified_until: string | null };
+type BadgeState = { verified: boolean; verified_until: string | null; shop_name: string | null };
 
 type UserProduct = {
   id: string;
@@ -75,12 +75,16 @@ function AdminUsersPage() {
   const load = async () => {
     const { data } = await supabase.rpc("admin_list_users", {});
     setUsers((data as AdminUser[] | null) ?? []);
-    // État du badge « Fournisseur vérifié » (l'admin peut lire les profils)
-    const { data: profs } = await supabase.from("profiles").select("id,verified,verified_until");
+    // État du badge + nom de la boutique (l'admin peut lire les profils).
+    // Le vendeur envoie le NOM DE SA BOUTIQUE sur WhatsApp : on doit pouvoir
+    // le retrouver ici par une simple recherche.
+    const { data: profs } = await supabase.from("profiles").select("id,verified,verified_until,shop_name");
     const map: Record<string, BadgeState> = {};
-    (profs as { id: string; verified: boolean; verified_until: string | null }[] | null)?.forEach((p) => {
-      map[p.id] = { verified: p.verified, verified_until: p.verified_until };
-    });
+    (profs as { id: string; verified: boolean; verified_until: string | null; shop_name: string | null }[] | null)?.forEach(
+      (p) => {
+        map[p.id] = { verified: p.verified, verified_until: p.verified_until, shop_name: p.shop_name };
+      },
+    );
     setBadges(map);
   };
 
@@ -110,12 +114,16 @@ function AdminUsersPage() {
     if (!users) return null;
     const term = q.trim().toLowerCase();
     if (!term) return users;
+    const digits = term.replace(/\D/g, "");
     return users.filter(
       (u) =>
         u.email?.toLowerCase().includes(term) ||
-        u.full_name?.toLowerCase().includes(term),
+        u.full_name?.toLowerCase().includes(term) ||
+        // Recherche par NOM DE BOUTIQUE (celui que le vendeur envoie sur WhatsApp)
+        badges[u.id]?.shop_name?.toLowerCase().includes(term) ||
+        (digits.length >= 3 && (!!u.phone?.includes(digits) || !!u.whatsapp?.includes(digits))),
     );
-  }, [users, q]);
+  }, [users, q, badges]);
 
   const setRole = async (u: AdminUser, makeAdmin: boolean) => {
     setBusyId(u.id);
@@ -200,7 +208,7 @@ function AdminUsersPage() {
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Rechercher par email ou nom..."
+          placeholder="Rechercher par nom de boutique, nom, email ou téléphone..."
           className="pl-9"
         />
       </div>
@@ -232,14 +240,23 @@ function AdminUsersPage() {
                       onClick={() => toggleExpand(u)}
                       aria-expanded={expanded === u.id}
                       title="Voir et gérer les produits de ce vendeur"
-                      className="inline-flex items-center gap-1.5 text-left hover:text-primary"
+                      className="inline-flex items-start gap-1.5 text-left hover:text-primary"
                     >
                       <ChevronDown
-                        className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${
+                        className={`mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${
                           expanded === u.id ? "rotate-180" : ""
                         }`}
                       />
-                      <span className="whitespace-nowrap">{u.full_name || "—"}</span>
+                      <span className="flex flex-col">
+                        <span className="whitespace-nowrap font-semibold">
+                          {badges[u.id]?.shop_name || u.full_name || "—"}
+                        </span>
+                        {badges[u.id]?.shop_name && u.full_name && (
+                          <span className="whitespace-nowrap text-[11px] font-normal text-muted-foreground">
+                            {u.full_name}
+                          </span>
+                        )}
+                      </span>
                     </button>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{u.email || "—"}</td>

@@ -195,12 +195,12 @@ export const VERIFIED_BADGE_PRICE_FCFA = 2000;
 export const SERVICE_WHATSAPP = "221786635331";
 
 /** Lien WhatsApp pré-rempli pour payer / demander la vérification. */
-export const verifiedBadgeWhatsAppLink = (shopName?: string | null, userId?: string) => {
+export const verifiedBadgeWhatsAppLink = (shopName?: string | null, contactName?: string | null) => {
+  const boutique = shopName?.trim() || contactName?.trim() || "";
   const message =
     `Bonjour StockMe, je souhaite faire vérifier ma boutique (badge Fournisseur vérifié — ` +
     `${VERIFIED_BADGE_PRICE_FCFA} FCFA).` +
-    (shopName ? `\nBoutique : ${shopName}` : "") +
-    (userId ? `\nMon identifiant : ${userId}` : "") +
-    `\nJe vous envoie la capture du paiement Wave / Orange Money.`;
+    (boutique ? `\n\nNom de la boutique : ${boutique}` : "") +
+    `\n\nJe vous envoie la capture du paiement Wave / Orange Money.`;
   return `https://wa.me/${SERVICE_WHATSAPP}?text=${encodeURIComponent(message)}`;
 };

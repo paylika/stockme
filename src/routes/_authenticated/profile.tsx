@@ -359,7 +359,7 @@ function ProfilePage() {
                   </ol>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <a
-                      href={verifiedBadgeWhatsAppLink(profile?.shop_name, user?.id)}
+                      href={verifiedBadgeWhatsAppLink(profile?.shop_name, profile?.full_name)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex h-11 items-center gap-2 rounded-full bg-volt px-4 text-sm font-bold text-volt-foreground shadow-sm transition hover:brightness-110"
