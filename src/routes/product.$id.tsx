@@ -463,13 +463,22 @@ function ProductPage() {
               ) : authLoading ? (
                 <div className="mt-4 h-11 rounded-md bg-muted shimmer" />
               ) : !user ? (
-                <div className="mt-4 rounded-xl border border-dashed border-border bg-background/50 p-4 text-center">
-                  <Lock className="mx-auto h-5 w-5 text-volt" />
-                  <p className="mt-2 text-sm font-medium">Numéro réservé aux membres</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Créez un compte gratuit pour voir le numéro WhatsApp.</p>
-                  <Link to="/auth" className="mt-3 block">
-                    <Button variant="volt" className="w-full h-11">Créer un compte gratuit</Button>
-                  </Link>
+                <div className="mt-4 border-t border-border pt-4">
+                  <p className="flex items-center gap-1.5 text-sm font-semibold">
+                    <Lock className="h-4 w-4 text-volt" /> Voir le numéro WhatsApp du vendeur
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    Connectez-vous ou créez un compte <strong className="font-semibold text-foreground">gratuit</strong> pour
+                    contacter le vendeur directement sur WhatsApp.
+                  </p>
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <Link to="/auth" search={{ mode: "login" }} className="flex-1">
+                      <Button variant="outline" className="h-11 w-full">Se connecter</Button>
+                    </Link>
+                    <Link to="/auth" search={{ mode: "signup" }} className="flex-1">
+                      <Button variant="volt" className="h-11 w-full">Créer un compte</Button>
+                    </Link>
+                  </div>
                 </div>
               ) : (
                 <div className="mt-4 flex flex-col sm:flex-row gap-2">
