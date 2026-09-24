@@ -7,16 +7,16 @@ import { MobileFooter } from "@/components/MobileFooter";
 import { Button } from "@/components/ui/button";
 import { StatusSwitch } from "@/components/StatusSwitch";
 import { VerifiedBadge, VerifiedBadgeGold } from "@/components/VerifiedBadge";
+import { VerifiedPaymentDialog } from "@/components/VerifiedPaymentDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
 import { formatFCFA } from "@/lib/format";
 import {
   COUNTRY_FLAGS,
-  SERVICE_WHATSAPP,
+  SERVICE_WHATSAPP_DISPLAY,
   VERIFIED_BADGE_PRICE_FCFA,
   countryOfCity,
-  verifiedBadgeWhatsAppLink,
 } from "@/lib/constants";
 import { toast } from "sonner";
 import {
@@ -83,6 +83,7 @@ function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Photo de profil : envoi immédiat depuis cette page (pas besoin de passer par « Modifier le profil »).
@@ -350,22 +351,20 @@ function ProfilePage() {
                     <li>
                       1. Payez {VERIFIED_BADGE_PRICE_FCFA.toLocaleString("fr-FR")} FCFA par{" "}
                       <strong className="text-foreground">Wave</strong> ou{" "}
-                      <strong className="text-foreground">Orange Money</strong> au +{SERVICE_WHATSAPP.slice(0, 3)}{" "}
-                      {SERVICE_WHATSAPP.slice(3, 5)} {SERVICE_WHATSAPP.slice(5, 7)} {SERVICE_WHATSAPP.slice(7, 9)}{" "}
-                      {SERVICE_WHATSAPP.slice(9)}
+                      <strong className="text-foreground">Orange Money</strong> au{" "}
+                      <strong className="text-foreground">{SERVICE_WHATSAPP_DISPLAY}</strong>
                     </li>
                     <li>2. Envoyez la capture du paiement sur WhatsApp</li>
                     <li>3. Nous activons votre badge après vérification</li>
                   </ol>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <a
-                      href={verifiedBadgeWhatsAppLink(profile?.shop_name, profile?.full_name)}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      type="button"
+                      onClick={() => setPayOpen(true)}
                       className="inline-flex h-11 items-center gap-2 rounded-full bg-volt px-4 text-sm font-bold text-volt-foreground shadow-sm transition hover:brightness-110"
                     >
-                      <MessageCircle className="h-4 w-4" /> Payer et envoyer la preuve
-                    </a>
+                      <MessageCircle className="h-4 w-4" /> Payer {VERIFIED_BADGE_PRICE_FCFA.toLocaleString("fr-FR")} FCFA
+                    </button>
                     <Link to="/profile/edit">
                       <Button variant="ghost" size="sm" className="h-11">
                         Compléter mon profil d'abord
@@ -503,6 +502,14 @@ function ProfilePage() {
 
       <MobileFooter />
       <MobileNav />
+
+      {/* Pop-up de paiement : on confirme l'envoi de l'argent AVANT WhatsApp */}
+      <VerifiedPaymentDialog
+        open={payOpen}
+        onOpenChange={setPayOpen}
+        shopName={profile?.shop_name}
+        contactName={profile?.full_name}
+      />
     </div>
   );
 }

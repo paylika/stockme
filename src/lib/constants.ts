@@ -194,6 +194,9 @@ export const VERIFIED_BADGE_PRICE_FCFA = 2000;
 /** Numéro WhatsApp du service client (format international, sans « + »). */
 export const SERVICE_WHATSAPP = "221786635331";
 
+/** Même numéro, prêt à afficher : +221 78 663 53 31 */
+export const SERVICE_WHATSAPP_DISPLAY = "+221 78 663 53 31";
+
 /** Lien WhatsApp pré-rempli pour payer / demander la vérification. */
 export const verifiedBadgeWhatsAppLink = (shopName?: string | null, contactName?: string | null) => {
   const boutique = shopName?.trim() || contactName?.trim() || "";
@@ -201,6 +204,6 @@ export const verifiedBadgeWhatsAppLink = (shopName?: string | null, contactName?
     `Bonjour StockMe, je souhaite faire vérifier ma boutique (badge Fournisseur vérifié — ` +
     `${VERIFIED_BADGE_PRICE_FCFA} FCFA).` +
     (boutique ? `\n\nNom de la boutique : ${boutique}` : "") +
-    `\n\nJe vous envoie la capture du paiement Wave / Orange Money.`;
+    `\n\nJ'ai DÉJÀ envoyé les ${VERIFIED_BADGE_PRICE_FCFA} FCFA — voici la capture du paiement.`;
   return `https://wa.me/${SERVICE_WHATSAPP}?text=${encodeURIComponent(message)}`;
 };
