@@ -7,6 +7,7 @@ import { MobileFooter } from "@/components/MobileFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ProductCard, type ListingProduct } from "@/components/ProductCard";
 import { SponsorBanner } from "@/components/SponsorBanner";
+import { Trophy } from "lucide-react";
 import { buildSeoHead } from "@/lib/seo";
 import { CATEGORIES, WEST_AFRICA_LOCATIONS } from "@/lib/constants";
 import {
@@ -61,6 +62,13 @@ function Index() {
   const [sort, setSort] = useState("pertinence");
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [winners, setWinners] = useState<Product[] | null>(null);
+
+  useEffect(() => {
+    supabase
+      .rpc("get_winner_products", { p_limit: 8 })
+      .then(({ data }) => setWinners((data as Product[] | null) ?? []));
+  }, []);
 
   useEffect(() => {
     setQ(search.q ?? "");
@@ -204,6 +212,26 @@ function Index() {
           logoAlt="XaalisPay"
         />
       </section>
+
+      {/* ============ POTENTIEL PRODUIT WINNER ============ */}
+      {winners && winners.length > 0 && !hasFilters && (
+        <section className="mx-auto max-w-7xl px-4 sm:px-6 pt-6 sm:pt-8">
+          <div className="mb-3 flex items-center gap-2">
+            <Trophy className="h-4 w-4 text-volt" />
+            <h2 className="text-sm sm:text-base font-bold tracking-tight uppercase">Potentiel produit Winner</h2>
+            <span className="text-xs text-muted-foreground">· les plus sollicités</span>
+          </div>
+          <div className="-mx-4 sm:mx-0 overflow-x-auto no-scrollbar">
+            <div className="flex gap-3 sm:gap-4 px-4 sm:px-0 snap-x snap-mandatory">
+              {winners.map((p, i) => (
+                <div key={p.id} className="w-[70%] sm:w-64 shrink-0 snap-start">
+                  <ProductCard product={p} delayMs={i * 40} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ============ PRODUCT GRID ============ */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10">

@@ -335,6 +335,28 @@ export type Database = {
           favorites: number
         }[]
       }
+      get_winner_products: {
+        Args: {
+          p_limit?: number
+        }
+        Returns: {
+          id: string
+          name: string
+          category: string
+          price_fcfa: number
+          promo_price_fcfa: number | null
+          quantity: number
+          moq: number
+          city: string
+          zone: string | null
+          images: string[]
+          sold_out: boolean
+          dropshipping: boolean
+          contacts: number
+          views: number
+          favorites: number
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "user"

@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { Eye, Heart, MessageCircle } from "lucide-react";
 import { formatFCFA } from "@/lib/format";
 import { IconPin as MapPin, IconBox as Package } from "@/components/icons";
 
@@ -14,6 +15,9 @@ export type ListingProduct = {
   zone?: string | null;
   images: string[];
   sold_out?: boolean;
+  views?: number;
+  contacts?: number;
+  favorites?: number;
 };
 
 export function ProductCard({ product, delayMs = 0 }: { product: ListingProduct; delayMs?: number }) {
@@ -23,6 +27,7 @@ export function ProductCard({ product, delayMs = 0 }: { product: ListingProduct;
     ? Math.round(((product.price_fcfa - (product.promo_price_fcfa as number)) / product.price_fcfa) * 100)
     : 0;
   const showStock = typeof product.moq === "number" && typeof product.quantity === "number";
+  const showStats = typeof product.views === "number" && typeof product.contacts === "number";
 
   return (
     <Link
@@ -73,6 +78,15 @@ export function ProductCard({ product, delayMs = 0 }: { product: ListingProduct;
         {showStock && (
           <div className="mt-1 text-[10px] text-muted-foreground sm:text-[11px]">
             MOQ {product.moq} · Stock {product.quantity}
+          </div>
+        )}
+        {showStats && (
+          <div className="mt-2 flex items-center gap-3 border-t border-border pt-2 text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1"><Eye className="h-3 w-3" /> {product.views}</span>
+            <span className="inline-flex items-center gap-1"><MessageCircle className="h-3 w-3" /> {product.contacts}</span>
+            {!!product.favorites && (
+              <span className="inline-flex items-center gap-1"><Heart className="h-3 w-3" /> {product.favorites}</span>
+            )}
           </div>
         )}
       </div>
