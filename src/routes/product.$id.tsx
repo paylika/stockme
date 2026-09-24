@@ -22,7 +22,11 @@ type Product = {
   published: boolean; sold_out: boolean; dropshipping: boolean;
 };
 type Profile = { full_name: string | null; whatsapp: string | null; phone: string | null; city: string | null; shop_name: string | null };
-type Similar = { id: string; name: string; price_fcfa: number; promo_price_fcfa: number | null; city: string; images: string[] };
+type Similar = {
+  id: string; name: string; price_fcfa: number; promo_price_fcfa: number | null;
+  city: string; zone: string | null; images: string[]; sold_out: boolean;
+  views: number; contacts: number; favorites: number;
+};
 type SellerStats = {
   total_products: number;
   total_views: number;
@@ -126,8 +130,7 @@ function ProductPage() {
       if (p) {
         const [{ data: prof }, { data: sim }] = await Promise.all([
           supabase.from("profiles").select("full_name,whatsapp,phone,city,shop_name").eq("id", p.owner_id).maybeSingle(),
-          supabase.from("products").select("id,name,price_fcfa,promo_price_fcfa,city,images")
-            .eq("category", p.category).neq("id", p.id).order("created_at", { ascending: false }).limit(8),
+          supabase.rpc("get_similar_products", { p_product_id: p.id, p_limit: 8 }),
         ]);
         if (!cancel) {
           setProfile(prof as Profile | null);
@@ -527,18 +530,30 @@ function ProductPage() {
               {similar.map((s) => {
                 const sp = s.promo_price_fcfa && s.promo_price_fcfa < s.price_fcfa;
                 return (
-                  <Link key={s.id} to="/product/$id" params={{ id: s.id }} className="group rounded-xl border border-border bg-card overflow-hidden hover:border-foreground/30 transition">
-                    <div className="aspect-[4/3] bg-muted overflow-hidden">
+                  <Link key={s.id} to="/product/$id" params={{ id: s.id }} className="group flex flex-col rounded-xl border border-border bg-card overflow-hidden hover:border-foreground/30 transition">
+                    <div className="relative aspect-[4/3] bg-muted overflow-hidden">
                       {s.images[0] ? (
                         <img src={s.images[0]} alt={s.name} className="h-full w-full object-cover transition-transform group-hover:scale-105" loading="lazy" />
                       ) : (
                         <div className="grid h-full place-items-center text-muted-foreground"><Package className="h-8 w-8" /></div>
                       )}
+                      {s.sold_out && (
+                        <span className="absolute right-2 top-2 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-bold text-background">
+                          Épuisé
+                        </span>
+                      )}
                     </div>
-                    <div className="p-3">
+                    <div className="flex flex-1 flex-col p-3">
                       <h3 className="font-semibold leading-tight line-clamp-1 text-sm">{s.name}</h3>
                       <p className="mt-0.5 text-[11px] text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{s.city}</p>
                       <div className="mt-1 font-bold text-sm">{formatFCFA(sp ? s.promo_price_fcfa! : s.price_fcfa)}</div>
+                      <div className="mt-2 flex items-center gap-3 border-t border-border pt-2 text-[11px] text-muted-foreground">
+                        <span className="inline-flex items-center gap-1"><Eye className="h-3 w-3" /> {s.views}</span>
+                        <span className="inline-flex items-center gap-1"><MessageCircle className="h-3 w-3" /> {s.contacts}</span>
+                        {s.favorites > 0 && (
+                          <span className="inline-flex items-center gap-1"><Heart className="h-3 w-3" /> {s.favorites}</span>
+                        )}
+                      </div>
                     </div>
                   </Link>
                 );

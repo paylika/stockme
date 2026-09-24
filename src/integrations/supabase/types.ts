@@ -315,6 +315,26 @@ export type Database = {
           favorites: number
         }[]
       }
+      get_similar_products: {
+        Args: {
+          p_product_id: string
+          p_limit?: number
+        }
+        Returns: {
+          id: string
+          name: string
+          category: string
+          price_fcfa: number
+          promo_price_fcfa: number | null
+          city: string
+          zone: string | null
+          images: string[]
+          sold_out: boolean
+          views: number
+          contacts: number
+          favorites: number
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "user"
