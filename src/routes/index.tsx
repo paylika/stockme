@@ -8,7 +8,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { ProductCard, type ListingProduct } from "@/components/ProductCard";
 import { SponsorCarousel } from "@/components/SponsorCarousel";
 import { ALL_COUNTRIES, useVisitorCountry } from "@/lib/geo";
-import { MapPin, Trophy } from "lucide-react";
+import { BadgeCheck, MapPin, Trophy } from "lucide-react";
 import { buildSeoHead } from "@/lib/seo";
 import { CATEGORIES, WEST_AFRICA_LOCATIONS } from "@/lib/constants";
 import { trackAdClick, trackAdImpression } from "@/lib/ad-tracking";
@@ -19,7 +19,7 @@ import {
   IconStore as Store,
 } from "@/components/icons";
 
-type Filters = { country?: string; city?: string; category?: string; q?: string };
+type Filters = { country?: string; city?: string; category?: string; q?: string; verified?: boolean };
 
 export const Route = createFileRoute("/")({
   validateSearch: (s: Record<string, unknown>): Filters => ({
@@ -27,6 +27,11 @@ export const Route = createFileRoute("/")({
     city: typeof s.city === "string" ? s.city : undefined,
     category: typeof s.category === "string" ? s.category : undefined,
     q: typeof s.q === "string" ? s.q : undefined,
+    // Le routeur convertit « ?verified=1 » en nombre : on accepte toutes les formes.
+    verified:
+      s.verified === true || s.verified === "true" || s.verified === 1 || s.verified === "1"
+        ? true
+        : undefined,
   }),
   head: () => {
     const { meta, links } = buildSeoHead({
@@ -158,6 +163,7 @@ function Index() {
       p_cities: cities,
       p_category: search.category ?? null,
       p_q: search.q ?? null,
+      p_verified_only: !!search.verified,
     });
     return (data as Product[] | null) ?? [];
   };
@@ -175,7 +181,7 @@ function Index() {
     return () => {
       cancel = true;
     };
-  }, [search.country, search.city, search.category, search.q, sort]);
+  }, [search.country, search.city, search.category, search.q, search.verified, sort]);
 
   const loadMore = async () => {
     if (!items || loadingMore) return;
@@ -197,7 +203,7 @@ function Index() {
     visitor.setManual(ALL_COUNTRIES);
     navigate({ search: {} });
   };
-  const hasFilters = !!(search.country || search.city || search.category || search.q);
+  const hasFilters = !!(search.country || search.city || search.category || search.q || search.verified);
 
   // Filtre local automatique : un visiteur ivoirien voit d'abord la Côte d'Ivoire.
   useEffect(() => {
@@ -309,6 +315,9 @@ function Index() {
             {search.category && (
               <Chip onRemove={() => update({ category: undefined })}>{search.category}</Chip>
             )}
+            {search.verified && (
+              <Chip onRemove={() => update({ verified: undefined })}>Vendeurs vérifiés</Chip>
+            )}
             <button
               onClick={clearAll}
               className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
@@ -365,6 +374,19 @@ function Index() {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div className="overflow-x-auto no-scrollbar">
             <div className="flex items-center gap-2">
+              {/* Filtre « Vendeurs vérifiés » : c'est l'avantage concret du badge */}
+              <button
+                onClick={() => update({ verified: search.verified ? undefined : true })}
+                aria-pressed={!!search.verified}
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+                  search.verified
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <BadgeCheck className="h-3.5 w-3.5" /> Vendeurs vérifiés
+              </button>
+              <span className="mx-0.5 h-5 w-px shrink-0 bg-border" aria-hidden />
               {SORTS.map((s) => {
                 const active = sort === s.id;
                 return (
@@ -396,7 +418,7 @@ function Index() {
           </div>
         ) : items.length === 0 ? (
           <>
-            <EmptyState onClear={clearAll} country={search.country} />
+            <EmptyState onClear={clearAll} country={search.country} verifiedOnly={!!search.verified} />
             {elsewhere.length > 0 && (
               <section className="mt-10">
                 <h3 className="text-sm font-bold tracking-tight uppercase">
@@ -505,23 +527,37 @@ function SkeletonCard() {
   );
 }
 
-function EmptyState({ onClear, country }: { onClear: () => void; country?: string }) {
+function EmptyState({
+  onClear,
+  country,
+  verifiedOnly,
+}: {
+  onClear: () => void;
+  country?: string;
+  verifiedOnly?: boolean;
+}) {
+  const title = verifiedOnly
+    ? "Aucun vendeur vérifié dans cette sélection"
+    : country
+    ? `Aucun produit en ${country}`
+    : "Aucun produit trouvé";
+
+  const text = verifiedOnly
+    ? "Aucun fournisseur vérifié ne correspond à votre recherche pour le moment. Relancez la recherche sans ce filtre pour voir tout le stock disponible."
+    : country
+    ? `Nous n'avons pas encore de stock publié en ${country}. Élargissez à toute l'Afrique de l'Ouest — la sous-région bouge vite.`
+    : "Essayez d'élargir vos filtres ou explorez une autre catégorie.";
+
   return (
     <div className="grid place-items-center rounded-3xl border border-dashed border-border bg-muted/30 py-16 text-center">
       <Package className="h-10 w-10 text-muted-foreground" />
-      <h3 className="mt-4 text-lg font-semibold">
-        {country ? `Aucun produit en ${country}` : "Aucun produit trouvé"}
-      </h3>
-      <p className="mt-1 max-w-xs text-sm text-muted-foreground">
-        {country
-          ? `Nous n'avons pas encore de stock publié en ${country}. Élargissez à toute l'Afrique de l'Ouest — la sous-région bouge vite.`
-          : "Essayez d'élargir vos filtres ou explorez une autre catégorie."}
-      </p>
+      <h3 className="mt-4 text-lg font-semibold">{title}</h3>
+      <p className="mt-1 max-w-md text-sm text-muted-foreground">{text}</p>
       <button
         onClick={onClear}
         className="mt-4 rounded-full bg-foreground px-4 py-2 text-xs font-semibold text-background"
       >
-        {country ? "Voir toute l'Afrique de l'Ouest" : "Réinitialiser les filtres"}
+        {verifiedOnly ? "Voir tout le stock" : country ? "Voir toute l'Afrique de l'Ouest" : "Réinitialiser les filtres"}
       </button>
     </div>
   );

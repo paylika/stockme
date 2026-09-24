@@ -1,6 +1,8 @@
 import { supabase } from "@/integrations/supabase/stockme-client";
 
 export const MAX_PHOTOS = 5;
+/** Compte non vérifié : 2 photos par produit (5 pour un fournisseur vérifié). */
+export const FREE_MAX_PHOTOS = 2;
 /** Taille maximale du fichier CHOISI par l'utilisateur (il est compressé avant envoi). */
 export const MAX_PHOTO_SIZE = 15 * 1024 * 1024;
 /** Taille maximale réellement ENVOYÉE au serveur (garantie par la compression). */

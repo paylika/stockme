@@ -363,6 +363,7 @@ export type Database = {
           p_cities?: string[] | null
           p_category?: string | null
           p_q?: string | null
+          p_verified_only?: boolean
         }
         Returns: {
           id: string

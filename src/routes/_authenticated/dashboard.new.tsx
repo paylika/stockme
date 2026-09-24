@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
@@ -7,7 +7,7 @@ import { MobileFooter } from "@/components/MobileFooter";
 import { ProductForm, ProductFormValues } from "@/components/ProductForm";
 import { PhotoFailurePanel } from "@/components/PhotoFailurePanel";
 import { Button } from "@/components/ui/button";
-import { uploadImagesResilient, type UploadFailure } from "@/lib/image-upload";
+import { uploadImagesResilient, MAX_PHOTOS, FREE_MAX_PHOTOS, type UploadFailure } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
 import { toast } from "sonner";
 
@@ -27,6 +27,20 @@ function NewProduct() {
   const [uploadingStatus, setUploadingStatus] = useState("");
   const [pending, setPending] = useState<Pending | null>(null);
   const [retrying, setRetrying] = useState(false);
+  // Compte gratuit : 2 photos. Fournisseur vérifié : 5.
+  const [maxPhotos, setMaxPhotos] = useState(FREE_MAX_PHOTOS);
+
+  useEffect(() => {
+    (async () => {
+      const { data: s } = await supabase.auth.getSession();
+      const uid = s.session?.user?.id;
+      if (!uid) return;
+      const { data } = await supabase.from("profiles").select("verified,verified_until").eq("id", uid).maybeSingle();
+      const p = data as { verified: boolean; verified_until: string | null } | null;
+      const ok = !!p?.verified && (!p.verified_until || new Date(p.verified_until) > new Date());
+      setMaxPhotos(ok ? MAX_PHOTOS : FREE_MAX_PHOTOS);
+    })();
+  }, []);
 
   const submit = async (values: ProductFormValues) => {
     const userId = await requireUserId("Reconnectez-vous pour publier le produit.");
@@ -173,6 +187,7 @@ function NewProduct() {
               onSubmit={submit}
               submitLabel="Publier"
               uploadingStatus={uploadingStatus}
+              maxPhotos={maxPhotos}
               onCancel={() => navigate({ to: "/dashboard" })}
             />
           </div>

@@ -6,7 +6,7 @@ import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
 import { ProductForm, ProductFormInitial, ProductFormValues } from "@/components/ProductForm";
 import { PhotoFailurePanel } from "@/components/PhotoFailurePanel";
-import { uploadImagesResilient, type UploadFailure } from "@/lib/image-upload";
+import { uploadImagesResilient, MAX_PHOTOS, FREE_MAX_PHOTOS, type UploadFailure } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
 import { toast } from "sonner";
 
@@ -22,6 +22,20 @@ function EditProduct() {
   const [uploadingStatus, setUploadingStatus] = useState("");
   const [pending, setPending] = useState<{ urls: string[]; files: File[]; failures: UploadFailure[] } | null>(null);
   const [retrying, setRetrying] = useState(false);
+  // Compte gratuit : 2 photos — on ne force JAMAIS à supprimer des photos déjà
+  // en ligne : la limite ne s'applique qu'aux ajouts.
+  const [verifiedSeller, setVerifiedSeller] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { data: s } = await supabase.auth.getSession();
+      const uid = s.session?.user?.id;
+      if (!uid) return;
+      const { data } = await supabase.from("profiles").select("verified,verified_until").eq("id", uid).maybeSingle();
+      const p = data as { verified: boolean; verified_until: string | null } | null;
+      setVerifiedSeller(!!p?.verified && (!p.verified_until || new Date(p.verified_until) > new Date()));
+    })();
+  }, []);
 
   useEffect(() => {
     let cancel = false;
@@ -201,6 +215,7 @@ function EditProduct() {
             onSubmit={submit}
             submitLabel="Enregistrer"
             uploadingStatus={uploadingStatus}
+            maxPhotos={verifiedSeller ? MAX_PHOTOS : Math.max(FREE_MAX_PHOTOS, product?.images?.length ?? 0)}
             onCancel={() => navigate({ to: "/dashboard" })}
           />
         </div>

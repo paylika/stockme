@@ -68,6 +68,8 @@ type Props = {
   submitLabel?: string;
   uploadingStatus?: string;
   onCancel?: () => void;
+  /** Nombre de photos autorisées : 2 en compte gratuit, 5 pour un vendeur vérifié. */
+  maxPhotos?: number;
 };
 
 export function ProductForm({
@@ -76,6 +78,7 @@ export function ProductForm({
   submitLabel = "Publier",
   uploadingStatus,
   onCancel,
+  maxPhotos = MAX_PHOTOS,
 }: Props) {
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -140,10 +143,10 @@ export function ProductForm({
   const onFiles = (list: FileList | null) => {
     if (!list) return;
     const incoming = Array.from(list);
-    if (images.length + incoming.length > MAX_PHOTOS) {
-      toast.error(`Ajoutez entre 1 et ${MAX_PHOTOS} photos maximum.`);
+    if (images.length + incoming.length > maxPhotos) {
+      toast.error(`Ajoutez entre 1 et ${maxPhotos} photos maximum.`);
     }
-    const arr = incoming.slice(0, MAX_PHOTOS - images.length).filter((file) => {
+    const arr = incoming.slice(0, maxPhotos - images.length).filter((file) => {
       const isImage = file.type ? file.type.startsWith("image/") : /\.(jpe?g|png|webp|heic|heif|gif|avif)$/i.test(file.name);
       if (!isImage) {
         toast.error(`${file.name} n'est pas une image.`);
@@ -199,8 +202,8 @@ export function ProductForm({
 
     if (trimmedName.length < 2) return stop("Nom du produit requis");
     if (!category || !city) return stop("Catégorie et localité requises");
-    if (totalImages < 1 || totalImages > MAX_PHOTOS)
-      return stop(`Ajoutez entre 1 et ${MAX_PHOTOS} photos.`);
+    if (totalImages < 1 || totalImages > maxPhotos)
+      return stop(`Ajoutez entre 1 et ${maxPhotos} photos.`);
     if (price === "" || promoPrice === "" || quantity === "" || moq === "")
       return stop("Prix avant, prix maintenant, stock et MOQ requis");
     if (Number(price) <= 0 || Number(promoPrice) <= 0)
@@ -276,7 +279,7 @@ export function ProductForm({
         <div className="flex items-center justify-between gap-3">
           <Label>Photos *</Label>
           <span className="text-xs text-muted-foreground">
-            {images.length}/{MAX_PHOTOS}
+            {images.length}/{maxPhotos}
           </span>
         </div>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
@@ -295,7 +298,7 @@ export function ProductForm({
               </button>
             </div>
           ))}
-          {images.length < MAX_PHOTOS && (
+          {images.length < maxPhotos && (
             <label className="aspect-square rounded-lg border-2 border-dashed border-border grid place-items-center text-muted-foreground hover:border-foreground/30 hover:text-foreground transition cursor-pointer">
               <ImagePlus className="h-6 w-6" />
               <input
@@ -309,8 +312,14 @@ export function ProductForm({
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          Ajoutez 1 à 5 photos nettes du produit. Elles sont <strong className="text-foreground">compressées automatiquement</strong> avant l'envoi : la publication fonctionne même avec une connexion lente.
+          Ajoutez 1 à {maxPhotos} photos nettes du produit. Elles sont <strong className="text-foreground">compressées automatiquement</strong> avant l'envoi : la publication fonctionne même avec une connexion lente.
         </p>
+        {maxPhotos < MAX_PHOTOS && (
+          <p className="rounded-xl border border-volt/40 bg-volt/10 px-3 py-2 text-xs leading-relaxed">
+            Compte non vérifié : <strong>2 photos par produit</strong> et 10 produits publiés maximum. Faites vérifier
+            votre boutique (2 000 FCFA) pour aller jusqu'à 5 photos et publier sans limite.
+          </p>
+        )}
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
