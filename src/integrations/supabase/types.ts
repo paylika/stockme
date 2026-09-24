@@ -238,11 +238,207 @@ export type Database = {
         }
         Relationships: []
       }
+      wallets: {
+        Row: {
+          balance_fcfa: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance_fcfa?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance_fcfa?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wallet_transactions: {
+        Row: {
+          amount_fcfa: number
+          created_at: string
+          id: string
+          kind: string
+          label: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_fcfa: number
+          created_at?: string
+          id?: string
+          kind: string
+          label?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_fcfa?: number
+          created_at?: string
+          id?: string
+          kind?: string
+          label?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      payment_intents: {
+        Row: {
+          amount_fcfa: number
+          checkout_url: string | null
+          created_at: string
+          id: string
+          metadata: Record<string, unknown>
+          method: string | null
+          paid_at: string | null
+          provider: string
+          provider_payload: Record<string, unknown> | null
+          provider_ref: string | null
+          purpose: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount_fcfa: number
+          checkout_url?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Record<string, unknown>
+          method?: string | null
+          paid_at?: string | null
+          provider: string
+          provider_payload?: Record<string, unknown> | null
+          provider_ref?: string | null
+          purpose: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount_fcfa?: number
+          checkout_url?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Record<string, unknown>
+          method?: string | null
+          paid_at?: string | null
+          provider?: string
+          provider_payload?: Record<string, unknown> | null
+          provider_ref?: string | null
+          purpose?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      boost_campaigns: {
+        Row: {
+          ad_id: string | null
+          created_at: string
+          daily_budget_fcfa: number
+          days_served: number
+          id: string
+          last_run_at: string | null
+          product_id: string
+          status: string
+          total_spent_fcfa: number
+          user_id: string
+        }
+        Insert: {
+          ad_id?: string | null
+          created_at?: string
+          daily_budget_fcfa?: number
+          days_served?: number
+          id?: string
+          last_run_at?: string | null
+          product_id: string
+          status?: string
+          total_spent_fcfa?: number
+          user_id: string
+        }
+        Update: {
+          ad_id?: string | null
+          created_at?: string
+          daily_budget_fcfa?: number
+          days_served?: number
+          id?: string
+          last_run_at?: string | null
+          product_id?: string
+          status?: string
+          total_spent_fcfa?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      payment_create_intent: {
+        Args: {
+          p_purpose: string
+          p_amount: number
+          p_provider: string
+          p_method?: string | null
+          p_metadata?: Record<string, unknown>
+        }
+        Returns: {
+          intent_id: string
+          amount_fcfa: number
+          purpose: string
+        }
+      }
+      payment_attach_checkout: {
+        Args: {
+          p_intent_id: string
+          p_provider_ref: string
+          p_checkout_url: string
+        }
+        Returns: undefined
+      }
+      payment_mark_paid: {
+        Args: {
+          p_provider: string
+          p_provider_ref: string
+          p_amount?: number | null
+          p_payload?: Record<string, unknown> | null
+        }
+        Returns: Record<string, unknown>
+      }
+      wallet_overview: {
+        Args: Record<string, never>
+        Returns: {
+          balance_fcfa: number
+          transactions: {
+            amount_fcfa: number
+            kind: string
+            label: string | null
+            created_at: string
+          }[]
+          boosts: {
+            id: string
+            product_id: string
+            product_name: string | null
+            images: string[] | null
+            status: string
+            daily_budget_fcfa: number
+            days_served: number
+            total_spent_fcfa: number
+            created_at: string
+            impressions: number
+            clicks: number
+          }[]
+        }
+      }
+      boost_run_daily: {
+        Args: Record<string, never>
+        Returns: Record<string, unknown>
+      }
+      admin_payments_overview: {
+        Args: Record<string, never>
+        Returns: Record<string, unknown>
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

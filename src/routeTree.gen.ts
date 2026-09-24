@@ -28,11 +28,15 @@ import { Route as LegalCguRouteImport } from './routes/legal.cgu'
 import { Route as LegalConfidentialiteRouteImport } from './routes/legal.confidentialite'
 import { Route as LegalCookiesRouteImport } from './routes/legal.cookies'
 import { Route as LegalMentionsRouteImport } from './routes/legal.mentions'
+import { Route as PaiementRetourRouteImport } from './routes/paiement.retour'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
 import { Route as VendeurIdRouteImport } from './routes/vendeur.$id'
 import { Route as AuthenticatedDashboardNewRouteImport } from './routes/_authenticated/dashboard.new'
 import { Route as AuthenticatedProfileEditRouteImport } from './routes/_authenticated/profile.edit'
+import { Route as ApiJobsBoostDailyRouteImport } from './routes/api.jobs.boost-daily'
+import { Route as ApiPayCheckoutRouteImport } from './routes/api.pay.checkout'
 import { Route as AuthenticatedDashboardEditIdRouteImport } from './routes/_authenticated/dashboard.edit.$id'
+import { Route as ApiPayWebhookProviderRouteImport } from './routes/api.pay.webhook.$provider'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -127,6 +131,11 @@ const LegalMentionsRoute = LegalMentionsRouteImport.update({
   path: '/mentions',
   getParentRoute: () => LegalRoute,
 } as any)
+const PaiementRetourRoute = PaiementRetourRouteImport.update({
+  id: '/paiement/retour',
+  path: '/paiement/retour',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProductIdRoute = ProductIdRouteImport.update({
   id: '/product/$id',
   path: '/product/$id',
@@ -149,12 +158,27 @@ const AuthenticatedProfileEditRoute =
     path: '/edit',
     getParentRoute: () => AuthenticatedProfileRoute,
   } as any)
+const ApiJobsBoostDailyRoute = ApiJobsBoostDailyRouteImport.update({
+  id: '/api/jobs/boost-daily',
+  path: '/api/jobs/boost-daily',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPayCheckoutRoute = ApiPayCheckoutRouteImport.update({
+  id: '/api/pay/checkout',
+  path: '/api/pay/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedDashboardEditIdRoute =
   AuthenticatedDashboardEditIdRouteImport.update({
     id: '/edit/$id',
     path: '/edit/$id',
     getParentRoute: () => AuthenticatedDashboardRoute,
   } as any)
+const ApiPayWebhookProviderRoute = ApiPayWebhookProviderRouteImport.update({
+  id: '/api/pay/webhook/$provider',
+  path: '/api/pay/webhook/$provider',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -174,11 +198,15 @@ export interface FileRoutesByFullPath {
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/mentions': typeof LegalMentionsRoute
+  '/paiement/retour': typeof PaiementRetourRoute
   '/product/$id': typeof ProductIdRoute
   '/vendeur/$id': typeof VendeurIdRoute
   '/dashboard/new': typeof AuthenticatedDashboardNewRoute
   '/profile/edit': typeof AuthenticatedProfileEditRoute
+  '/api/jobs/boost-daily': typeof ApiJobsBoostDailyRoute
+  '/api/pay/checkout': typeof ApiPayCheckoutRoute
   '/dashboard/edit/$id': typeof AuthenticatedDashboardEditIdRoute
+  '/api/pay/webhook/$provider': typeof ApiPayWebhookProviderRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -198,11 +226,15 @@ export interface FileRoutesByTo {
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/mentions': typeof LegalMentionsRoute
+  '/paiement/retour': typeof PaiementRetourRoute
   '/product/$id': typeof ProductIdRoute
   '/vendeur/$id': typeof VendeurIdRoute
   '/dashboard/new': typeof AuthenticatedDashboardNewRoute
   '/profile/edit': typeof AuthenticatedProfileEditRoute
+  '/api/jobs/boost-daily': typeof ApiJobsBoostDailyRoute
+  '/api/pay/checkout': typeof ApiPayCheckoutRoute
   '/dashboard/edit/$id': typeof AuthenticatedDashboardEditIdRoute
+  '/api/pay/webhook/$provider': typeof ApiPayWebhookProviderRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -225,11 +257,15 @@ export interface FileRoutesById {
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/mentions': typeof LegalMentionsRoute
+  '/paiement/retour': typeof PaiementRetourRoute
   '/product/$id': typeof ProductIdRoute
   '/vendeur/$id': typeof VendeurIdRoute
   '/_authenticated/dashboard/new': typeof AuthenticatedDashboardNewRoute
   '/_authenticated/profile/edit': typeof AuthenticatedProfileEditRoute
+  '/api/jobs/boost-daily': typeof ApiJobsBoostDailyRoute
+  '/api/pay/checkout': typeof ApiPayCheckoutRoute
   '/_authenticated/dashboard/edit/$id': typeof AuthenticatedDashboardEditIdRoute
+  '/api/pay/webhook/$provider': typeof ApiPayWebhookProviderRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -251,11 +287,15 @@ export interface FileRouteTypes {
     | '/legal/confidentialite'
     | '/legal/cookies'
     | '/legal/mentions'
+    | '/paiement/retour'
     | '/product/$id'
     | '/vendeur/$id'
     | '/dashboard/new'
     | '/profile/edit'
+    | '/api/jobs/boost-daily'
+    | '/api/pay/checkout'
     | '/dashboard/edit/$id'
+    | '/api/pay/webhook/$provider'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -275,11 +315,15 @@ export interface FileRouteTypes {
     | '/legal/confidentialite'
     | '/legal/cookies'
     | '/legal/mentions'
+    | '/paiement/retour'
     | '/product/$id'
     | '/vendeur/$id'
     | '/dashboard/new'
     | '/profile/edit'
+    | '/api/jobs/boost-daily'
+    | '/api/pay/checkout'
     | '/dashboard/edit/$id'
+    | '/api/pay/webhook/$provider'
   id:
     | '__root__'
     | '/'
@@ -301,11 +345,15 @@ export interface FileRouteTypes {
     | '/legal/confidentialite'
     | '/legal/cookies'
     | '/legal/mentions'
+    | '/paiement/retour'
     | '/product/$id'
     | '/vendeur/$id'
     | '/_authenticated/dashboard/new'
     | '/_authenticated/profile/edit'
+    | '/api/jobs/boost-daily'
+    | '/api/pay/checkout'
     | '/_authenticated/dashboard/edit/$id'
+    | '/api/pay/webhook/$provider'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -317,8 +365,12 @@ export interface RootRouteChildren {
   DropshippingRoute: typeof DropshippingRoute
   LegalRoute: typeof LegalRouteWithChildren
   ApiGeoRoute: typeof ApiGeoRoute
+  PaiementRetourRoute: typeof PaiementRetourRoute
   ProductIdRoute: typeof ProductIdRoute
   VendeurIdRoute: typeof VendeurIdRoute
+  ApiJobsBoostDailyRoute: typeof ApiJobsBoostDailyRoute
+  ApiPayCheckoutRoute: typeof ApiPayCheckoutRoute
+  ApiPayWebhookProviderRoute: typeof ApiPayWebhookProviderRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -456,6 +508,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegalMentionsRouteImport
       parentRoute: typeof LegalRoute
     }
+    '/paiement/retour': {
+      id: '/paiement/retour'
+      path: '/paiement/retour'
+      fullPath: '/paiement/retour'
+      preLoaderRoute: typeof PaiementRetourRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/product/$id': {
       id: '/product/$id'
       path: '/product/$id'
@@ -484,12 +543,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileEditRouteImport
       parentRoute: typeof AuthenticatedProfileRoute
     }
+    '/api/jobs/boost-daily': {
+      id: '/api/jobs/boost-daily'
+      path: '/api/jobs/boost-daily'
+      fullPath: '/api/jobs/boost-daily'
+      preLoaderRoute: typeof ApiJobsBoostDailyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/pay/checkout': {
+      id: '/api/pay/checkout'
+      path: '/api/pay/checkout'
+      fullPath: '/api/pay/checkout'
+      preLoaderRoute: typeof ApiPayCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/dashboard/edit/$id': {
       id: '/_authenticated/dashboard/edit/$id'
       path: '/edit/$id'
       fullPath: '/dashboard/edit/$id'
       preLoaderRoute: typeof AuthenticatedDashboardEditIdRouteImport
       parentRoute: typeof AuthenticatedDashboardRoute
+    }
+    '/api/pay/webhook/$provider': {
+      id: '/api/pay/webhook/$provider'
+      path: '/api/pay/webhook/$provider'
+      fullPath: '/api/pay/webhook/$provider'
+      preLoaderRoute: typeof ApiPayWebhookProviderRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -578,8 +658,12 @@ const rootRouteChildren: RootRouteChildren = {
   DropshippingRoute: DropshippingRoute,
   LegalRoute: LegalRouteWithChildren,
   ApiGeoRoute: ApiGeoRoute,
+  PaiementRetourRoute: PaiementRetourRoute,
   ProductIdRoute: ProductIdRoute,
   VendeurIdRoute: VendeurIdRoute,
+  ApiJobsBoostDailyRoute: ApiJobsBoostDailyRoute,
+  ApiPayCheckoutRoute: ApiPayCheckoutRoute,
+  ApiPayWebhookProviderRoute: ApiPayWebhookProviderRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
