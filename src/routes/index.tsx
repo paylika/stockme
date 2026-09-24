@@ -7,7 +7,8 @@ import { MobileFooter } from "@/components/MobileFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ProductCard, type ListingProduct } from "@/components/ProductCard";
 import { SponsorCarousel } from "@/components/SponsorCarousel";
-import { Trophy } from "lucide-react";
+import { ALL_COUNTRIES, useVisitorCountry } from "@/lib/geo";
+import { MapPin, Trophy } from "lucide-react";
 import { buildSeoHead } from "@/lib/seo";
 import { CATEGORIES, WEST_AFRICA_LOCATIONS } from "@/lib/constants";
 import { trackAdClick, trackAdImpression } from "@/lib/ad-tracking";
@@ -61,6 +62,7 @@ const SORTS = [
 function Index() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/" });
+  const visitor = useVisitorCountry();
   const [items, setItems] = useState<Product[] | null>(null);
   const [q, setQ] = useState(search.q ?? "");
   // Par défaut : les nouveautés. « Pertinence » remonterait les mêmes produits
@@ -71,6 +73,8 @@ function Index() {
   const [winners, setWinners] = useState<Product[] | null>(null);
   const [winnerRot, setWinnerRot] = useState(() => Math.floor(Math.random() * 8));
   const [sponsored, setSponsored] = useState<SponsoredProduct[]>([]);
+  // Produits de la sous-région, affichés si son propre pays n'a pas encore de stock.
+  const [elsewhere, setElsewhere] = useState<Product[]>([]);
 
   // Emplacements sponsorisés (annonces « produit » actives et dans leur fenêtre).
   useEffect(() => {
@@ -183,10 +187,40 @@ function Index() {
   };
 
 
-  const update = (patch: Partial<Filters>) =>
+  const update = (patch: Partial<Filters>) => {
+    // Un choix de pays (ou son retrait) est un choix EXPLICITE : on le mémorise
+    // pour que la détection automatique ne revienne jamais le contredire.
+    if ("country" in patch) visitor.setManual(patch.country ?? ALL_COUNTRIES);
     navigate({ search: (prev: Filters) => ({ ...prev, ...patch }) });
-  const clearAll = () => navigate({ search: {} });
+  };
+  const clearAll = () => {
+    visitor.setManual(ALL_COUNTRIES);
+    navigate({ search: {} });
+  };
   const hasFilters = !!(search.country || search.city || search.category || search.q);
+
+  // Filtre local automatique : un visiteur ivoirien voit d'abord la Côte d'Ivoire.
+  useEffect(() => {
+    if (search.country || visitor.manual || !visitor.country) return;
+    navigate({ search: (prev: Filters) => ({ ...prev, country: visitor.country as string }) });
+  }, [visitor.country, visitor.manual, search.country]);
+
+  // Aucun stock dans le pays détecté → on propose la sous-région (jamais de page vide).
+  useEffect(() => {
+    if (!items || items.length > 0 || !search.country) {
+      setElsewhere([]);
+      return;
+    }
+    let cancel = false;
+    supabase
+      .rpc("get_ranked_products", { p_sort: sort, p_limit: 12, p_offset: 0 })
+      .then(({ data }) => {
+        if (!cancel) setElsewhere((data as Product[] | null) ?? []);
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [items, search.country, sort]);
 
   const countries = useMemo(() => Object.keys(WEST_AFRICA_LOCATIONS).sort((a, b) => a.localeCompare(b, "fr")), []);
   const availableCities = useMemo(() => {
@@ -245,6 +279,25 @@ function Index() {
           </div>
         </div>
       </section>
+
+      {/* ============ FILTRE LOCAL AUTOMATIQUE ============ */}
+      {search.country && visitor.isAuto && (
+        <section className="mx-auto max-w-7xl px-4 pt-3 sm:px-6">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-2 rounded-2xl border border-primary/30 bg-primary/5 px-3 py-2.5 text-xs">
+            <MapPin className="h-4 w-4 shrink-0 text-primary" />
+            <span className="min-w-0 flex-1">
+              Vous voyez les produits disponibles <strong>en {search.country}</strong> — votre pays a été détecté
+              automatiquement.
+            </span>
+            <button
+              onClick={() => update({ country: undefined, city: undefined })}
+              className="shrink-0 rounded-full bg-foreground px-3 py-1.5 font-semibold text-background transition hover:opacity-90"
+            >
+              Voir toute l'Afrique de l'Ouest
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* ============ ACTIVE FILTERS ============ */}
       {hasFilters && (
@@ -342,7 +395,25 @@ function Index() {
             ))}
           </div>
         ) : items.length === 0 ? (
-          <EmptyState onClear={clearAll} />
+          <>
+            <EmptyState onClear={clearAll} country={search.country} />
+            {elsewhere.length > 0 && (
+              <section className="mt-10">
+                <h3 className="text-sm font-bold tracking-tight uppercase">
+                  Ailleurs en Afrique de l'Ouest
+                </h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Aucun stock publié{search.country ? ` en ${search.country}` : ""} pour le moment — voici ce qui est
+                  disponible dans la sous-région. Vous pouvez commander ou collaborer avec ces vendeurs par WhatsApp.
+                </p>
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
+                  {elsewhere.map((p, i) => (
+                    <ProductCard key={p.id} product={p} sellerVerified={!!p.seller_verified} delayMs={i * 40} />
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
         ) : (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
@@ -434,19 +505,23 @@ function SkeletonCard() {
   );
 }
 
-function EmptyState({ onClear }: { onClear: () => void }) {
+function EmptyState({ onClear, country }: { onClear: () => void; country?: string }) {
   return (
-    <div className="grid place-items-center py-16 text-center border border-dashed border-border rounded-3xl bg-muted/30">
+    <div className="grid place-items-center rounded-3xl border border-dashed border-border bg-muted/30 py-16 text-center">
       <Package className="h-10 w-10 text-muted-foreground" />
-      <h3 className="mt-4 text-lg font-semibold">Aucun produit trouvé</h3>
-      <p className="mt-1 text-sm text-muted-foreground max-w-xs">
-        Essayez d'élargir vos filtres ou explorez une autre catégorie.
+      <h3 className="mt-4 text-lg font-semibold">
+        {country ? `Aucun produit en ${country}` : "Aucun produit trouvé"}
+      </h3>
+      <p className="mt-1 max-w-xs text-sm text-muted-foreground">
+        {country
+          ? `Nous n'avons pas encore de stock publié en ${country}. Élargissez à toute l'Afrique de l'Ouest — la sous-région bouge vite.`
+          : "Essayez d'élargir vos filtres ou explorez une autre catégorie."}
       </p>
       <button
         onClick={onClear}
-        className="mt-4 rounded-full bg-foreground text-background px-4 py-2 text-xs font-semibold"
+        className="mt-4 rounded-full bg-foreground px-4 py-2 text-xs font-semibold text-background"
       >
-        Réinitialiser les filtres
+        {country ? "Voir toute l'Afrique de l'Ouest" : "Réinitialiser les filtres"}
       </button>
     </div>
   );

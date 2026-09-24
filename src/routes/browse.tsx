@@ -10,6 +10,7 @@ import { CATEGORIES, WEST_AFRICA_LOCATIONS } from "@/lib/constants";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { ProductCard, type ListingProduct } from "@/components/ProductCard";
 import { useVerifiedSellers } from "@/hooks/useVerifiedSellers";
+import { ALL_COUNTRIES, useVisitorCountry } from "@/lib/geo";
 import { buildSeoHead } from "@/lib/seo";
 
 type Filters = { city?: string; category?: string; q?: string; min?: number; max?: number };
@@ -44,6 +45,9 @@ function Browse() {
   const [items, setItems] = useState<Product[] | null>(null);
   const [q, setQ] = useState(search.q ?? "");
   const verified = useVerifiedSellers();
+  const visitor = useVisitorCountry();
+  // Pays détecté → on cherche dans ses villes (sauf si l'utilisateur a choisi une ville précise).
+  const visitorCities = visitor.country ? WEST_AFRICA_LOCATIONS[visitor.country] ?? null : null;
 
   useEffect(() => {
     let cancel = false;
@@ -51,6 +55,7 @@ function Browse() {
     const run = async () => {
       let query = supabase.from("products").select("*").eq("published", true).eq("dropshipping", false).order("created_at", { ascending: false }).limit(60);
       if (search.city) query = query.eq("city", search.city);
+      else if (visitorCities) query = query.in("city", visitorCities);
       if (search.category) query = query.eq("category", search.category);
       if (search.q) query = query.ilike("name", `%${search.q}%`);
       const { data } = await query;
@@ -58,7 +63,7 @@ function Browse() {
     };
     run();
     return () => { cancel = true; };
-  }, [search.city, search.category, search.q]);
+  }, [search.city, search.category, search.q, visitor.country]);
 
   const update = (patch: Partial<Filters>) =>
     navigate({ search: (prev: Filters) => ({ ...prev, ...patch }) });
@@ -101,6 +106,21 @@ function Browse() {
               </Select>
             </div>
           </form>
+
+          {visitor.country && visitor.isAuto && !search.city && (
+            <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-2 rounded-2xl border border-primary/30 bg-primary/5 px-3 py-2.5 text-xs">
+              <Search className="h-4 w-4 shrink-0 text-primary" />
+              <span className="min-w-0 flex-1">
+                Résultats <strong>en {visitor.country}</strong> (votre pays détecté automatiquement).
+              </span>
+              <button
+                onClick={() => { visitor.setManual(ALL_COUNTRIES); navigate({ search: (prev: Filters) => ({ ...prev, city: undefined }) }); }}
+                className="shrink-0 rounded-full bg-foreground px-3 py-1.5 font-semibold text-background transition hover:opacity-90"
+              >
+                Voir toute l'Afrique de l'Ouest
+              </button>
+            </div>
+          )}
 
           {hasFilters && (
             <div className="mt-4 flex flex-wrap gap-2">

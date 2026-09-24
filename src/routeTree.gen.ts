@@ -23,6 +23,7 @@ import { Route as AdminUsersRouteImport } from './routes/_admin/users'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedFavoritesRouteImport } from './routes/_authenticated/favorites'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as ApiGeoRouteImport } from './routes/api.geo'
 import { Route as LegalCguRouteImport } from './routes/legal.cgu'
 import { Route as LegalConfidentialiteRouteImport } from './routes/legal.confidentialite'
 import { Route as LegalCookiesRouteImport } from './routes/legal.cookies'
@@ -101,6 +102,11 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const ApiGeoRoute = ApiGeoRouteImport.update({
+  id: '/api/geo',
+  path: '/api/geo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LegalCguRoute = LegalCguRouteImport.update({
   id: '/cgu',
   path: '/cgu',
@@ -163,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/favorites': typeof AuthenticatedFavoritesRoute
   '/profile': typeof AuthenticatedProfileRouteWithChildren
+  '/api/geo': typeof ApiGeoRoute
   '/legal/cgu': typeof LegalCguRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/cookies': typeof LegalCookiesRoute
@@ -186,6 +193,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/favorites': typeof AuthenticatedFavoritesRoute
   '/profile': typeof AuthenticatedProfileRouteWithChildren
+  '/api/geo': typeof ApiGeoRoute
   '/legal/cgu': typeof LegalCguRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/cookies': typeof LegalCookiesRoute
@@ -212,6 +220,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/_authenticated/favorites': typeof AuthenticatedFavoritesRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRouteWithChildren
+  '/api/geo': typeof ApiGeoRoute
   '/legal/cgu': typeof LegalCguRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/cookies': typeof LegalCookiesRoute
@@ -237,6 +246,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/favorites'
     | '/profile'
+    | '/api/geo'
     | '/legal/cgu'
     | '/legal/confidentialite'
     | '/legal/cookies'
@@ -260,6 +270,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/favorites'
     | '/profile'
+    | '/api/geo'
     | '/legal/cgu'
     | '/legal/confidentialite'
     | '/legal/cookies'
@@ -285,6 +296,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/favorites'
     | '/_authenticated/profile'
+    | '/api/geo'
     | '/legal/cgu'
     | '/legal/confidentialite'
     | '/legal/cookies'
@@ -304,6 +316,7 @@ export interface RootRouteChildren {
   BrowseRoute: typeof BrowseRoute
   DropshippingRoute: typeof DropshippingRoute
   LegalRoute: typeof LegalRouteWithChildren
+  ApiGeoRoute: typeof ApiGeoRoute
   ProductIdRoute: typeof ProductIdRoute
   VendeurIdRoute: typeof VendeurIdRoute
 }
@@ -407,6 +420,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/profile'
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/api/geo': {
+      id: '/api/geo'
+      path: '/api/geo'
+      fullPath: '/api/geo'
+      preLoaderRoute: typeof ApiGeoRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/legal/cgu': {
       id: '/legal/cgu'
@@ -557,6 +577,7 @@ const rootRouteChildren: RootRouteChildren = {
   BrowseRoute: BrowseRoute,
   DropshippingRoute: DropshippingRoute,
   LegalRoute: LegalRouteWithChildren,
+  ApiGeoRoute: ApiGeoRoute,
   ProductIdRoute: ProductIdRoute,
   VendeurIdRoute: VendeurIdRoute,
 }
