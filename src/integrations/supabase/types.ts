@@ -239,6 +239,8 @@ export type Database = {
           id: string
           email: string | null
           full_name: string | null
+          phone: string | null
+          whatsapp: string | null
           city: string | null
           role: string | null
           created_at: string

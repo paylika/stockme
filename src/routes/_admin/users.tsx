@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { COUNTRY_FLAGS, countryOfCity } from "@/lib/constants";
 import { toast } from "sonner";
-import { Search, Shield, ShieldCheck, ShieldOff, Users as UsersIcon } from "lucide-react";
+import { MessageCircle, Search, Shield, ShieldCheck, ShieldOff, Users as UsersIcon } from "lucide-react";
 
 type AdminUser = {
   id: string;
   email: string | null;
   full_name: string | null;
+  phone: string | null;
+  whatsapp: string | null;
   city: string | null;
   role: string | null;
   created_at: string;
@@ -89,6 +91,7 @@ function AdminUsersPage() {
             <tr>
               <th className="text-left px-4 py-3">Nom</th>
               <th className="text-left px-4 py-3 hidden sm:table-cell">Email</th>
+              <th className="text-left px-4 py-3 hidden md:table-cell">Téléphone</th>
               <th className="text-left px-4 py-3 hidden lg:table-cell">Ville</th>
               <th className="text-left px-4 py-3 hidden md:table-cell">Inscrit le</th>
               <th className="text-left px-4 py-3">Accès</th>
@@ -97,13 +100,30 @@ function AdminUsersPage() {
           </thead>
           <tbody>
             {users === null ? (
-              <tr><td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">Chargement…</td></tr>
+              <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Chargement…</td></tr>
             ) : filtered && filtered.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">Aucun utilisateur</td></tr>
+              <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Aucun utilisateur</td></tr>
             ) : (filtered ?? []).map((u) => (
               <tr key={u.id} className="border-t border-border hover:bg-muted/30">
                 <td className="px-4 py-3 font-medium">{u.full_name || "—"}</td>
                 <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground truncate max-w-[220px]">{u.email || "—"}</td>
+                <td className="px-4 py-3 hidden md:table-cell whitespace-nowrap">
+                  {u.phone || u.whatsapp ? (
+                    <div className="flex flex-col gap-0.5 text-xs">
+                      {u.phone && <span className="text-muted-foreground">{u.phone}</span>}
+                      {u.whatsapp && (
+                        <a
+                          href={`https://wa.me/${u.whatsapp.replace(/\D/g, "")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 font-medium text-volt underline underline-offset-2"
+                        >
+                          <MessageCircle className="h-3 w-3" /> {u.whatsapp}
+                        </a>
+                      )}
+                    </div>
+                  ) : "—"}
+                </td>
                 <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground whitespace-nowrap">
                   {COUNTRY_FLAGS[countryOfCity(u.city)] ?? ""} {u.city || "—"}
                 </td>
