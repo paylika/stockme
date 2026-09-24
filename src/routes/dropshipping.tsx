@@ -7,7 +7,7 @@ import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
 import { ProductCard, type ListingProduct } from "@/components/ProductCard";
 import { buildSeoHead } from "@/lib/seo";
-import { Package, Truck, Zap } from "lucide-react";
+import { Package, Store, Truck, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/dropshipping")({
   head: () => {
@@ -54,27 +54,40 @@ function DropshippingPage() {
             <p className="text-[11px] font-semibold tracking-[0.2em] uppercase">Dropshipping</p>
           </div>
           <h1 className="mt-2 font-display text-2xl sm:text-4xl font-bold tracking-tight">
-            Des produits livrés sur commande
+            Vendez sans stock — ou faites livrer votre stock
           </h1>
           <p className="mt-2 max-w-2xl text-sm sm:text-base text-muted-foreground leading-relaxed">
-            Contrairement à la <strong>vente en gros</strong> (lots), ces produits sont vendus
-            <strong> unité par unité</strong> et le vendeur <strong>livre dès qu'il y a une commande</strong> —
-            exactement comme en dropshipping. Commandez directement, sans acheter de stock.
+            En dropshipping, <strong className="text-foreground">rien n'est acheté à l'avance</strong> :
+            l'e-commerçant trouve la commande, le fournisseur livre. Chacun y gagne.
           </p>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <div className="flex items-start gap-3 rounded-2xl border border-border bg-background/50 p-4">
-              <Truck className="mt-0.5 h-5 w-5 shrink-0 text-volt" />
-              <div>
-                <p className="text-sm font-semibold">Livraison à la commande</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">Le vendeur vous livre après votre commande.</p>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-2xl border border-border bg-background/50 p-5">
+              <div className="flex items-center gap-2">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-volt/15 text-volt">
+                  <Store className="h-4 w-4" />
+                </span>
+                <h2 className="text-sm font-bold">Vous avez du stock ?</h2>
               </div>
+              <ol className="mt-3 space-y-2 text-sm text-muted-foreground">
+                <li className="flex gap-2"><span className="font-bold text-foreground">1.</span> Publiez votre produit en cochant <strong className="text-foreground">Dropshipping</strong>.</li>
+                <li className="flex gap-2"><span className="font-bold text-foreground">2.</span> Un e-commerçant vous passe la commande.</li>
+                <li className="flex gap-2"><span className="font-bold text-foreground">3.</span> Vous livrez le client et vous lui versez son bénéfice.</li>
+              </ol>
             </div>
-            <div className="flex items-start gap-3 rounded-2xl border border-border bg-background/50 p-4">
-              <Package className="mt-0.5 h-5 w-5 shrink-0 text-volt" />
-              <div>
-                <p className="text-sm font-semibold">Pas de stock à acheter</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">Vous commandez, il livre. Simple et rapide.</p>
+
+            <div className="rounded-2xl border border-border bg-background/50 p-5">
+              <div className="flex items-center gap-2">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary">
+                  <Truck className="h-4 w-4" />
+                </span>
+                <h2 className="text-sm font-bold">Vous êtes e-commerçant ?</h2>
               </div>
+              <ol className="mt-3 space-y-2 text-sm text-muted-foreground">
+                <li className="flex gap-2"><span className="font-bold text-foreground">1.</span> Choisissez un produit en dropshipping (sans acheter de stock).</li>
+                <li className="flex gap-2"><span className="font-bold text-foreground">2.</span> Vendez-le à vos clients avec votre marge.</li>
+                <li className="flex gap-2"><span className="font-bold text-foreground">3.</span> Le fournisseur livre — vous touchez votre bénéfice.</li>
+              </ol>
             </div>
           </div>
         </section>

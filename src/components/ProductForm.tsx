@@ -374,9 +374,9 @@ export function ProductForm({
           <span className="text-sm">
             <span className="font-semibold">Produit en dropshipping</span>
             <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-              Cochez si ce produit doit être <strong>vendu et livré sur commande</strong> (unité par
-              unité, vous livrez quand il y a une commande). Décoché = <strong>vente en gros</strong> (lots,
-              sur l'accueil).
+              Cochez si vous avez du stock et acceptez de <strong className="text-foreground">livrer sur commande</strong> :
+              un e-commerçant vous apporte la commande, vous livrez le client et vous lui versez son bénéfice.
+              Décoché = <strong className="text-foreground">vente en gros</strong> (lots, affiché sur l'accueil).
             </span>
           </span>
         </label>
