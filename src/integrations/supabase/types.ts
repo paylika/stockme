@@ -47,6 +47,7 @@ export type Database = {
         Row: {
           category: string
           city: string
+          colors: string[]
           created_at: string
           description: string | null
           dropshipping: boolean
@@ -60,14 +61,17 @@ export type Database = {
           published: boolean
           quantity: number
           revenue_fcfa: number | null
+          sizes: string[]
           sold_out: boolean
           updated_at: string
+          weight_grams: number | null
           whatsapp: string | null
           zone: string | null
         }
         Insert: {
           category: string
           city: string
+          colors?: string[]
           created_at?: string
           description?: string | null
           dropshipping?: boolean
@@ -81,14 +85,17 @@ export type Database = {
           published?: boolean
           quantity?: number
           revenue_fcfa?: number | null
+          sizes?: string[]
           sold_out?: boolean
           updated_at?: string
+          weight_grams?: number | null
           whatsapp?: string | null
           zone?: string | null
         }
         Update: {
           category?: string
           city?: string
+          colors?: string[]
           created_at?: string
           description?: string | null
           dropshipping?: boolean
@@ -102,8 +109,10 @@ export type Database = {
           published?: boolean
           quantity?: number
           revenue_fcfa?: number | null
+          sizes?: string[]
           sold_out?: boolean
           updated_at?: string
+          weight_grams?: number | null
           whatsapp?: string | null
           zone?: string | null
         }

@@ -40,6 +40,9 @@ function NewProduct() {
       published: true,
       sold_out: false,
       dropshipping: values.dropshipping,
+      sizes: values.sizes,
+      colors: values.colors,
+      weight_grams: values.weight_grams,
     };
 
     let insertError: string | null = null;

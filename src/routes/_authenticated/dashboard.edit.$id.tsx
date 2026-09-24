@@ -51,6 +51,9 @@ function EditProduct() {
         moq: data.moq,
         whatsapp: data.whatsapp,
         dropshipping: data.dropshipping ?? false,
+        sizes: data.sizes ?? [],
+        colors: data.colors ?? [],
+        weight_grams: data.weight_grams,
         images: data.images ?? [],
       });
       setLoading(false);
@@ -84,6 +87,9 @@ function EditProduct() {
         whatsapp: values.whatsapp,
         images,
         dropshipping: values.dropshipping,
+        sizes: values.sizes,
+        colors: values.colors,
+        weight_grams: values.weight_grams,
       })
       .eq("id", id);
     if (error) throw new Error(error.message);

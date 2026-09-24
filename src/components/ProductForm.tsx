@@ -23,6 +23,9 @@ export type ProductFormValues = {
   moq: number;
   whatsapp: string;
   dropshipping: boolean;
+  sizes: string[];
+  colors: string[];
+  weight_grams: number | null;
   existingImages: string[];
   newFiles: File[];
 };
@@ -40,10 +43,16 @@ export type ProductFormInitial = {
   moq: number;
   whatsapp: string | null;
   dropshipping: boolean;
+  sizes: string[];
+  colors: string[];
+  weight_grams: number | null;
   images: string[];
 };
 
 const cleanPhone = (value: string) => value.replace(/[^+\d]/g, "").trim();
+
+const SIZE_OPTIONS = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL"];
+const COLOR_OPTIONS = ["Noir", "Blanc", "Beige", "Gris", "Bleu", "Rouge", "Vert", "Jaune", "Marron", "Rose", "Violet", "Orange", "Doré"];
 
 type Props = {
   initial?: ProductFormInitial | null;
@@ -74,6 +83,12 @@ export function ProductForm({
   const [moq, setMoq] = useState<number | "">(initial?.moq ?? 1);
   const [whatsapp, setWhatsapp] = useState(initial?.whatsapp ?? "");
   const [dropshipping, setDropshipping] = useState(initial?.dropshipping ?? false);
+  const [sizes, setSizes] = useState<string[]>(initial?.sizes ?? []);
+  const [colors, setColors] = useState<string[]>(initial?.colors ?? []);
+  const [colorInput, setColorInput] = useState("");
+  const [weightKg, setWeightKg] = useState<number | "">(
+    initial?.weight_grams != null ? initial.weight_grams / 1000 : "",
+  );
   const [images, setImages] = useState<FormImage[]>(
     (initial?.images ?? []).map((url) => ({ url, preview: url })),
   );
@@ -86,6 +101,19 @@ export function ProductForm({
   }, [city]);
 
   const zones = city ? (CITY_ZONES[city] ?? []) : [];
+
+  const toggleSize = (s: string) =>
+    setSizes((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
+
+  const toggleColor = (c: string) =>
+    setColors((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
+
+  const addColor = () => {
+    const c = colorInput.trim();
+    if (!c) return;
+    setColors((prev) => (prev.includes(c) ? prev : [...prev, c]));
+    setColorInput("");
+  };
 
   const onFiles = (list: FileList | null) => {
     if (!list) return;
@@ -171,6 +199,9 @@ export function ProductForm({
         moq: Number(moq),
         whatsapp: normalizedWhatsapp,
         dropshipping,
+        sizes,
+        colors,
+        weight_grams: weightKg === "" ? null : Math.round(Number(weightKg) * 1000),
         existingImages,
         newFiles,
       });
@@ -333,6 +364,89 @@ export function ProductForm({
             value={moq}
             onChange={(e) => setMoq(e.target.value === "" ? "" : Number(e.target.value))}
           />
+        </div>
+      </div>
+
+      {/* ===== Variantes & poids (optionnel) ===== */}
+      <div className="space-y-4 rounded-2xl border border-border bg-card p-4">
+        <div>
+          <Label>Tailles disponibles</Label>
+          <p className="mt-0.5 text-xs text-muted-foreground">Optionnel — utile pour la mode et les chaussures.</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {SIZE_OPTIONS.map((s) => {
+              const active = sizes.includes(s);
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => toggleSize(s)}
+                  className={`h-9 min-w-11 rounded-lg border px-3 text-xs font-semibold transition ${
+                    active ? "border-volt bg-volt text-volt-foreground" : "border-input bg-background text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {s}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <Label>Couleurs disponibles</Label>
+          <p className="mt-0.5 text-xs text-muted-foreground">Cliquez pour ajouter, ou tapez une couleur personnalisée.</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {COLOR_OPTIONS.map((c) => {
+              const active = colors.includes(c);
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => toggleColor(c)}
+                  className={`h-9 rounded-lg border px-3 text-xs font-medium transition ${
+                    active ? "border-volt bg-volt/15 text-volt" : "border-input bg-background text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {c}
+                </button>
+              );
+            })}
+          </div>
+          {colors.filter((c) => !COLOR_OPTIONS.includes(c)).length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {colors.filter((c) => !COLOR_OPTIONS.includes(c)).map((c) => (
+                <span key={c} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-volt bg-volt/15 px-3 text-xs font-medium text-volt">
+                  {c}
+                  <button type="button" onClick={() => toggleColor(c)} aria-label="Retirer">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="mt-2 flex gap-2">
+            <Input
+              value={colorInput}
+              onChange={(e) => setColorInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addColor(); } }}
+              placeholder="Autre couleur…"
+              className="h-10"
+            />
+            <Button type="button" variant="outline" className="h-10" onClick={addColor}>Ajouter</Button>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="weight">Poids (kg)</Label>
+          <Input
+            id="weight"
+            type="number"
+            min={0}
+            step="0.1"
+            value={weightKg}
+            onChange={(e) => setWeightKg(e.target.value === "" ? "" : Number(e.target.value))}
+            placeholder="Ex: 0.5"
+          />
+          <p className="text-xs text-muted-foreground">Optionnel — utile pour calculer la livraison.</p>
         </div>
       </div>
 

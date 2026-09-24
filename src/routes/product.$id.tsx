@@ -20,6 +20,7 @@ type Product = {
   quantity: number; moq: number; city: string; zone: string | null;
   images: string[]; owner_id: string; whatsapp: string | null;
   published: boolean; sold_out: boolean; dropshipping: boolean;
+  sizes: string[]; colors: string[]; weight_grams: number | null;
 };
 type Profile = { full_name: string | null; whatsapp: string | null; phone: string | null; city: string | null; shop_name: string | null };
 type Similar = {
@@ -409,6 +410,37 @@ function ProductPage() {
                   </div>
                 ) : null}
               </div>
+
+              {(product.sizes?.length > 0 || product.colors?.length > 0 || product.weight_grams) && (
+                <div className="mt-4 space-y-3 border-t border-border pt-4 text-sm">
+                  {product.sizes?.length > 0 && (
+                    <div>
+                      <div className="text-muted-foreground text-xs uppercase tracking-wider">Tailles</div>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {product.sizes.map((s) => (
+                          <span key={s} className="rounded-md border border-border bg-background px-2 py-0.5 text-xs font-semibold">{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {product.colors?.length > 0 && (
+                    <div>
+                      <div className="text-muted-foreground text-xs uppercase tracking-wider">Couleurs</div>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {product.colors.map((c) => (
+                          <span key={c} className="rounded-md border border-border bg-background px-2 py-0.5 text-xs font-medium">{c}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {product.weight_grams ? (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-xs uppercase tracking-wider">Poids</span>
+                      <span className="font-semibold">{(product.weight_grams / 1000).toLocaleString("fr-FR")} kg</span>
+                    </div>
+                  ) : null}
+                </div>
+              )}
             </div>
 
             <h2 className="mt-5 text-sm font-semibold tracking-wider uppercase text-muted-foreground">À propos du vendeur</h2>
