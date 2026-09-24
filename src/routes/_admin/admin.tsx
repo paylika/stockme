@@ -15,12 +15,10 @@ import {
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { countryOfCity } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
-import { Eye, Heart, MessageCircle, Package, UserPlus, Users } from "lucide-react";
+import { MessageCircle, Package, UserPlus, Users } from "lucide-react";
 import {
   IconUsers,
   IconStock,
-  IconCoins,
-  IconFlame,
   IconGlobe,
   IconPin,
   IconTrend,
@@ -264,21 +262,28 @@ function AdminDashboard() {
         </div>
       </div>
 
-      {/* ===== KPIs ===== */}
+      {/* ===== KPIs clés (période) ===== */}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Kpi icon={Users} label="Visiteurs" value={loading ? "…" : ps?.visits} accent="primary" hint={periodLabel} />
         <Kpi icon={MessageCircle} label="Contacts" value={loading ? "…" : ps?.contacts} accent="volt" hint={periodLabel} />
         <Kpi icon={UserPlus} label="Comptes créés" value={loading ? "…" : ps?.new_users} accent="primary" hint={periodLabel} />
         <Kpi icon={IconTrend} label="Taux d'inscription" value={loading ? "…" : `${ps?.signup_rate ?? 0}%`} accent="volt" hint="inscrits / visiteurs" />
-        <Kpi icon={Eye} label="Vues produits" value={loading ? "…" : ps?.views} accent="primary" hint={periodLabel} />
-        <Kpi icon={IconTrend} label="Taux de contact" value={loading ? "…" : `${ps?.conversion_rate ?? 0}%`} accent="volt" hint="contacts / vues" />
-        <Kpi icon={IconStock} label="Produits publiés" value={loading ? "…" : ps?.new_products} accent="primary" hint={periodLabel} />
-        <Kpi icon={IconUsers} label="Utilisateurs (total)" value={loading ? "…" : t?.users} accent="primary" />
-        <Kpi icon={IconUsers} label="Vendeurs actifs" value={loading ? "…" : t?.active_sellers} accent="volt" hint={loading ? "" : `sur ${t?.sellers ?? 0} vendeurs`} />
-        <Kpi icon={IconCoins} label="Valeur du stock" value={loading ? "…" : formatFCFA(t?.stock_value ?? 0)} accent="volt" small />
-        <Kpi icon={Heart} label="Favoris" value={loading ? "…" : t?.favorites} accent="primary" />
-        <Kpi icon={IconFlame} label="Promos actives" value={loading ? "…" : t?.promos} accent="volt" />
-        <Kpi icon={IconGlobe} label="Pays / Villes" value={loading ? "…" : `${geo.countries} / ${geo.cities}`} accent="primary" small />
+      </div>
+
+      {/* ===== Vue d'ensemble (métriques secondaires, compactes) ===== */}
+      <div className="mt-4 rounded-2xl border border-border bg-card p-5">
+        <h3 className="text-sm font-semibold tracking-tight">Vue d'ensemble</h3>
+        <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-5">
+          <StatItem label="Vues produits" value={ps?.views} hint={periodLabel} />
+          <StatItem label="Taux de contact" value={ps ? `${ps.conversion_rate}%` : undefined} hint="contacts / vues" />
+          <StatItem label="Produits publiés" value={ps?.new_products} hint={periodLabel} />
+          <StatItem label="Utilisateurs (total)" value={t?.users} />
+          <StatItem label="Vendeurs actifs" value={t?.active_sellers} hint={t ? `sur ${t.sellers}` : undefined} />
+          <StatItem label="Valeur du stock" value={t ? formatFCFA(t.stock_value) : undefined} />
+          <StatItem label="Favoris" value={t?.favorites} />
+          <StatItem label="Promos actives" value={t?.promos} />
+          <StatItem label="Pays / Villes" value={geo.countries ? `${geo.countries} / ${geo.cities}` : undefined} />
+        </div>
       </div>
 
       {/* ===== Graphiques ===== */}
@@ -562,6 +567,24 @@ function MiniStat({ label, value }: { label: string; value: string }) {
     <div className="rounded-lg border border-border bg-background/50 p-3">
       <div className="text-[11px] text-muted-foreground">{label}</div>
       <div className="mt-0.5 text-lg font-bold tracking-tight">{value}</div>
+    </div>
+  );
+}
+
+function StatItem({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value?: number | string;
+  hint?: string;
+}) {
+  return (
+    <div>
+      <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="mt-0.5 text-lg font-bold tracking-tight">{value ?? "…"}</div>
+      {hint && <div className="text-[11px] text-muted-foreground">{hint}</div>}
     </div>
   );
 }
