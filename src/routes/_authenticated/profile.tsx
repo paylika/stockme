@@ -6,15 +6,22 @@ import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
 import { Button } from "@/components/ui/button";
 import { StatusSwitch } from "@/components/StatusSwitch";
+import { VerifiedBadge, VerifiedBadgeGold } from "@/components/VerifiedBadge";
 import { useAuth } from "@/hooks/useAuth";
 import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
 import { formatFCFA } from "@/lib/format";
-import { COUNTRY_FLAGS, countryOfCity } from "@/lib/constants";
+import {
+  COUNTRY_FLAGS,
+  SERVICE_WHATSAPP,
+  VERIFIED_BADGE_PRICE_FCFA,
+  countryOfCity,
+  verifiedBadgeWhatsAppLink,
+} from "@/lib/constants";
 import { toast } from "sonner";
 import {
+  BadgeCheck,
   Camera,
-  CheckCircle2,
   Eye,
   ExternalLink,
   LogOut,
@@ -24,6 +31,7 @@ import {
   Package,
   Pencil,
   Phone,
+  ShieldQuestion,
   Trash2,
   Zap,
 } from "lucide-react";
@@ -37,6 +45,8 @@ type Profile = {
   whatsapp: string | null;
   phone: string | null;
   role: string;
+  verified: boolean;
+  verified_until: string | null;
 };
 
 type Product = {
@@ -170,6 +180,8 @@ function ProfilePage() {
   const initials = (displayName || "U").split(/\s+/).map((s) => s[0]).join("").slice(0, 2).toUpperCase();
   const city = profile?.city;
   const online = (products ?? []).filter((p) => p.published).length;
+  const isVerified = !!profile?.verified && (!profile.verified_until || new Date(profile.verified_until) > new Date());
+  const isLifetime = isVerified && !profile?.verified_until;
 
   if (loading) {
     return (
@@ -265,11 +277,19 @@ function ProfilePage() {
 
           {/* Bio */}
           <div className="mt-6 space-y-1.5 text-sm">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="font-semibold">{profile?.full_name || "Vendeur"}</span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-volt/15 px-2 py-0.5 text-[11px] font-semibold text-volt">
-                <CheckCircle2 className="h-3 w-3" /> Vérifié
-              </span>
+              {isVerified ? (
+                isLifetime ? (
+                  <VerifiedBadgeGold />
+                ) : (
+                  <VerifiedBadge />
+                )
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                  <ShieldQuestion className="h-3 w-3" /> Boutique non vérifiée
+                </span>
+              )}
             </div>
             {profile?.bio && <p className="whitespace-pre-line text-muted-foreground leading-relaxed">{profile.bio}</p>}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-muted-foreground">
@@ -293,6 +313,69 @@ function ProfilePage() {
               </span>
             </div>
           </div>
+
+          {/* ===== Badge « Fournisseur vérifié » ===== */}
+          {isVerified ? (
+            <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4">
+              <BadgeCheck className="h-6 w-6 shrink-0 text-primary" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold">Boutique vérifiée par StockMe</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {isLifetime
+                    ? "Badge permanent."
+                    : `Valable jusqu'au ${new Date(profile!.verified_until as string).toLocaleDateString("fr-FR")}.`}{" "}
+                  Il s'affiche sur toutes vos fiches produit et sur votre boutique.
+                </p>
+              </div>
+              {user?.id && (
+                <Link to="/vendeur/$id" params={{ id: user.id }}>
+                  <Button variant="outline" size="sm">Voir ma boutique</Button>
+                </Link>
+              )}
+            </div>
+          ) : (
+            <div className="mt-5 rounded-2xl border border-volt/40 bg-volt/10 p-4">
+              <div className="flex flex-wrap items-start gap-3">
+                <BadgeCheck className="mt-0.5 h-6 w-6 shrink-0 text-primary" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold">
+                    Faites vérifier votre boutique — {VERIFIED_BADGE_PRICE_FCFA.toLocaleString("fr-FR")} FCFA
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    Le badge <strong className="text-foreground">Fournisseur vérifié</strong> rassure les acheteurs : il
+                    s'affiche sur vos fiches produit et sur votre boutique. Nous contrôlons votre numéro WhatsApp et
+                    votre activité.
+                  </p>
+                  <ol className="mt-2 space-y-1 text-xs text-muted-foreground">
+                    <li>
+                      1. Payez {VERIFIED_BADGE_PRICE_FCFA.toLocaleString("fr-FR")} FCFA par{" "}
+                      <strong className="text-foreground">Wave</strong> ou{" "}
+                      <strong className="text-foreground">Orange Money</strong> au +{SERVICE_WHATSAPP.slice(0, 3)}{" "}
+                      {SERVICE_WHATSAPP.slice(3, 5)} {SERVICE_WHATSAPP.slice(5, 7)} {SERVICE_WHATSAPP.slice(7, 9)}{" "}
+                      {SERVICE_WHATSAPP.slice(9)}
+                    </li>
+                    <li>2. Envoyez la capture du paiement sur WhatsApp</li>
+                    <li>3. Nous activons votre badge après vérification</li>
+                  </ol>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <a
+                      href={verifiedBadgeWhatsAppLink(profile?.shop_name, user?.id)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex h-11 items-center gap-2 rounded-full bg-volt px-4 text-sm font-bold text-volt-foreground shadow-sm transition hover:brightness-110"
+                    >
+                      <MessageCircle className="h-4 w-4" /> Payer et envoyer la preuve
+                    </a>
+                    <Link to="/profile/edit">
+                      <Button variant="ghost" size="sm" className="h-11">
+                        Compléter mon profil d'abord
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

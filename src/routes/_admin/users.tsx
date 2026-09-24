@@ -3,11 +3,13 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { COUNTRY_FLAGS, countryOfCity } from "@/lib/constants";
 import { explainDbError } from "@/lib/db-errors";
 import { formatFCFA } from "@/lib/format";
 import { toast } from "sonner";
 import {
+  BadgeCheck,
   ChevronDown,
   Eye,
   EyeOff,
@@ -33,6 +35,8 @@ type AdminUser = {
   created_at: string;
   is_admin: boolean;
 };
+
+type BadgeState = { verified: boolean; verified_until: string | null };
 
 type UserProduct = {
   id: string;
@@ -62,12 +66,22 @@ function AdminUsersPage() {
   const [q, setQ] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [busyProduct, setBusyProduct] = useState<string | null>(null);
+  const [badgeBusyId, setBadgeBusyId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [productsByUser, setProductsByUser] = useState<Record<string, UserProduct[] | "loading">>({});
+  const [badges, setBadges] = useState<Record<string, BadgeState>>({});
+  const [monthsByUser, setMonthsByUser] = useState<Record<string, number>>({});
 
   const load = async () => {
     const { data } = await supabase.rpc("admin_list_users", {});
     setUsers((data as AdminUser[] | null) ?? []);
+    // État du badge « Fournisseur vérifié » (l'admin peut lire les profils)
+    const { data: profs } = await supabase.from("profiles").select("id,verified,verified_until");
+    const map: Record<string, BadgeState> = {};
+    (profs as { id: string; verified: boolean; verified_until: string | null }[] | null)?.forEach((p) => {
+      map[p.id] = { verified: p.verified, verified_until: p.verified_until };
+    });
+    setBadges(map);
   };
 
   useEffect(() => {
@@ -149,6 +163,24 @@ function AdminUsersPage() {
   };
 
   const admins = (filtered ?? []).filter((u) => u.is_admin);
+  const verifiedCount = Object.values(badges).filter((b) => b.verified).length;
+
+  // ===== Badge « Fournisseur vérifié » (2 000 FCFA, activation manuelle) =====
+  const setVerified = async (u: AdminUser, months: number | null, on: boolean) => {
+    if (!on && !confirm(`Retirer le badge « Fournisseur vérifié » de ${u.email || u.full_name} ?`)) return;
+    setBadgeBusyId(u.id);
+    const { error } = on
+      ? await supabase.rpc("admin_set_seller_verified", { p_user_id: u.id, p_months: months })
+      : await supabase.rpc("admin_unset_seller_verified", { p_user_id: u.id });
+    setBadgeBusyId(null);
+    if (error) return toast.error(explainDbError(error.message, "20260720000000_verified_seller_badge.sql"));
+    toast.success(
+      on
+        ? `Badge accordé à ${u.email || u.full_name}${months ? ` (${months} mois)` : " (à vie)"}`
+        : `Badge retiré à ${u.email || u.full_name}`,
+    );
+    load();
+  };
 
   return (
     <div>
@@ -159,7 +191,7 @@ function AdminUsersPage() {
       <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
         <h1 className="font-display text-2xl sm:text-4xl font-bold tracking-tight">Accès &amp; rôles</h1>
         <span className="text-xs text-muted-foreground">
-          {users === null ? "…" : `${users.length} utilisateur(s)`} · {admins.length} admin(s)
+          {users === null ? "…" : `${users.length} utilisateur(s)`} · {admins.length} admin(s) · {verifiedCount} vérifié(s)
         </span>
       </div>
 
@@ -183,14 +215,15 @@ function AdminUsersPage() {
               <th className="px-4 py-3 text-left">Ville</th>
               <th className="px-4 py-3 text-left">Inscrit le</th>
               <th className="px-4 py-3 text-left">Accès</th>
+              <th className="px-4 py-3 text-left">Badge vérifié</th>
               <th className="px-4 py-3 text-right">Action</th>
             </tr>
           </thead>
           <tbody>
             {users === null ? (
-              <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Chargement…</td></tr>
+              <tr><td colSpan={8} className="px-4 py-6 text-center text-muted-foreground">Chargement…</td></tr>
             ) : filtered && filtered.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Aucun utilisateur</td></tr>
+              <tr><td colSpan={8} className="px-4 py-6 text-center text-muted-foreground">Aucun utilisateur</td></tr>
             ) : (filtered ?? []).map((u) => (
               <Fragment key={u.id}>
                 <tr className="border-t border-border hover:bg-muted/30">
@@ -244,6 +277,53 @@ function AdminUsersPage() {
                       </span>
                     )}
                   </td>
+
+                  {/* Badge « Fournisseur vérifié » — 2 000 FCFA, activation manuelle */}
+                  <td className="px-4 py-3">
+                    {badges[u.id]?.verified ? (
+                      <div className="flex flex-col items-start gap-1">
+                        <VerifiedBadge compact />
+                        <span className="text-[10px] text-muted-foreground">
+                          {badges[u.id]?.verified_until
+                            ? `Jusqu'au ${new Date(badges[u.id].verified_until as string).toLocaleDateString("fr-FR")}`
+                            : "À vie"}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={badgeBusyId === u.id}
+                          onClick={() => setVerified(u, null, false)}
+                          className="text-[11px] font-medium text-muted-foreground underline underline-offset-2 hover:text-destructive disabled:opacity-50"
+                        >
+                          Retirer le badge
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          value={monthsByUser[u.id] ?? 12}
+                          onChange={(e) => setMonthsByUser((prev) => ({ ...prev, [u.id]: Number(e.target.value) }))}
+                          aria-label="Durée du badge"
+                          className="h-8 rounded-lg border border-border bg-background px-1.5 text-[11px]"
+                        >
+                          <option value={1}>1 mois</option>
+                          <option value={3}>3 mois</option>
+                          <option value={12}>12 mois</option>
+                          <option value={0}>À vie</option>
+                        </select>
+                        <button
+                          type="button"
+                          disabled={badgeBusyId === u.id}
+                          onClick={() => {
+                            const m = monthsByUser[u.id] ?? 12;
+                            setVerified(u, m === 0 ? null : m, true);
+                          }}
+                          className="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-2 text-[11px] font-semibold text-primary-foreground transition hover:brightness-110 disabled:opacity-50"
+                        >
+                          <BadgeCheck className="h-3 w-3" /> Vérifier
+                        </button>
+                      </div>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
@@ -273,7 +353,7 @@ function AdminUsersPage() {
 
                 {expanded === u.id && (
                   <tr className="border-t border-border bg-muted/20">
-                    <td colSpan={7} className="px-4 py-5">
+                    <td colSpan={8} className="px-4 py-5">
                       {(() => {
                         const list = productsByUser[u.id];
                         if (!list || list === "loading") {

@@ -183,3 +183,24 @@ export const ADMIN_EMAILS = ["adabecomx@gmail.com", "adbaecomx@gmail.com"] as co
 export const ADMIN_EMAIL = ADMIN_EMAILS[0];
 export const isAdminEmail = (email?: string | null) =>
   !!email && ADMIN_EMAILS.includes(email.toLowerCase() as (typeof ADMIN_EMAILS)[number]);
+
+/* ------------------------------------------------------------------ *
+ * Badge « Fournisseur vérifié » (payant, activé par l'admin)
+ * ------------------------------------------------------------------ */
+
+/** Prix du badge, en FCFA. */
+export const VERIFIED_BADGE_PRICE_FCFA = 2000;
+
+/** Numéro WhatsApp du service client (format international, sans « + »). */
+export const SERVICE_WHATSAPP = "221786635331";
+
+/** Lien WhatsApp pré-rempli pour payer / demander la vérification. */
+export const verifiedBadgeWhatsAppLink = (shopName?: string | null, userId?: string) => {
+  const message =
+    `Bonjour StockMe, je souhaite faire vérifier ma boutique (badge Fournisseur vérifié — ` +
+    `${VERIFIED_BADGE_PRICE_FCFA} FCFA).` +
+    (shopName ? `\nBoutique : ${shopName}` : "") +
+    (userId ? `\nMon identifiant : ${userId}` : "") +
+    `\nJe vous envoie la capture du paiement Wave / Orange Money.`;
+  return `https://wa.me/${SERVICE_WHATSAPP}?text=${encodeURIComponent(message)}`;
+};

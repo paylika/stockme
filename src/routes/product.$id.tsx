@@ -9,6 +9,7 @@ import { formatFCFA, whatsappLink } from "@/lib/format";
 import { useAuth } from "@/hooks/useAuth";
 import { IntensityGauge, computeIntensity } from "@/components/IntensityGauge";
 import { JsonLd } from "@/components/JsonLd";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { buildSeoHead, productLd, breadcrumbLd } from "@/lib/seo";
 import { countryOfCity, isAdminEmail } from "@/lib/constants";
 import { ArrowLeft, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Eye, Heart, Lock, MapPin, MessageCircle, Package, Phone, Share2, ShieldCheck, Store, Zap } from "lucide-react";
@@ -32,6 +33,8 @@ type PublicSeller = {
   bio: string | null;
   created_at: string;
   products_count: number;
+  is_verified?: boolean;
+  verified_until?: string | null;
 };
 type Similar = {
   id: string; name: string; price_fcfa: number; promo_price_fcfa: number | null;
@@ -504,9 +507,7 @@ function ProductPage() {
                       {profile?.shop_name || profile?.full_name || "Vendeur"}
                     </Link>
                     <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-volt">
-                        <CheckCircle2 className="h-3.5 w-3.5" /> Vérifié
-                      </span>
+                      {seller?.is_verified && <VerifiedBadge compact />}
                       {profile?.city && (
                         <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                           <MapPin className="h-3 w-3" /> {profile.city}

@@ -6,9 +6,10 @@ import { MobileFooter } from "@/components/MobileFooter";
 import { MobileNav } from "@/components/MobileNav";
 import { ProductCard, type ListingProduct } from "@/components/ProductCard";
 import { JsonLd } from "@/components/JsonLd";
+import { VerifiedBadge, VerifiedBadgeGold } from "@/components/VerifiedBadge";
 import { buildSeoHead, breadcrumbLd, SITE_URL } from "@/lib/seo";
 import { COUNTRY_FLAGS, countryOfCity } from "@/lib/constants";
-import { ArrowLeft, CheckCircle2, Eye, Heart, MapPin, MessageCircle, Package, Store } from "lucide-react";
+import { ArrowLeft, Eye, Heart, MapPin, MessageCircle, Package, Store } from "lucide-react";
 
 const formatCount = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n));
 
@@ -21,6 +22,8 @@ type PublicSeller = {
   bio: string | null;
   created_at: string;
   products_count: number;
+  is_verified?: boolean;
+  verified_until?: string | null;
 };
 
 type SellerStats = {
@@ -140,11 +143,12 @@ function SellerPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">{displayName}</h1>
-                    {seller && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-volt/15 px-2 py-0.5 text-[11px] font-semibold text-volt">
-                        <CheckCircle2 className="h-3 w-3" /> Vendeur vérifié
-                      </span>
-                    )}
+                    {seller?.is_verified &&
+                      (seller.verified_until ? (
+                        <VerifiedBadge size="md" />
+                      ) : (
+                        <VerifiedBadgeGold size="md" />
+                      ))}
                   </div>
 
                   <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">

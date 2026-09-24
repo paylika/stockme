@@ -130,6 +130,9 @@ export type Database = {
           role: string
           shop_name: string | null
           updated_at: string
+          verified: boolean
+          verified_at: string | null
+          verified_until: string | null
           whatsapp: string | null
         }
         Insert: {
@@ -143,6 +146,9 @@ export type Database = {
           role?: string
           shop_name?: string | null
           updated_at?: string
+          verified?: boolean
+          verified_at?: string | null
+          verified_until?: string | null
           whatsapp?: string | null
         }
         Update: {
@@ -156,6 +162,9 @@ export type Database = {
           role?: string
           shop_name?: string | null
           updated_at?: string
+          verified?: boolean
+          verified_at?: string | null
+          verified_until?: string | null
           whatsapp?: string | null
         }
         Relationships: []
@@ -530,7 +539,22 @@ export type Database = {
           bio: string | null
           created_at: string
           products_count: number
+          is_verified: boolean
+          verified_until: string | null
         } | null
+      }
+      admin_set_seller_verified: {
+        Args: {
+          p_user_id: string
+          p_months?: number | null
+        }
+        Returns: Record<string, unknown>
+      }
+      admin_unset_seller_verified: {
+        Args: {
+          p_user_id: string
+        }
+        Returns: Record<string, unknown>
       }
     }
     Enums: {
