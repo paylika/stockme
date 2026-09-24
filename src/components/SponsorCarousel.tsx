@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Megaphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { SponsorBanner } from "@/components/SponsorBanner";
+import { trackAdClick, trackAdImpression } from "@/lib/ad-tracking";
 
 type Slide = {
   badge: string;
@@ -12,6 +13,8 @@ type Slide = {
   logoSrc?: string;
   logoAlt?: string;
   icon?: React.ComponentType<{ className?: string }>;
+  /** Identifiant de l'annonce en base (absent pour les slides maison). */
+  adId?: string;
 };
 
 /** Annonces "maison" affichées quand il n'y a aucune annonce programmée. */
@@ -82,6 +85,7 @@ export function SponsorCarousel() {
               href: `/product/${a.product_id}`,
               logoSrc: a.product_images?.[0] ?? undefined,
               logoAlt: "",
+              adId: a.id,
             }
           : {
               badge: "Annonce",
@@ -91,6 +95,7 @@ export function SponsorCarousel() {
               href: a.href || "#",
               logoSrc: a.image_url ?? undefined,
               logoAlt: "",
+              adId: a.id,
             },
       );
 
@@ -119,6 +124,11 @@ export function SponsorCarousel() {
 
   const slide = slides[Math.min(index, slides.length - 1)];
 
+  // Mesure des performances : l'annonce réellement affichée est comptée (1×/jour/visiteur).
+  useEffect(() => {
+    if (slide?.adId) trackAdImpression(slide.adId);
+  }, [slide?.adId]);
+
   return (
     <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} className="touch-pan-y">
       <div key={index} className="fade-in">
@@ -131,6 +141,7 @@ export function SponsorCarousel() {
           logoSrc={slide.logoSrc}
           logoAlt={slide.logoAlt}
           icon={slide.icon}
+          onNavigate={() => trackAdClick(slide.adId)}
         />
       </div>
 

@@ -433,11 +433,53 @@ export type Database = {
           product_name: string | null
           product_images: string[] | null
           product_city: string | null
+          product_zone: string | null
+          product_category: string | null
+          moq: number | null
+          quantity: number | null
           price_fcfa: number | null
           promo_price_fcfa: number | null
           dropshipping: boolean | null
           sold_out: boolean | null
         }[]
+      }
+      get_ad_stats: {
+        Args: Record<string, never>
+        Returns: {
+          ad_id: string
+          impressions: number
+          clicks: number
+          impressions_7d: number
+          clicks_7d: number
+          last_event_at: string | null
+        }[]
+      }
+      get_sponsored_products: {
+        Args: {
+          p_limit?: number
+        }
+        Returns: {
+          ad_id: string
+          id: string
+          name: string
+          category: string
+          price_fcfa: number
+          promo_price_fcfa: number | null
+          quantity: number
+          moq: number
+          city: string
+          zone: string | null
+          images: string[]
+          sold_out: boolean
+          dropshipping: boolean
+        }[]
+      }
+      log_ad_event: {
+        Args: {
+          p_ad_id: string
+          p_event: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

@@ -10,6 +10,7 @@ import { SponsorCarousel } from "@/components/SponsorCarousel";
 import { Trophy } from "lucide-react";
 import { buildSeoHead } from "@/lib/seo";
 import { CATEGORIES, WEST_AFRICA_LOCATIONS } from "@/lib/constants";
+import { trackAdClick, trackAdImpression } from "@/lib/ad-tracking";
 import {
   IconBox as Package,
   IconClose as X,
@@ -41,8 +42,11 @@ export const Route = createFileRoute("/")({
 });
 
 type Product = ListingProduct;
+type SponsoredProduct = Product & { ad_id: string };
 
 const PAGE_SIZE = 24;
+/** Positions sponsorisées dans la grille (index 1 et 2 = cartes n°2 et n°3). */
+const SPONSOR_SLOTS = [1, 2];
 const SORTS = [
   { id: "pertinence", label: "Pertinence" },
   { id: "nouveau", label: "Nouveautés" },
@@ -64,6 +68,14 @@ function Index() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [winners, setWinners] = useState<Product[] | null>(null);
   const [winnerRot, setWinnerRot] = useState(() => Math.floor(Math.random() * 8));
+  const [sponsored, setSponsored] = useState<SponsoredProduct[]>([]);
+
+  // Emplacements sponsorisés (annonces « produit » actives et dans leur fenêtre).
+  useEffect(() => {
+    supabase
+      .rpc("get_sponsored_products", { p_limit: 3 })
+      .then(({ data }) => setSponsored((data as SponsoredProduct[] | null) ?? []));
+  }, []);
 
   useEffect(() => {
     // "Potentiel Winner" : pool des produits les plus sollicités (contacts + vues).
@@ -95,6 +107,32 @@ function Index() {
     const start = ((winnerRot % n) + n) % n;
     return [...winners.slice(start), ...winners.slice(0, start)].slice(0, 8);
   }, [winners, winnerRot]);
+
+  // Grille affichée = produits naturels + emplacements sponsorisés (cartes n°2 et n°3).
+  const display = useMemo(() => {
+    const list = items ?? [];
+    const rows: { product: Product; adId?: string }[] = list.map((product) => ({ product }));
+    const isMainFeed = !search.country && !search.city && !search.category && !search.q;
+    if (!isMainFeed || list.length === 0) return rows;
+
+    const alreadyListed = new Set(list.map((p) => p.id));
+    const ads = sponsored.filter((a) => !alreadyListed.has(a.id)).slice(0, SPONSOR_SLOTS.length);
+    ads.forEach((ad, i) => {
+      const at = Math.min(SPONSOR_SLOTS[i] ?? rows.length, rows.length);
+      rows.splice(at, 0, { product: ad, adId: ad.ad_id });
+    });
+    return rows;
+  }, [items, sponsored, search.country, search.city, search.category, search.q]);
+
+  const sponsoredAdIds = useMemo(
+    () => display.filter((r) => r.adId).map((r) => r.adId as string),
+    [display],
+  );
+
+  // Impression : comptée dès que l'emplacement sponsorisé est réellement affiché.
+  useEffect(() => {
+    sponsoredAdIds.forEach((id) => trackAdImpression(id));
+  }, [sponsoredAdIds]);
 
   useEffect(() => {
     setQ(search.q ?? "");
@@ -269,23 +307,30 @@ function Index() {
         </div>
 
         {/* Onglets de tri */}
-        <div className="mb-4 overflow-x-auto no-scrollbar">
-          <div className="flex items-center gap-2">
-            {SORTS.map((s) => {
-              const active = sort === s.id;
-              return (
-                <button
-                  key={s.id}
-                  onClick={() => setSort(s.id)}
-                  className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
-                    active ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {s.label}
-                </button>
-              );
-            })}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div className="overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-2">
+              {SORTS.map((s) => {
+                const active = sort === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => setSort(s.id)}
+                    className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+                      active ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
+          {sponsoredAdIds.length > 0 && (
+            <span className="hidden text-[11px] text-muted-foreground sm:inline">
+              Emplacements « Sponsorisé » : annonces mises en avant.
+            </span>
+          )}
         </div>
 
         {items === null ? (
@@ -299,8 +344,14 @@ function Index() {
         ) : (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
-              {items.map((p, i) => (
-                <ProductCard key={p.id} product={p} delayMs={(i % PAGE_SIZE) * 40} />
+              {display.map((row, i) => (
+                <ProductCard
+                  key={row.adId ? `ad-${row.adId}` : row.product.id}
+                  product={row.product}
+                  sponsored={!!row.adId}
+                  onOpen={row.adId ? () => trackAdClick(row.adId) : undefined}
+                  delayMs={(i % PAGE_SIZE) * 40}
+                />
               ))}
             </div>
             {hasMore && (

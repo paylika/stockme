@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,13 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { uploadImage } from "@/lib/image-upload";
 import { formatFCFA } from "@/lib/format";
+import { ctr as computeCtr } from "@/lib/ad-tracking";
 import { toast } from "sonner";
 import {
+  BarChart3,
   CalendarClock,
   Eye,
   EyeOff,
   ImagePlus,
   Megaphone,
+  MousePointerClick,
   Package,
   Plus,
   Store,
@@ -34,6 +37,15 @@ type Ad = {
   active: boolean;
   weight: number;
   created_at: string;
+};
+
+type AdStat = {
+  ad_id: string;
+  impressions: number;
+  clicks: number;
+  impressions_7d: number;
+  clicks_7d: number;
+  last_event_at: string | null;
 };
 
 type Vendor = { id: string; full_name: string | null };
@@ -67,6 +79,8 @@ function adStatus(a: Ad) {
 
 function AdminAdsPage() {
   const [ads, setAds] = useState<Ad[] | null>(null);
+  const [stats, setStats] = useState<Record<string, AdStat>>({});
+  const [productNames, setProductNames] = useState<Record<string, string>>({});
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [vendorProducts, setVendorProducts] = useState<VendorProduct[]>([]);
   const [saving, setSaving] = useState(false);
@@ -88,7 +102,23 @@ function AdminAdsPage() {
 
   const load = async () => {
     const { data } = await supabase.from("ads").select("*").order("created_at", { ascending: false });
-    setAds((data as Ad[] | null) ?? []);
+    const rows = (data as Ad[] | null) ?? [];
+    setAds(rows);
+
+    // Noms des produits mis en avant (pour un affichage lisible côté admin).
+    const ids = rows.filter((a) => a.kind === "product" && a.product_id).map((a) => a.product_id as string);
+    if (ids.length > 0) {
+      const { data: prods } = await supabase.from("products").select("id,name").in("id", ids);
+      const map: Record<string, string> = {};
+      (prods as { id: string; name: string }[] | null)?.forEach((p) => { map[p.id] = p.name; });
+      setProductNames(map);
+    }
+
+    // Performances (impressions / clics) — réservé aux admins.
+    const { data: st } = await supabase.rpc("get_ad_stats", {});
+    const byId: Record<string, AdStat> = {};
+    ((st as AdStat[] | null) ?? []).forEach((s) => { byId[s.ad_id] = s; });
+    setStats(byId);
   };
 
   useEffect(() => {
@@ -204,6 +234,13 @@ function AdminAdsPage() {
 
   const selectedProduct = vendorProducts.find((p) => p.id === productId);
 
+  const totals = useMemo(() => {
+    const list = Object.values(stats);
+    const impressions = list.reduce((s, x) => s + Number(x.impressions ?? 0), 0);
+    const clicks = list.reduce((s, x) => s + Number(x.clicks ?? 0), 0);
+    return { impressions, clicks, ctr: computeCtr(impressions, clicks) };
+  }, [stats]);
+
   return (
     <div>
       <div className="flex items-center gap-2">
@@ -215,6 +252,31 @@ function AdminAdsPage() {
         <span className="text-xs text-muted-foreground">
           {ads === null ? "…" : `${ads.length} annonce(s)`}
         </span>
+      </div>
+
+      {/* ===== Performances globales ===== */}
+      <div className="mt-4 grid grid-cols-3 gap-3">
+        <PerfCard
+          icon={Eye}
+          label="Impressions"
+          value={totals.impressions.toLocaleString("fr-FR")}
+          hint="affichages mesurés"
+          tone="primary"
+        />
+        <PerfCard
+          icon={MousePointerClick}
+          label="Clics"
+          value={totals.clicks.toLocaleString("fr-FR")}
+          hint="vers l'annonce"
+          tone="volt"
+        />
+        <PerfCard
+          icon={BarChart3}
+          label="Taux de clic"
+          value={`${totals.ctr.toLocaleString("fr-FR")} %`}
+          hint="clics / impressions"
+          tone="muted"
+        />
       </div>
 
       {/* ===== Nouvelle annonce ===== */}
@@ -406,7 +468,7 @@ function AdminAdsPage() {
                   <p className="mt-1 truncate text-sm font-semibold">
                     {a.kind === "product" ? (
                       <Link to="/product/$id" params={{ id: a.product_id ?? "" }} className="hover:text-primary">
-                        Produit mis en avant
+                        {productNames[a.product_id ?? ""] ?? "Produit mis en avant"}
                       </Link>
                     ) : (
                       a.title || "Annonce"
@@ -417,6 +479,27 @@ function AdminAdsPage() {
                     {" → "}
                     {a.ends_at ? new Date(a.ends_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "sans fin"}
                   </p>
+
+                  {/* Performances de l'annonce */}
+                  {(() => {
+                    const s = stats[a.id];
+                    const imp = Number(s?.impressions ?? 0);
+                    const clk = Number(s?.clicks ?? 0);
+                    return (
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                        <span className="inline-flex items-center gap-1">
+                          <Eye className="h-3 w-3" /> {imp.toLocaleString("fr-FR")} impression{imp > 1 ? "s" : ""}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <MousePointerClick className="h-3 w-3" /> {clk.toLocaleString("fr-FR")} clic{clk > 1 ? "s" : ""}
+                        </span>
+                        <span className="inline-flex items-center gap-1 font-semibold text-foreground">
+                          <BarChart3 className="h-3 w-3" /> {computeCtr(imp, clk).toLocaleString("fr-FR")} % CTR
+                        </span>
+                        {imp === 0 && <span className="italic">· aucune donnée pour l'instant</span>}
+                      </div>
+                    );
+                  })()}
                   <div className="mt-2 flex items-center gap-2">
                     <button
                       onClick={() => toggleActive(a)}
@@ -441,3 +524,39 @@ function AdminAdsPage() {
     </div>
   );
 }
+
+function PerfCard({
+  icon: Icon,
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  hint?: string;
+  tone: "primary" | "volt" | "muted";
+}) {
+  const tones = {
+    primary: "bg-primary/10 text-primary",
+    volt: "bg-volt/15 text-volt",
+    muted: "bg-secondary text-muted-foreground",
+  } as const;
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-3 sm:p-4">
+      <div className="flex items-center gap-2">
+        <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ${tones[tone]}`}>
+          <Icon className="h-4 w-4" />
+        </span>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:text-[11px]">
+          {label}
+        </span>
+      </div>
+      <p className="mt-2 text-xl font-bold tracking-tight sm:text-2xl">{value}</p>
+      {hint && <p className="mt-0.5 hidden text-[11px] text-muted-foreground sm:block">{hint}</p>}
+    </div>
+  );
+}
+

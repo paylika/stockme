@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Eye, Heart, MessageCircle } from "lucide-react";
+import { Eye, Heart, MessageCircle, Megaphone } from "lucide-react";
 import { formatFCFA } from "@/lib/format";
 import { IconPin as MapPin, IconBox as Package } from "@/components/icons";
 
@@ -21,7 +21,16 @@ export type ListingProduct = {
   favorites?: number;
 };
 
-export function ProductCard({ product, delayMs = 0 }: { product: ListingProduct; delayMs?: number }) {
+type Props = {
+  product: ListingProduct;
+  delayMs?: number;
+  /** Emplacement sponsorisé : badge "Sponsorisé" + mise en avant visuelle. */
+  sponsored?: boolean;
+  /** Appelé au clic (mesure des performances d'une annonce). */
+  onOpen?: () => void;
+};
+
+export function ProductCard({ product, delayMs = 0, sponsored = false, onOpen }: Props) {
   const img = product.images[0];
   const hasPromo = product.promo_price_fcfa && product.promo_price_fcfa < product.price_fcfa;
   const discount = hasPromo
@@ -34,7 +43,10 @@ export function ProductCard({ product, delayMs = 0 }: { product: ListingProduct;
     <Link
       to="/product/$id"
       params={{ id: product.id }}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-[0_20px_40px_-24px_rgba(0,0,0,0.25)] fade-in"
+      onClick={onOpen}
+      className={`group flex flex-col overflow-hidden rounded-2xl border bg-card transition-all hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-[0_20px_40px_-24px_rgba(0,0,0,0.25)] fade-in ${
+        sponsored ? "border-volt/50 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.35)]" : "border-border"
+      }`}
       style={{ animationDelay: `${delayMs}ms` }}
     >
       <div className="relative aspect-square w-full overflow-hidden bg-muted">
@@ -50,8 +62,17 @@ export function ProductCard({ product, delayMs = 0 }: { product: ListingProduct;
             <Package className="h-10 w-10" />
           </div>
         )}
+        {sponsored ? (
+          <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-foreground px-2 py-0.5 text-[10px] font-bold text-background shadow-sm">
+            <Megaphone className="h-2.5 w-2.5" /> Sponsorisé
+          </span>
+        ) : null}
         {hasPromo && (
-          <span className="absolute left-2 top-2 rounded-full bg-volt px-2 py-0.5 text-[10px] font-bold text-volt-foreground">
+          <span
+            className={`absolute rounded-full bg-volt px-2 py-0.5 text-[10px] font-bold text-volt-foreground ${
+              sponsored ? "left-2 top-9" : "left-2 top-2"
+            }`}
+          >
             -{discount}%
           </span>
         )}

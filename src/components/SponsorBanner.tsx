@@ -10,6 +10,8 @@ type Props = {
   logoSrc?: string;
   logoAlt?: string;
   icon?: React.ComponentType<{ className?: string }>;
+  /** Appelé au clic sur l'annonce (mesure des performances). */
+  onNavigate?: () => void;
 };
 
 export function SponsorBanner({
@@ -21,6 +23,7 @@ export function SponsorBanner({
   logoSrc,
   logoAlt = "",
   icon: Icon,
+  onNavigate,
 }: Props) {
   const isInternal = href.startsWith("/");
 
@@ -64,14 +67,14 @@ export function SponsorBanner({
   // Lien interne (ex: fiche produit) → navigation client
   if (isInternal) {
     return (
-      <Link to={href as never} className={className}>
+      <Link to={href as never} className={className} onClick={onNavigate}>
         {inner}
       </Link>
     );
   }
 
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+    <a href={href} target="_blank" rel="noopener noreferrer" className={className} onClick={onNavigate}>
       {inner}
     </a>
   );
