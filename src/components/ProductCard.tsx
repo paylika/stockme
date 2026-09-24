@@ -15,6 +15,7 @@ export type ListingProduct = {
   zone?: string | null;
   images: string[];
   sold_out?: boolean;
+  dropshipping?: boolean;
   views?: number;
   contacts?: number;
   favorites?: number;
@@ -62,6 +63,11 @@ export function ProductCard({ product, delayMs = 0 }: { product: ListingProduct;
         <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-background/95 px-2 py-0.5 text-[10px] font-medium backdrop-blur">
           <MapPin className="h-2.5 w-2.5" /> {product.zone || product.city}
         </span>
+        {product.dropshipping && (
+          <span className="absolute bottom-2 right-2 rounded-full bg-foreground/90 px-2 py-0.5 text-[10px] font-semibold text-background backdrop-blur">
+            Dropshipping
+          </span>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col p-3 sm:p-4">
