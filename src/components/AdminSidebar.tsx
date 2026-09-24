@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { LayoutDashboard, Package, Users } from "lucide-react";
 
-const items = [
+export const ADMIN_NAV = [
   { to: "/admin", label: "Pilotage", icon: LayoutDashboard, match: "/admin" },
   { to: "/products", label: "Produits", icon: Package, match: "/products" },
   { to: "/users", label: "Utilisateurs & accès", icon: Users, match: "/users" },
@@ -13,7 +13,7 @@ export function AdminSidebar() {
   return (
     <aside className="hidden md:block w-60 shrink-0 border-r border-border bg-background py-6">
       <div className="space-y-1 px-3">
-        {items.map((it) => {
+        {ADMIN_NAV.map((it) => {
           const active = pathname === it.match || pathname.startsWith(it.match + "/");
           const Icon = it.icon;
           return (

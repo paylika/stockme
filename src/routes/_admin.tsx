@@ -1,7 +1,7 @@
-import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
-import { AdminSidebar } from "@/components/AdminSidebar";
+import { ADMIN_NAV, AdminSidebar } from "@/components/AdminSidebar";
 import { buildSeoHead } from "@/lib/seo";
 import logoUrl from "@/assets/stockme-logo.png";
 
@@ -30,6 +30,7 @@ export const Route = createFileRoute("/_admin")({
 
 function AdminLayout() {
   const [adminEmail, setAdminEmail] = useState("");
+  const pathname = useRouterState({ select: (r) => r.location.pathname });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setAdminEmail(data.session?.user?.email ?? ""));
@@ -67,6 +68,30 @@ function AdminLayout() {
           </button>
         </div>
       </header>
+
+      {/* Navigation admin (mobile) */}
+      <nav className="border-b border-border bg-background md:hidden">
+        <div className="mx-auto max-w-7xl overflow-x-auto no-scrollbar px-3">
+          <div className="flex items-center gap-1 py-2">
+            {ADMIN_NAV.map((it) => {
+              const active = pathname === it.match || pathname.startsWith(it.match + "/");
+              const Icon = it.icon;
+              return (
+                <Link
+                  key={it.to}
+                  to={it.to}
+                  className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition ${
+                    active ? "bg-volt text-volt-foreground shadow-sm shadow-volt/30" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="whitespace-nowrap">{it.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </nav>
 
       <div className="mx-auto flex max-w-7xl">
         {/* Sidebar admin (remplace la sidebar StockMe) */}
