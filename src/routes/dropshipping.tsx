@@ -6,6 +6,7 @@ import { Footer } from "@/components/Footer";
 import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
 import { ProductCard, type ListingProduct } from "@/components/ProductCard";
+import { useVerifiedSellers } from "@/hooks/useVerifiedSellers";
 import { buildSeoHead } from "@/lib/seo";
 import { Package, Store, Truck, Zap } from "lucide-react";
 
@@ -25,13 +26,14 @@ export const Route = createFileRoute("/dropshipping")({
 
 function DropshippingPage() {
   const [items, setItems] = useState<ListingProduct[] | null>(null);
+  const verified = useVerifiedSellers();
 
   useEffect(() => {
     let cancel = false;
     (async () => {
       const { data } = await supabase
         .from("products")
-        .select("id,name,category,price_fcfa,promo_price_fcfa,quantity,moq,city,zone,images,sold_out")
+        .select("id,name,category,price_fcfa,promo_price_fcfa,quantity,moq,city,zone,images,sold_out,dropshipping,owner_id")
         .eq("published", true)
         .eq("dropshipping", true)
         .order("created_at", { ascending: false })
@@ -114,7 +116,12 @@ function DropshippingPage() {
           ) : (
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
               {items.map((p, i) => (
-                <ProductCard key={p.id} product={p} delayMs={i * 45} />
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  sellerVerified={!!p.owner_id && verified.has(p.owner_id)}
+                  delayMs={i * 45}
+                />
               ))}
             </div>
           )}

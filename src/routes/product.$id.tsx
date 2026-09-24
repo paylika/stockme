@@ -40,6 +40,7 @@ type Similar = {
   id: string; name: string; price_fcfa: number; promo_price_fcfa: number | null;
   city: string; zone: string | null; images: string[]; sold_out: boolean;
   views: number; contacts: number; favorites: number;
+  owner_id?: string; seller_verified?: boolean;
 };
 type SellerStats = {
   total_products: number;
@@ -651,7 +652,10 @@ function ProductPage() {
                     </div>
                     <div className="flex flex-1 flex-col p-3">
                       <h3 className="font-semibold leading-tight line-clamp-1 text-sm">{s.name}</h3>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{s.city}</p>
+                      <div className="mt-0.5 flex items-center gap-1.5">
+                        {s.seller_verified && <VerifiedBadge compact />}
+                        <p className="flex items-center gap-1 text-[11px] text-muted-foreground"><MapPin className="h-3 w-3" />{s.city}</p>
+                      </div>
                       <div className="mt-1 font-bold text-sm">{formatFCFA(sp ? s.promo_price_fcfa! : s.price_fcfa)}</div>
                       <div className="mt-2 flex items-center gap-3 border-t border-border pt-2 text-[11px] text-muted-foreground">
                         <span className="inline-flex items-center gap-1"><Eye className="h-3 w-3" /> {s.views}</span>

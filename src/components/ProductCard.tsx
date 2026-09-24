@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Eye, Heart, MessageCircle, Megaphone } from "lucide-react";
+import { BadgeCheck, Eye, Heart, MessageCircle, Megaphone } from "lucide-react";
 import { formatFCFA } from "@/lib/format";
 import { IconPin as MapPin, IconBox as Package } from "@/components/icons";
 
@@ -16,6 +16,9 @@ export type ListingProduct = {
   images: string[];
   sold_out?: boolean;
   dropshipping?: boolean;
+  owner_id?: string | null;
+  /** Renseigné par les fonctions de liste (le vendeur a le badge). */
+  seller_verified?: boolean;
   views?: number;
   contacts?: number;
   favorites?: number;
@@ -26,11 +29,13 @@ type Props = {
   delayMs?: number;
   /** Emplacement sponsorisé : badge "Sponsorisé" + mise en avant visuelle. */
   sponsored?: boolean;
+  /** Vendeur au badge « Fournisseur vérifié » (affiché sur la carte). */
+  sellerVerified?: boolean;
   /** Appelé au clic (mesure des performances d'une annonce). */
   onOpen?: () => void;
 };
 
-export function ProductCard({ product, delayMs = 0, sponsored = false, onOpen }: Props) {
+export function ProductCard({ product, delayMs = 0, sponsored = false, sellerVerified = false, onOpen }: Props) {
   const img = product.images[0];
   const hasPromo = product.promo_price_fcfa && product.promo_price_fcfa < product.price_fcfa;
   const discount = hasPromo
@@ -93,9 +98,19 @@ export function ProductCard({ product, delayMs = 0, sponsored = false, onOpen }:
 
       <div className="flex flex-1 flex-col p-3 sm:p-4">
         <h3 className="line-clamp-1 font-semibold leading-tight text-sm sm:text-base">{product.name}</h3>
-        {product.category && (
-          <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">{product.category}</p>
-        )}
+        <div className="mt-0.5 flex items-center gap-1.5">
+          {sellerVerified && (
+            <span
+              className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground"
+              title="Fournisseur vérifié par StockMe"
+            >
+              <BadgeCheck className="h-3 w-3" /> Vérifié
+            </span>
+          )}
+          {product.category && (
+            <p className="line-clamp-1 text-[11px] text-muted-foreground">{product.category}</p>
+          )}
+        </div>
         <div className="mt-2 flex items-baseline gap-1.5">
           <span className="text-base font-bold tracking-tight sm:text-lg">
             {formatFCFA(hasPromo ? product.promo_price_fcfa! : product.price_fcfa)}

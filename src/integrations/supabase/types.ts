@@ -377,6 +377,8 @@ export type Database = {
           images: string[]
           sold_out: boolean
           dropshipping: boolean
+          owner_id: string
+          seller_verified: boolean
           score: number
           contacts_total: number
           views_30: number
@@ -398,6 +400,9 @@ export type Database = {
           zone: string | null
           images: string[]
           sold_out: boolean
+          dropshipping: boolean
+          owner_id: string
+          seller_verified: boolean
           views: number
           contacts: number
           favorites: number
@@ -542,6 +547,14 @@ export type Database = {
           is_verified: boolean
           verified_until: string | null
         } | null
+      }
+      get_verified_sellers: {
+        Args: Record<string, never>
+        Returns: {
+          id: string
+          shop_name: string | null
+          city: string | null
+        }[]
       }
       admin_set_seller_verified: {
         Args: {

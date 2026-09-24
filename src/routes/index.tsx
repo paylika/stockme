@@ -283,7 +283,7 @@ function Index() {
             <div className="flex gap-3 sm:gap-4 px-4 sm:px-0 snap-x snap-mandatory">
               {winnerList.map((p, i) => (
                 <div key={p.id} className="w-[70%] sm:w-64 shrink-0 snap-start">
-                  <ProductCard product={p} delayMs={i * 40} />
+                  <ProductCard product={p} sellerVerified={!!p.seller_verified} delayMs={i * 40} />
                 </div>
               ))}
             </div>
@@ -351,6 +351,7 @@ function Index() {
                   key={row.adId ? `ad-${row.adId}` : row.product.id}
                   product={row.product}
                   sponsored={!!row.adId}
+                  sellerVerified={!!row.product.seller_verified}
                   onOpen={row.adId ? () => trackAdClick(row.adId) : undefined}
                   delayMs={(i % PAGE_SIZE) * 40}
                 />

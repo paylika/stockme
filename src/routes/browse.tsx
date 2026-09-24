@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { CATEGORIES, WEST_AFRICA_LOCATIONS } from "@/lib/constants";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { ProductCard, type ListingProduct } from "@/components/ProductCard";
+import { useVerifiedSellers } from "@/hooks/useVerifiedSellers";
 import { buildSeoHead } from "@/lib/seo";
 
 type Filters = { city?: string; category?: string; q?: string; min?: number; max?: number };
@@ -42,6 +43,7 @@ function Browse() {
   const navigate = useNavigate({ from: "/browse" });
   const [items, setItems] = useState<Product[] | null>(null);
   const [q, setQ] = useState(search.q ?? "");
+  const verified = useVerifiedSellers();
 
   useEffect(() => {
     let cancel = false;
@@ -127,7 +129,14 @@ function Browse() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {items.map((p, i) => <ProductCard key={p.id} product={p} delayMs={i * 45} />)}
+            {items.map((p, i) => (
+              <ProductCard
+                key={p.id}
+                product={p}
+                sellerVerified={!!p.owner_id && verified.has(p.owner_id)}
+                delayMs={i * 45}
+              />
+            ))}
           </div>
         )}
       </div>

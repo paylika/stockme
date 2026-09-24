@@ -5,9 +5,10 @@ import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
 import { ProductCard } from "@/components/ProductCard";
+import { useVerifiedSellers } from "@/hooks/useVerifiedSellers";
 import { Heart } from "lucide-react";
 
-type Fav = { product_id: string; products: { id: string; name: string; price_fcfa: number; promo_price_fcfa: number | null; city: string; images: string[]; category: string; sold_out: boolean } | null };
+type Fav = { product_id: string; products: { id: string; name: string; price_fcfa: number; promo_price_fcfa: number | null; city: string; images: string[]; category: string; sold_out: boolean; owner_id: string | null } | null };
 
 export const Route = createFileRoute("/_authenticated/favorites")({
   component: Favorites,
@@ -15,13 +16,14 @@ export const Route = createFileRoute("/_authenticated/favorites")({
 
 function Favorites() {
   const [items, setItems] = useState<Fav[] | null>(null);
+  const verified = useVerifiedSellers();
 
   useEffect(() => {
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
       const { data } = await supabase.from("favorites")
-        .select("product_id, products(id,name,price_fcfa,promo_price_fcfa,city,images,category,sold_out)")
+        .select("product_id, products(id,name,price_fcfa,promo_price_fcfa,city,images,category,sold_out,owner_id)")
         .eq("user_id", u.user.id)
         .eq("products.published", true)
         .order("created_at", { ascending: false });
@@ -52,7 +54,14 @@ function Favorites() {
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
               {items.filter(i => i.products).map((i, idx) => {
                 const p = i.products!;
-                return <ProductCard key={p.id} product={p} delayMs={idx * 45} />;
+                return (
+                  <ProductCard
+                    key={p.id}
+                    product={p}
+                    sellerVerified={!!p.owner_id && verified.has(p.owner_id)}
+                    delayMs={idx * 45}
+                  />
+                );
               })}
             </div>
           )}
