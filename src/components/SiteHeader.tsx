@@ -65,7 +65,7 @@ export function SiteHeader({
                 type="search"
                 inputMode="search"
                 placeholder="Rechercher un produit…"
-                className="min-w-0 flex-1 bg-transparent px-2 text-sm placeholder:text-muted-foreground focus:outline-none"
+                className="min-w-0 flex-1 bg-transparent px-2 text-base placeholder:text-muted-foreground focus:outline-none"
               />
               <button
                 type="submit"
@@ -80,7 +80,7 @@ export function SiteHeader({
                 <select
                   value={country ?? ""}
                   onChange={(e) => onUpdate({ country: e.target.value || undefined, city: undefined })}
-                  className="appearance-none w-full h-10 rounded-full border border-border bg-background pl-3 pr-8 text-xs font-medium focus:outline-none focus:border-foreground/40 truncate"
+                  className="appearance-none w-full h-10 rounded-full border border-border bg-background pl-3 pr-8 text-base font-medium focus:outline-none focus:border-foreground/40 truncate"
                 >
                   <option value="">Tous les pays</option>
                   {countries.map((c) => (
@@ -97,7 +97,7 @@ export function SiteHeader({
                   onChange={(e) => onUpdate({ city: e.target.value || undefined })}
                   type="search"
                   placeholder="Ville"
-                  className="w-full h-10 rounded-full border border-border bg-background pl-8 pr-3 text-xs font-medium placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
+                  className="w-full h-10 rounded-full border border-border bg-background pl-8 pr-3 text-base font-medium placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
                 />
               </div>
             </div>

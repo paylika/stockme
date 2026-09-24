@@ -673,7 +673,58 @@ function ProductPage() {
         )}
       </div>
       <MobileFooter />
-      <MobileNav />
+
+      {/* ===== Barre d'achat mobile : le contact reste à portée de pouce =====
+          Sur la fiche produit, on remplace la navigation générale par l'action
+          de vente (prix + Commander), qui suit l'acheteur pendant le scroll. */}
+      {!product.sold_out && (
+        <>
+          <div className="h-20 lg:hidden" aria-hidden />
+          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
+            <div className="mx-auto flex max-w-md items-center gap-2.5 px-3 py-2">
+              <Link
+                to="/"
+                aria-label="Retour aux produits"
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-border transition hover:bg-accent"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Prix</p>
+                <p className="flex items-baseline gap-1.5 truncate text-sm font-bold">
+                  {formatFCFA(hasPromo ? (product.promo_price_fcfa as number) : product.price_fcfa)}
+                  {hasPromo && (
+                    <span className="text-[11px] font-normal line-through text-muted-foreground">
+                      {formatFCFA(product.price_fcfa)}
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              {!authLoading &&
+                (user ? (
+                  wa ? (
+                    <a href={wa} target="_blank" rel="noopener noreferrer" onClick={() => logContact()} className="shrink-0">
+                      <Button variant="volt" className="h-11 px-4">
+                        <MessageCircle className="mr-1 h-4 w-4" />
+                        {product.dropshipping ? "Commander" : "WhatsApp"}
+                      </Button>
+                    </a>
+                  ) : (
+                    <Button variant="volt" disabled className="h-11 shrink-0 px-4">
+                      Indisponible
+                    </Button>
+                  )
+                ) : (
+                  <Link to="/auth" search={{ mode: "signup", redirect: `/product/${id}` }} className="shrink-0">
+                    <Button variant="volt" className="h-11 px-4">Voir le contact</Button>
+                  </Link>
+                ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

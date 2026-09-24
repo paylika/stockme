@@ -164,11 +164,23 @@
 }
 
 @layer components {
+  /* 16px sur mobile : en dessous, iOS zoome automatiquement au focus
+     (la page « saute » et l'utilisateur perd le fil du formulaire). */
   .form-input {
-    @apply h-11 w-full rounded-xl border border-input bg-background px-3 text-sm shadow-sm transition placeholder:text-muted-foreground focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-ring;
+    @apply h-11 w-full rounded-xl border border-input bg-background px-3 text-base shadow-sm transition placeholder:text-muted-foreground focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-ring sm:text-sm;
   }
   .form-select {
-    @apply h-11 w-full rounded-xl border border-input bg-background px-3 text-sm shadow-sm transition focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-ring;
+    @apply h-11 w-full rounded-xl border border-input bg-background px-3 text-base shadow-sm transition focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-ring sm:text-sm;
+  }
+}
+
+@layer utilities {
+  /* iOS / Android : 100vh inclut la barre d'adresse, ce qui crée un
+     décalage et un scroll fantôme. On utilise la hauteur dynamique. */
+  @supports (min-height: 100svh) {
+    .min-h-screen {
+      min-height: 100svh;
+    }
   }
 }
 

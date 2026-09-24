@@ -106,7 +106,7 @@ function SellerPage() {
   const online = products?.length ?? seller?.products_count ?? 0;
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-0">
+    <div className="min-h-screen bg-background">
       <JsonLd
         data={breadcrumbLd([
           { name: "Accueil", path: "/" },
