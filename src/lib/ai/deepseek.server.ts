@@ -47,6 +47,12 @@ export async function aiConfigured(): Promise<boolean> {
  * Appel unique et sans effet de bord.
  * `json: true` active le mode JSON natif : la réponse est un objet valide,
  * donc plus de parsing fragile côté serveur.
+ *
+ * `thinking` : le mode « réflexion » est ACTIVÉ PAR DÉFAUT chez DeepSeek (effort
+ * élevé) — très bien pour un raisonnement complexe, mais il multiplie le temps
+ * de réponse (8-9 s mesurés pour une image) alors que nos tâches sont de la
+ * simple extraction d'information. On le désactive donc par défaut : même
+ * résultat, beaucoup plus rapide.
  */
 export async function deepseekChat(opts: {
   messages: AiMessage[];
@@ -54,6 +60,8 @@ export async function deepseekChat(opts: {
   maxTokens?: number;
   temperature?: number;
   timeoutMs?: number;
+  /** "disabled" (défaut, rapide) ou un niveau d'effort : "low" | "high" | "max". */
+  thinking?: "disabled" | "low" | "high" | "max";
 }): Promise<AiResult> {
   const started = Date.now();
   const key = await serverEnv("DEEPSEEK_API_KEY");
@@ -61,6 +69,7 @@ export async function deepseekChat(opts: {
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 20_000);
+  const effort = opts.thinking ?? "disabled";
 
   try {
     const res = await fetch(`${BASE_URL}/chat/completions`, {
@@ -72,6 +81,9 @@ export async function deepseekChat(opts: {
         temperature: opts.temperature ?? 0.2,
         max_tokens: opts.maxTokens ?? 800,
         ...(opts.json ? { response_format: { type: "json_object" } } : {}),
+        ...(effort === "disabled"
+          ? { thinking: { type: "disabled" } }
+          : { thinking: { type: "enabled" }, reasoning_effort: effort }),
         stream: false,
       }),
       signal: controller.signal,
