@@ -10,8 +10,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { isAdminEmail } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
 import { goToCheckout } from "@/lib/pay-client";
-import { planById, PRO_AVAILABLE } from "@/lib/pricing";
-import { CheckCircle2, Clock, XCircle, Sparkles } from "lucide-react";
+import { VERIFICATION_BONUS_FCFA, planById, PRO_AVAILABLE } from "@/lib/pricing";
+import { BadgeCheck, CheckCircle2, Clock, Gift, Rocket, Sparkles, XCircle } from "lucide-react";
 
 /**
  * Retour du navigateur après un paiement (Wave, Orange Money, carte).
@@ -105,6 +105,8 @@ function PaymentReturn() {
   const proPlan = planById("pro");
   const proMonthly = proPlan?.price ?? 2500;
   const packStep2 = PRO_AVAILABLE && paid && intent?.metadata?.next_step === "pro";
+  /** Paiement d'un badge / abonnement : on annonce le badge + le bonus offert. */
+  const isBadgePayment = intent?.purpose === "subscription";
 
   const activatePro = async () => {
     setStepError(null);
@@ -182,14 +184,60 @@ function PaymentReturn() {
                 </Link>
               </div>
             ) : (
-              <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
-                <Link to="/profile">
-                  <Button variant="volt" className="h-11 w-full">Voir mon compte</Button>
-                </Link>
-                <Link to="/dashboard">
-                  <Button variant="outline" className="h-11 w-full">Mon stock</Button>
-                </Link>
-              </div>
+              <>
+                {/* Un vendeur qui vient de payer doit VOIR ce qu'il a gagné et
+                    quoi faire maintenant. C'est ici que se joue la suite. */}
+                <div className="mt-6 space-y-3 text-left">
+                  {isBadgePayment && (
+                    <div className="rounded-2xl border border-primary/25 bg-primary/5 p-4">
+                      <p className="flex items-center gap-2 text-sm font-bold">
+                        <BadgeCheck className="h-4 w-4 text-primary" /> Votre badge est activé
+                      </p>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                        Il s'affiche maintenant sur <strong className="text-foreground">toutes vos annonces</strong> et
+                        vous fait remonter dans la recherche. Vos acheteurs le voient dès l'accueil.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="rounded-2xl border border-volt/40 bg-volt/5 p-4">
+                    <p className="flex items-center gap-2 text-sm font-bold">
+                      <Gift className="h-4 w-4 text-volt" />
+                      {isBadgePayment
+                        ? `${formatFCFA(VERIFICATION_BONUS_FCFA)} de mise en avant offerts`
+                        : `Votre solde est crédité`}
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      {isBadgePayment ? (
+                        <>
+                          C'est notre cadeau de bienvenue : de quoi mettre un produit en tête du catalogue pendant
+                          72 h. <strong className="text-foreground">Choisissez le produit à mettre en avant maintenant</strong> —
+                          c'est ce qui déclenche de vraies visites.
+                        </>
+                      ) : (
+                        <>
+                          Utilisez-le pour mettre vos produits en tête du catalogue. Tant que vous ne lancez pas de
+                          mise en avant, le solde ne travaille pas pour vous.
+                        </>
+                      )}
+                    </p>
+                    <Link to="/profile" search={{ tab: "promo" }} className="mt-3 block">
+                      <Button variant="volt" className="h-11 w-full">
+                        <Rocket className="mr-1.5 h-4 w-4" /> Mettre un produit en avant
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
+                  <Link to="/profile">
+                    <Button variant="outline" className="h-11 w-full">Voir mon compte</Button>
+                  </Link>
+                  <Link to="/dashboard">
+                    <Button variant="outline" className="h-11 w-full">Mon stock</Button>
+                  </Link>
+                </div>
+              </>
             )}
           </div>
         ) : cancelled ? (

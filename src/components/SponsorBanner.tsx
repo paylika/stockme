@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 
 type Props = {
   badge?: string;
@@ -10,6 +11,8 @@ type Props = {
   logoSrc?: string;
   logoAlt?: string;
   icon?: React.ComponentType<{ className?: string }>;
+  /** Le vendeur derrière cette annonce est-il fournisseur vérifié ? */
+  verified?: boolean;
   /** Appelé au clic sur l'annonce (mesure des performances). */
   onNavigate?: () => void;
 };
@@ -23,6 +26,7 @@ export function SponsorBanner({
   logoSrc,
   logoAlt = "",
   icon: Icon,
+  verified = false,
   onNavigate,
 }: Props) {
   const isInternal = href.startsWith("/");
@@ -44,8 +48,12 @@ export function SponsorBanner({
         ) : null}
 
         <div className="min-w-0 flex-1">
-          <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            {badge}
+          <span className="inline-flex flex-wrap items-center gap-1.5">
+            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              {badge}
+            </span>
+            {/* Le badge du vendeur : même sur un emplacement payant, on dit qui vend. */}
+            {verified && <VerifiedBadge compact />}
           </span>
           <p className="mt-1 text-sm font-semibold leading-snug">{title}</p>
           {description && (

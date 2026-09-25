@@ -31,6 +31,7 @@ import {
   Eye,
   ExternalLink,
   CreditCard,
+  Gift,
   Heart,
   LogOut,
   Mail,
@@ -39,6 +40,7 @@ import {
   Package,
   Pencil,
   Phone,
+  Rocket,
   ShieldQuestion,
   Sparkles,
   Trash2,
@@ -238,6 +240,10 @@ function ProfilePage() {
   const isLifetime = isVerified && !profile?.verified_until;
   // Avantages affichés = exactement ceux de la page Tarifs (source unique).
   const badgePlan = planById("verifie")!;
+  // Portefeuille global : sert à rappeler le cadeau de bienvenue non utilisé.
+  const money = useSellerMoney();
+  const unusedBalance = money?.balance ?? 0;
+  const hasActiveBoost = (money?.wallet?.boosts ?? []).some((b) => b.status === "active");
 
   if (loading) {
     return (
@@ -411,18 +417,41 @@ function ProfilePage() {
 
           {/* ===== Badge « Fournisseur vérifié » — version compacte ===== */}
           {isVerified ? (
-            <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border border-primary/25 bg-primary/5 px-3 py-2.5 text-xs">
-              <BadgeCheck className="h-4 w-4 shrink-0 text-primary" />
-              <span className="min-w-0 flex-1">
-                <strong className="text-foreground">Boutique vérifiée</strong>
-                {" · "}
-                {isLifetime
-                  ? "badge permanent"
-                  : `valable jusqu'au ${new Date(profile!.verified_until as string).toLocaleDateString("fr-FR")}`}
-                {" · "}
-                <span className="text-muted-foreground">affiché sur vos fiches et votre boutique</span>
-              </span>
-            </div>
+            <>
+              <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border border-primary/25 bg-primary/5 px-3 py-2.5 text-xs">
+                <BadgeCheck className="h-4 w-4 shrink-0 text-primary" />
+                <span className="min-w-0 flex-1">
+                  <strong className="text-foreground">Boutique vérifiée</strong>
+                  {" · "}
+                  {isLifetime
+                    ? "badge permanent"
+                    : `valable jusqu'au ${new Date(profile!.verified_until as string).toLocaleDateString("fr-FR")}`}
+                  {" · "}
+                  <span className="text-muted-foreground">affiché sur vos fiches et votre boutique</span>
+                </span>
+              </div>
+
+              {/* Le badge n'apporte PAS de visites à lui seul : on rappelle au
+                  vendeur vérifié qu'il a de quoi lancer une mise en avant.
+                  Sans ce rappel, il paie et ne voit « rien ». */}
+              {unusedBalance > 0 && !hasActiveBoost && (
+                <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-volt/40 bg-volt/10 px-3 py-2.5">
+                  <Gift className="h-4 w-4 shrink-0 text-volt" />
+                  <span className="min-w-0 flex-1 text-xs leading-relaxed">
+                    <strong className="text-foreground">{formatFCFA(unusedBalance)} de mise en avant non utilisés</strong>
+                    {" · "}
+                    <span className="text-muted-foreground">
+                      tant que vous ne lancez rien, votre solde ne vous apporte aucune visite.
+                    </span>
+                  </span>
+                  <Link to="/profile" search={{ tab: "promo" }} className="shrink-0">
+                    <Button variant="volt" size="sm" className="h-9">
+                      <Rocket className="mr-1.5 h-3.5 w-3.5" /> Booster
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </>
           ) : (
             <details
               open={badgeOpen}

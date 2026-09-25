@@ -5,6 +5,7 @@ import { SponsorBanner } from "@/components/SponsorBanner";
 import { trackAdClick, trackAdImpression } from "@/lib/ad-tracking";
 import { useAuth } from "@/hooks/useAuth";
 import { usePaymentsStatus } from "@/lib/features";
+import { useVerifiedSellers } from "@/hooks/useVerifiedSellers";
 import { isAdminEmail } from "@/lib/constants";
 
 type Slide = {
@@ -18,6 +19,8 @@ type Slide = {
   icon?: React.ComponentType<{ className?: string }>;
   /** Identifiant de l'annonce en base (absent pour les slides maison). */
   adId?: string;
+  /** Le vendeur du produit mis en avant est-il fournisseur vérifié ? */
+  verified?: boolean;
 };
 
 /** Annonces "maison" toujours affichées (partenaire + offre de visibilité). */
@@ -84,6 +87,9 @@ export function SponsorCarousel() {
   const touchX = useRef<number | null>(null);
   const { user } = useAuth();
   const payments = usePaymentsStatus();
+  const verifiedSellers = useVerifiedSellers();
+  /** Produits mis en avant dont le vendeur est vérifié (badge affiché). */
+  const [verifiedOwners, setVerifiedOwners] = useState<Set<string>>(new Set());
 
   // Sponsorisation en libre-service réellement disponible ?
   const selfService = payments.enabled || (isAdminEmail(user?.email) && payments.methods.length > 0);
@@ -92,6 +98,31 @@ export function SponsorCarousel() {
   useEffect(() => {
     supabase.rpc("get_active_ads", {}).then(({ data }) => setAds((data as AdRow[] | null) ?? []));
   }, []);
+
+  // `get_active_ads` ne dit pas qui vend : on va chercher les propriétaires des
+  // produits mis en avant pour afficher le badge des vendeurs vérifiés.
+  useEffect(() => {
+    const ids = (ads ?? []).filter((a) => a.kind === "product" && a.product_id).map((a) => a.product_id as string);
+    if (ids.length === 0 || verifiedSellers.size === 0) return;
+    let cancel = false;
+    supabase
+      .from("products")
+      .select("id,owner_id")
+      .in("id", ids)
+      .then(({ data }) => {
+        if (cancel) return;
+        setVerifiedOwners(
+          new Set(
+            ((data as { id: string; owner_id: string }[] | null) ?? [])
+              .filter((r) => verifiedSellers.has(r.owner_id))
+              .map((r) => r.id),
+          ),
+        );
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [ads, verifiedSellers]);
 
   const slides = useMemo<Slide[]>(() => {
     const now = Date.now();
@@ -113,6 +144,8 @@ export function SponsorCarousel() {
               logoSrc: a.product_images?.[0] ?? undefined,
               logoAlt: "",
               adId: a.id,
+              // Le vendeur du produit mis en avant est-il vérifié ? (badge visible)
+              verified: a.product_id ? verifiedOwners.has(a.product_id) : false,
             }
           : {
               badge: "Annonce",
@@ -168,6 +201,7 @@ export function SponsorCarousel() {
           logoSrc={slide.logoSrc}
           logoAlt={slide.logoAlt}
           icon={slide.icon}
+          verified={slide.verified}
           onNavigate={() => trackAdClick(slide.adId)}
         />
       </div>
