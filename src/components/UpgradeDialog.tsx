@@ -23,6 +23,8 @@ type Props = {
   /** Le vendeur est-il DÉJÀ fournisseur vérifié (achat ou admin) ? */
   isVerified: boolean;
   defaultPhone?: string | null;
+  /** Offre présélectionnée à l'ouverture (selon le bouton cliqué). */
+  defaultPlan?: PlanId;
 };
 
 /**
@@ -31,7 +33,7 @@ type Props = {
  *   • non vérifié → ÉTAPE 1 le badge annuel, ÉTAPE 2 PRO, avec le pack
  *     « badge + PRO » à 7 500 F le premier mois (badge sécurisé 12 mois).
  */
-export function UpgradeDialog({ open, onOpenChange, methods, isVerified, defaultPhone }: Props) {
+export function UpgradeDialog({ open, onOpenChange, methods, isVerified, defaultPhone, defaultPlan }: Props) {
   const [selected, setSelected] = useState<PlanId>("pro");
   const [method, setMethod] = useState<PayMethod>("card");
   const [phone, setPhone] = useState(defaultPhone ?? "");
@@ -45,11 +47,14 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
 
   useEffect(() => {
     if (!open) return;
-    setSelected(isVerified ? "pro" : "pro");
+    // On ouvre sur l'offre correspondant au bouton cliqué (jamais le badge
+    // pour un vendeur déjà vérifié).
+    const wanted = defaultPlan && (defaultPlan !== "verifie" || !isVerified) ? defaultPlan : "pro";
+    setSelected(wanted);
     setPack(false);
     setMethod(((methods[0] as PayMethod | undefined) ?? "card") as PayMethod);
     setBusy(false);
-  }, [open, isVerified, methods]);
+  }, [open, isVerified, methods, defaultPlan]);
 
   useEffect(() => {
     if (defaultPhone) setPhone(defaultPhone);
