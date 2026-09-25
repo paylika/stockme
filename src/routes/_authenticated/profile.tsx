@@ -11,6 +11,9 @@ import { VerifiedPaymentDialog } from "@/components/VerifiedPaymentDialog";
 import { BoostButton, SellerMoneyProvider, useSellerMoney } from "@/components/SellerMoneyProvider";
 import { WalletCard } from "@/components/WalletCard";
 import { EditableField } from "@/components/EditableField";
+import { UpgradeDialog } from "@/components/UpgradeDialog";
+import { usePaymentsStatus } from "@/lib/features";
+import { PLANS, VERIFICATION_BONUS_FCFA, planById, planOf, type PlanId } from "@/lib/pricing";
 import { useAuth } from "@/hooks/useAuth";
 import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
@@ -37,6 +40,7 @@ import {
   Pencil,
   Phone,
   ShieldQuestion,
+  Sparkles,
   Trash2,
   Zap,
 } from "lucide-react";
@@ -50,6 +54,7 @@ type Profile = {
   whatsapp: string | null;
   phone: string | null;
   role: string;
+  plan?: string | null;
   verified: boolean;
   verified_until: string | null;
 };
@@ -99,6 +104,9 @@ function ProfilePage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<TabId>("produits");
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradePlan, setUpgradePlan] = useState<"verifie" | "pro">("pro");
+  const payments = usePaymentsStatus();
   const [savingId, setSavingId] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
@@ -670,7 +678,9 @@ function ProfilePage() {
         )}
 
         {/* ---------- Sponsorisation ---------- */}
-        {tab === "promo" && <SponsorshipPanel />}
+        {tab === "promo" && (
+          <SponsorshipPanel plan={planOf(profile)} onUpgrade={(target) => { setUpgradePlan(target); setUpgradeOpen(true); }} />
+        )}
 
         </SellerMoneyProvider>
 
@@ -694,6 +704,15 @@ function ProfilePage() {
         onOpenChange={setPayOpen}
         shopName={profile?.shop_name}
         contactName={profile?.full_name}
+      />
+
+      {/* Passage à une offre payante (badge / PRO) */}
+      <UpgradeDialog
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        methods={payments.methods}
+        suggested={upgradePlan}
+        defaultPhone={profile?.whatsapp}
       />
     </div>
   );
@@ -730,34 +749,74 @@ function StatCard({
 }
 
 /**
- * Onglet « Sponsorisation » : solde, rechargement, mises en avant.
- * Le contenu vient du contexte vendeur (il n'apparaît que si le paiement est
- * réellement actif).
+ * Onglet « Sponsorisation » : offre en cours, solde, rechargement, mises en avant.
+ * Le contenu du solde vient du contexte vendeur (il n'apparaît que si le
+ * paiement est actuellement actif).
  */
-function SponsorshipPanel() {
+function SponsorshipPanel({
+  plan,
+  onUpgrade,
+}: {
+  plan: PlanId;
+  onUpgrade: (target: "verifie" | "pro") => void;
+}) {
   const money = useSellerMoney();
-
-  if (!money) {
-    return (
-      <div className="mt-5 rounded-2xl border border-dashed border-border bg-muted/30 p-8 text-center">
-        <Zap className="mx-auto h-7 w-7 text-muted-foreground" />
-        <h3 className="mt-3 font-semibold">Sponsorisation bientôt disponible</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          La mise en avant payante de vos produits arrive très bientôt sur StockMe.
-        </p>
-      </div>
-    );
-  }
+  const current = planById(plan);
+  const next = PLANS.find((p) => (plan === "pro" ? false : p.id === (plan === "gratuit" ? "verifie" : "pro")));
 
   return (
-    <div className="mt-5">
-      <WalletCard
-        wallet={money.wallet}
-        loading={money.loading}
-        onRecharge={money.openTopUp}
-        onEditPending={(p) => money.resumePending(p)}
-        onChanged={money.refresh}
-      />
+    <div className="mt-5 space-y-4">
+      {/* Offre en cours + montée d'offre */}
+      <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Mon offre</p>
+            <p className="mt-0.5 text-lg font-bold tracking-tight">{current.name}</p>
+            <p className="text-xs text-muted-foreground">
+              {current.price === 0
+                ? "10 produits · 2 photos · mise en avant à 700 F/jour"
+                : `${formatFCFA(current.price)} ${current.period} · mise en avant à ${formatFCFA(current.boostPerDay)}/jour`}
+            </p>
+          </div>
+          {next && (
+            <Button variant="volt" className="h-11" onClick={() => onUpgrade(next.id as "verifie" | "pro")}>
+              <Sparkles className="mr-1.5 h-4 w-4" />
+              Passer à {next.name.split(" ")[0]} — {formatFCFA(next.price)}
+            </Button>
+          )}
+        </div>
+
+        {next && (
+          <p className="mt-3 rounded-xl bg-muted/50 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+            Avec <strong className="text-foreground">{next.name}</strong> : {next.features[0].toLowerCase()},{" "}
+            mise en avant à {formatFCFA(next.boostPerDay)}/jour et{" "}
+            <strong className="text-foreground">{formatFCFA(VERIFICATION_BONUS_FCFA)} de boost offerts</strong> dès
+            l'activation.{" "}
+            <Link to="/tarifs" className="underline underline-offset-2">
+              Voir toutes les offres
+            </Link>
+          </p>
+        )}
+      </div>
+
+      {money ? (
+        <WalletCard
+          wallet={money.wallet}
+          loading={money.loading}
+          onRecharge={money.openTopUp}
+          onEditPending={(p) => money.resumePending(p)}
+          onChanged={money.refresh}
+        />
+      ) : (
+        <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-center">
+          <Zap className="mx-auto h-6 w-6 text-muted-foreground" />
+          <p className="mt-2 text-sm font-semibold">Mise en avant bientôt disponible</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Le rechargement et le suivi de performance arrivent très bientôt. En attendant, vous pouvez demander une
+            mise en avant par WhatsApp depuis l'accueil.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

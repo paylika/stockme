@@ -16,6 +16,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as DropshippingRouteImport } from './routes/dropshipping'
 import { Route as LegalRouteImport } from './routes/legal'
+import { Route as TarifsRouteImport } from './routes/tarifs'
 import { Route as AdminAdminRouteImport } from './routes/_admin/admin'
 import { Route as AdminAdsRouteImport } from './routes/_admin/ads'
 import { Route as AdminProductsRouteImport } from './routes/_admin/products'
@@ -72,6 +73,11 @@ const DropshippingRoute = DropshippingRouteImport.update({
 const LegalRoute = LegalRouteImport.update({
   id: '/legal',
   path: '/legal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TarifsRoute = TarifsRouteImport.update({
+  id: '/tarifs',
+  path: '/tarifs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminAdminRoute = AdminAdminRouteImport.update({
@@ -204,6 +210,7 @@ export interface FileRoutesByFullPath {
   '/browse': typeof BrowseRoute
   '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
+  '/tarifs': typeof TarifsRoute
   '/admin': typeof AdminAdminRoute
   '/ads': typeof AdminAdsRoute
   '/products': typeof AdminProductsRoute
@@ -235,6 +242,7 @@ export interface FileRoutesByTo {
   '/browse': typeof BrowseRoute
   '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
+  '/tarifs': typeof TarifsRoute
   '/admin': typeof AdminAdminRoute
   '/ads': typeof AdminAdsRoute
   '/products': typeof AdminProductsRoute
@@ -269,6 +277,7 @@ export interface FileRoutesById {
   '/browse': typeof BrowseRoute
   '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
+  '/tarifs': typeof TarifsRoute
   '/_admin/admin': typeof AdminAdminRoute
   '/_admin/ads': typeof AdminAdsRoute
   '/_admin/products': typeof AdminProductsRoute
@@ -302,6 +311,7 @@ export interface FileRouteTypes {
     | '/browse'
     | '/dropshipping'
     | '/legal'
+    | '/tarifs'
     | '/admin'
     | '/ads'
     | '/products'
@@ -333,6 +343,7 @@ export interface FileRouteTypes {
     | '/browse'
     | '/dropshipping'
     | '/legal'
+    | '/tarifs'
     | '/admin'
     | '/ads'
     | '/products'
@@ -366,6 +377,7 @@ export interface FileRouteTypes {
     | '/browse'
     | '/dropshipping'
     | '/legal'
+    | '/tarifs'
     | '/_admin/admin'
     | '/_admin/ads'
     | '/_admin/products'
@@ -400,6 +412,7 @@ export interface RootRouteChildren {
   BrowseRoute: typeof BrowseRoute
   DropshippingRoute: typeof DropshippingRoute
   LegalRoute: typeof LegalRouteWithChildren
+  TarifsRoute: typeof TarifsRoute
   ApiGeoRoute: typeof ApiGeoRoute
   PaiementRetourRoute: typeof PaiementRetourRoute
   ProductIdRoute: typeof ProductIdRoute
@@ -460,6 +473,13 @@ declare module '@tanstack/react-router' {
       path: '/legal'
       fullPath: '/legal'
       preLoaderRoute: typeof LegalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tarifs': {
+      id: '/tarifs'
+      path: '/tarifs'
+      fullPath: '/tarifs'
+      preLoaderRoute: typeof TarifsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_admin/admin': {
@@ -718,6 +738,7 @@ const rootRouteChildren: RootRouteChildren = {
   BrowseRoute: BrowseRoute,
   DropshippingRoute: DropshippingRoute,
   LegalRoute: LegalRouteWithChildren,
+  TarifsRoute: TarifsRoute,
   ApiGeoRoute: ApiGeoRoute,
   PaiementRetourRoute: PaiementRetourRoute,
   ProductIdRoute: ProductIdRoute,

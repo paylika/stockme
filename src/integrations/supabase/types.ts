@@ -127,6 +127,7 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          plan: string
           role: string
           shop_name: string | null
           updated_at: string

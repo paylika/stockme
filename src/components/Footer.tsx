@@ -27,6 +27,12 @@ export function Footer() {
           <ul className="mt-4 space-y-2.5 text-sm">
             <li><Link to="/" className="text-muted-foreground transition-colors hover:text-foreground">Parcourir le stock</Link></li>
             <li><Link to="/browse" className="text-muted-foreground transition-colors hover:text-foreground">Rechercher</Link></li>
+            <li><Link to="/dropshipping" className="text-muted-foreground transition-colors hover:text-foreground">Dropshipping</Link></li>
+            <li>
+              <Link to="/tarifs" className="font-medium text-volt transition-colors hover:brightness-110">
+                Tarifs &amp; offres vendeurs
+              </Link>
+            </li>
             <li><Link to="/auth" className="text-muted-foreground transition-colors hover:text-foreground">Créer un compte</Link></li>
             <li><Link to="/dashboard" className="text-muted-foreground transition-colors hover:text-foreground">Publier du stock</Link></li>
           </ul>
