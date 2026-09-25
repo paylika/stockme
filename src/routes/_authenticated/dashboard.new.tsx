@@ -34,6 +34,8 @@ function NewProduct() {
   const [maxPhotos, setMaxPhotos] = useState(FREE_MAX_PHOTOS);
   /** Publications déjà en ligne, et solde : sert à prévenir du prix de 500 F. */
   const [quota, setQuota] = useState<{ published: number; balance: number } | null>(null);
+  /** Numéro WhatsApp du compte : pré-rempli dans le formulaire. */
+  const [accountWhatsapp, setAccountWhatsapp] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -41,13 +43,14 @@ function NewProduct() {
       const uid = s.session?.user?.id;
       if (!uid) return;
       const [{ data: prof }, { count }, { data: wallet }] = await Promise.all([
-        supabase.from("profiles").select("verified,verified_until").eq("id", uid).maybeSingle(),
+        supabase.from("profiles").select("verified,verified_until,whatsapp").eq("id", uid).maybeSingle(),
         supabase.from("products").select("id", { count: "exact", head: true }).eq("owner_id", uid).eq("published", true),
         supabase.from("wallets").select("balance_fcfa").eq("user_id", uid).maybeSingle(),
       ]);
-      const p = prof as { verified: boolean; verified_until: string | null } | null;
+      const p = prof as { verified: boolean; verified_until: string | null; whatsapp: string | null } | null;
       const ok = !!p?.verified && (!p.verified_until || new Date(p.verified_until) > new Date());
       setMaxPhotos(ok ? MAX_PHOTOS : FREE_MAX_PHOTOS);
+      setAccountWhatsapp(p?.whatsapp ?? null);
       setQuota({ published: count ?? 0, balance: (wallet as { balance_fcfa: number } | null)?.balance_fcfa ?? 0 });
     })();
   }, []);
@@ -82,7 +85,6 @@ function NewProduct() {
       zone: values.zone || null,
       price_fcfa: values.price_fcfa,
       promo_price_fcfa: values.promo_price_fcfa,
-      revenue_fcfa: values.revenue_fcfa,
       quantity: values.quantity,
       moq: values.moq,
       whatsapp: values.whatsapp,
@@ -263,6 +265,7 @@ function NewProduct() {
               submitLabel="Publier"
               uploadingStatus={uploadingStatus}
               maxPhotos={maxPhotos}
+              defaultWhatsapp={accountWhatsapp}
               onCancel={() => navigate({ to: "/dashboard" })}
             />
           </div>

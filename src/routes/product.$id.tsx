@@ -20,7 +20,7 @@ import { toast } from "sonner";
 
 type Product = {
   id: string; name: string; description: string | null; category: string;
-  price_fcfa: number; promo_price_fcfa: number | null; revenue_fcfa: number | null;
+  price_fcfa: number; promo_price_fcfa: number | null;
   quantity: number; moq: number; city: string; zone: string | null;
   images: string[]; owner_id: string; whatsapp: string | null;
   published: boolean; sold_out: boolean; dropshipping: boolean;
@@ -515,12 +515,6 @@ function ProductPage() {
                   <div className="text-muted-foreground text-xs uppercase tracking-wider">Commande min</div>
                   <div className="mt-0.5 font-semibold">{product.moq} unités</div>
                 </div>
-                {product.revenue_fcfa ? (
-                  <div className="col-span-2">
-                    <div className="text-muted-foreground text-xs uppercase tracking-wider">CA déjà généré</div>
-                    <div className="mt-0.5 font-semibold text-foreground">{formatFCFA(product.revenue_fcfa)}</div>
-                  </div>
-                ) : null}
               </div>
 
               {(product.sizes?.length > 0 || product.colors?.length > 0 || product.weight_grams) && (

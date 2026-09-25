@@ -28,7 +28,6 @@ export type ProductFormValues = {
   zone: string;
   price_fcfa: number;
   promo_price_fcfa: number | null;
-  revenue_fcfa: number | null;
   quantity: number;
   moq: number;
   whatsapp: string;
@@ -50,7 +49,6 @@ export type ProductFormInitial = {
   zone: string | null;
   price_fcfa: number;
   promo_price_fcfa: number | null;
-  revenue_fcfa: number | null;
   quantity: number;
   moq: number;
   whatsapp: string | null;
@@ -67,6 +65,42 @@ const cleanPhone = (value: string) => value.replace(/[^+\d]/g, "").trim();
 const SIZE_OPTIONS = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL"];
 const COLOR_OPTIONS = ["Noir", "Blanc", "Beige", "Gris", "Bleu", "Rouge", "Vert", "Jaune", "Marron", "Rose", "Violet", "Orange", "Doré"];
 
+/**
+ * Tailles proposées SELON LA CATÉGORIE, en groupes distincts.
+ *
+ * Avant, tout était mélangé dans une seule rangée (du XS au 5XL) : un vendeur de
+ * chaussures ne trouvait pas ses pointures, et un vendeur de cosmétiques voyait
+ * des tailles qui ne le concernent pas. Désormais chaque catégorie a ses
+ * groupes, clairement étiquetés — et on peut toujours ajouter une taille libre.
+ */
+const SIZE_PRESET_GROUPS: Record<string, { label: string; values: string[] }[]> = {
+  "Mode & Textile": [
+    { label: "Vêtements", values: ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL"] },
+    { label: "Pointures", values: ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46"] },
+  ],
+  "Sport & Loisirs": [{ label: "Vêtements", values: ["XS", "S", "M", "L", "XL", "XXL"] }],
+  "Bébé & Enfant": [
+    { label: "Âges", values: ["0-3 mois", "3-6 mois", "6-12 mois", "1-2 ans", "2-4 ans", "4-6 ans", "6-8 ans"] },
+  ],
+};
+
+/** Couleur réelle affichée dans la pastille. */
+const COLOR_HEX: Record<string, string> = {
+  Noir: "#111827",
+  Blanc: "#ffffff",
+  Beige: "#e7d8c9",
+  Gris: "#9ca3af",
+  Bleu: "#2563eb",
+  Rouge: "#dc2626",
+  Vert: "#16a34a",
+  Jaune: "#facc15",
+  Marron: "#8b5e3c",
+  Rose: "#ec4899",
+  Violet: "#7c3aed",
+  Orange: "#f97316",
+  Doré: "#d4af37",
+};
+
 type Props = {
   initial?: ProductFormInitial | null;
   onSubmit: (values: ProductFormValues) => void | Promise<void>;
@@ -75,6 +109,8 @@ type Props = {
   onCancel?: () => void;
   /** Nombre de photos autorisées : 2 en compte gratuit, 5 pour un vendeur vérifié. */
   maxPhotos?: number;
+  /** Numéro WhatsApp du compte : pré-rempli pour ne pas le retaper à chaque produit. */
+  defaultWhatsapp?: string | null;
 };
 
 export function ProductForm({
@@ -82,6 +118,7 @@ export function ProductForm({
   onSubmit,
   submitLabel = "Publier",
   uploadingStatus,
+  defaultWhatsapp,
   onCancel,
   maxPhotos = MAX_PHOTOS,
 }: Props) {
@@ -106,16 +143,22 @@ export function ProductForm({
   const [tiers, setTiers] = useState<{ from: number | ""; to: number | ""; price: number | "" }[]>(
     () => normalizeTiers(initial?.price_tiers).map((t) => ({ from: t.from, to: t.to ?? "", price: t.price })),
   );
-  const [revenue, setRevenue] = useState<number | "">(initial?.revenue_fcfa ?? "");
   const [quantity, setQuantity] = useState<number | "">(initial?.quantity ?? "");
   const [moq, setMoq] = useState<number | "">(initial?.moq ?? 1);
-  const [whatsapp, setWhatsapp] = useState(initial?.whatsapp ?? "");
+  const [whatsapp, setWhatsapp] = useState(initial?.whatsapp ?? defaultWhatsapp ?? "");
   const [dropshipping, setDropshipping] = useState(initial?.dropshipping ?? false);
   const [sizes, setSizes] = useState<string[]>(initial?.sizes ?? []);
   const [colors, setColors] = useState<string[]>(initial?.colors ?? []);
   const [colorInput, setColorInput] = useState("");
-  const [weightKg, setWeightKg] = useState<number | "">(
-    initial?.weight_grams != null ? initial.weight_grams / 1000 : "",
+  const [sizeInput, setSizeInput] = useState("");
+  // Poids : on stocke toujours en grammes, mais le vendeur choisit son unité.
+  const [weightValue, setWeightValue] = useState<number | "">(() => {
+    const g = initial?.weight_grams;
+    if (g == null) return "";
+    return g >= 1000 ? Math.round((g / 1000) * 100) / 100 : g;
+  });
+  const [weightUnit, setWeightUnit] = useState<"kg" | "g">(
+    initial?.weight_grams != null && initial.weight_grams >= 1000 ? "kg" : "g",
   );
   const [images, setImages] = useState<FormImage[]>(
     (initial?.images ?? []).map((url) => ({ url, preview: url })),
@@ -143,12 +186,24 @@ export function ProductForm({
   const toggleColor = (c: string) =>
     setColors((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
 
+  /** Ajout d'une taille libre (pointure, contenance, âge…). */
+  const addSize = () => {
+    const v = sizeInput.trim();
+    if (!v) return;
+    setSizes((prev) => (prev.some((s) => s.toLowerCase() === v.toLowerCase()) ? prev : [...prev, v]));
+    setSizeInput("");
+  };
+
   const addColor = () => {
     const c = colorInput.trim();
     if (!c) return;
     setColors((prev) => (prev.includes(c) ? prev : [...prev, c]));
     setColorInput("");
   };
+
+  // Groupes de tailles de la catégorie choisie (vêtements / pointures / âges).
+  const sizeGroups = SIZE_PRESET_GROUPS[category] ?? [];
+  const presetValues = sizeGroups.flatMap((g) => g.values);
 
   const onFiles = (list: FileList | null) => {
     if (!list) return;
@@ -245,14 +300,16 @@ export function ProductForm({
         zone: zone || "",
         price_fcfa: Number(price),
         promo_price_fcfa: promoValue,
-        revenue_fcfa: revenue === "" ? null : Number(revenue),
         quantity: Number(quantity),
         moq: Number(moq),
         whatsapp: normalizedWhatsapp,
         dropshipping,
         sizes,
         colors,
-        weight_grams: weightKg === "" ? null : Math.round(Number(weightKg) * 1000),
+        weight_grams:
+          weightValue === ""
+            ? null
+            : Math.round(weightUnit === "kg" ? Number(weightValue) * 1000 : Number(weightValue)),
         price_tiers: cleanTiers.length > 0 ? cleanTiers : null,
         existingImages,
         newFiles,
@@ -564,33 +621,105 @@ export function ProductForm({
         )}
       </div>
 
-      {/* ===== Variantes & poids (optionnel) ===== */}
-      <div className="space-y-4 rounded-2xl border border-border bg-card p-4">
-        <div>
-          <Label>Tailles disponibles</Label>
-          <p className="mt-0.5 text-xs text-muted-foreground">Optionnel — utile pour la mode et les chaussures.</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {SIZE_OPTIONS.map((s) => {
-              const active = sizes.includes(s);
-              return (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => toggleSize(s)}
-                  className={`h-9 min-w-11 rounded-lg border px-3 text-xs font-semibold transition ${
-                    active ? "border-volt bg-volt text-volt-foreground" : "border-input bg-background text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {s}
-                </button>
-              );
-            })}
+      {/* ===== Tailles & couleurs : deux blocs séparés, chacun avec son compteur ===== */}
+      <div className="space-y-4">
+        {/* ---- Tailles ---- */}
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Label>Tailles disponibles</Label>
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+              {sizes.length === 0 ? "facultatif" : `${sizes.length} taille${sizes.length > 1 ? "s" : ""}`}
+            </span>
+          </div>
+
+          {sizeGroups.length > 0 ? (
+            <>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Touchez les tailles que vous avez en stock. Vous pouvez aussi en ajouter une à la main.
+              </p>
+              {sizeGroups.map((group) => (
+                <div key={group.label} className="mt-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {group.label}
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap gap-2">
+                    {group.values.map((s) => {
+                      const active = sizes.includes(s);
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => toggleSize(s)}
+                          className={`h-9 min-w-11 rounded-lg border px-3 text-xs font-semibold transition ${
+                            active
+                              ? "border-volt bg-volt text-volt-foreground"
+                              : "border-input bg-background text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          {s}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Pas de taille pour cette catégorie ? Laissez vide. Sinon ajoutez-les ci-dessous (ex. « 1 L », « 5 kg »,
+              « 42 »).
+            </p>
+          )}
+
+          {/* Tailles ajoutées à la main : toujours visibles, en évidence. */}
+          {sizes.filter((s) => !presetValues.includes(s)).length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {sizes
+                .filter((s) => !presetValues.includes(s))
+                .map((s) => (
+                  <span
+                    key={s}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-volt bg-volt/15 px-3 text-xs font-semibold text-volt"
+                  >
+                    {s}
+                    <button type="button" onClick={() => toggleSize(s)} aria-label={`Retirer ${s}`}>
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+            </div>
+          )}
+
+          <div className="mt-2 flex gap-2">
+            <Input
+              value={sizeInput}
+              onChange={(e) => setSizeInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addSize();
+                }
+              }}
+              placeholder="Autre taille…"
+              className="h-10"
+            />
+            <Button type="button" variant="outline" className="h-10" onClick={addSize}>
+              Ajouter
+            </Button>
           </div>
         </div>
 
-        <div>
-          <Label>Couleurs disponibles</Label>
-          <p className="mt-0.5 text-xs text-muted-foreground">Cliquez pour ajouter, ou tapez une couleur personnalisée.</p>
+        {/* ---- Couleurs (avec pastille de couleur) ---- */}
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Label>Couleurs disponibles</Label>
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+              {colors.length === 0 ? "facultatif" : `${colors.length} couleur${colors.length > 1 ? "s" : ""}`}
+            </span>
+          </div>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Touchez une couleur pour l'ajouter. La pastille montre la couleur réelle.
+          </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {COLOR_OPTIONS.map((c) => {
               const active = colors.includes(c);
@@ -599,10 +728,14 @@ export function ProductForm({
                   key={c}
                   type="button"
                   onClick={() => toggleColor(c)}
-                  className={`h-9 rounded-lg border px-3 text-xs font-medium transition ${
-                    active ? "border-volt bg-volt/15 text-volt" : "border-input bg-background text-muted-foreground hover:text-foreground"
+                  className={`inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition ${
+                    active ? "border-volt bg-volt/15 text-foreground" : "border-input bg-background text-muted-foreground hover:text-foreground"
                   }`}
                 >
+                  <span
+                    className="h-3.5 w-3.5 shrink-0 rounded-full border border-black/20"
+                    style={{ background: COLOR_HEX[c] ?? "#e5e7eb" }}
+                  />
                   {c}
                 </button>
               );
@@ -613,7 +746,7 @@ export function ProductForm({
               {colors.filter((c) => !COLOR_OPTIONS.includes(c)).map((c) => (
                 <span key={c} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-volt bg-volt/15 px-3 text-xs font-medium text-volt">
                   {c}
-                  <button type="button" onClick={() => toggleColor(c)} aria-label="Retirer">
+                  <button type="button" onClick={() => toggleColor(c)} aria-label={`Retirer ${c}`}>
                     <X className="h-3 w-3" />
                   </button>
                 </span>
@@ -632,31 +765,52 @@ export function ProductForm({
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="weight">Poids (kg)</Label>
-          <Input
-            id="weight"
-            type="number"
-            min={0}
-            step="0.1"
-            value={weightKg}
-            onChange={(e) => setWeightKg(e.target.value === "" ? "" : Number(e.target.value))}
-            placeholder="Ex: 0.5"
-          />
-          <p className="text-xs text-muted-foreground">Optionnel — utile pour calculer la livraison.</p>
+        {/* ---- Poids, avec choix de l'unité (g ou kg) ---- */}
+        <div className="space-y-1.5 rounded-2xl border border-border bg-card p-4">
+          <Label htmlFor="weight">Poids d'une pièce</Label>
+          <div className="flex gap-2">
+            <Input
+              id="weight"
+              type="number"
+              min={0}
+              step={weightUnit === "kg" ? "0.1" : "1"}
+              value={weightValue}
+              onChange={(e) => setWeightValue(e.target.value === "" ? "" : Number(e.target.value))}
+              placeholder={weightUnit === "kg" ? "Ex : 0.5" : "Ex : 500"}
+              className="flex-1"
+            />
+            {/* Choix de l'unité : grammes ou kilos, comme on parle au marché. */}
+            <div className="flex shrink-0 overflow-hidden rounded-xl border border-input">
+              {(["g", "kg"] as const).map((u) => (
+                <button
+                  key={u}
+                  type="button"
+                  onClick={() => setWeightUnit(u)}
+                  className={`h-10 w-12 text-sm font-semibold transition ${
+                    weightUnit === u ? "bg-volt text-volt-foreground" : "bg-background text-muted-foreground"
+                  }`}
+                >
+                  {u}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Optionnel — utile pour calculer la livraison.
+            {weightValue !== "" && weightUnit === "kg" && (
+              <>
+                {" "}
+                Soit <strong className="text-foreground">{Math.round(Number(weightValue) * 1000)} g</strong>.
+              </>
+            )}
+            {weightValue !== "" && weightUnit === "g" && Number(weightValue) >= 1000 && (
+              <>
+                {" "}
+                Soit <strong className="text-foreground">{(Number(weightValue) / 1000).toFixed(2)} kg</strong>.
+              </>
+            )}
+          </p>
         </div>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="rev">Chiffre d'affaires réalisé (FCFA)</Label>
-        <Input
-          id="rev"
-          type="number"
-          min={0}
-          value={revenue}
-          onChange={(e) => setRevenue(e.target.value === "" ? "" : Number(e.target.value))}
-          placeholder="Optionnel"
-        />
       </div>
 
       <div className="space-y-1.5">
@@ -670,7 +824,8 @@ export function ProductForm({
           onChange={(e) => setWhatsapp(e.target.value)}
         />
         <p className="text-xs text-muted-foreground">
-          Visible uniquement par les utilisateurs connectés.
+          Pré-rempli avec le numéro de votre compte. Si vous le changez ici, il sera aussi mis à jour sur votre compte.
+          Visible uniquement par les acheteurs connectés.
         </p>
       </div>
 
