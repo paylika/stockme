@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Megaphone } from "lucide-react";
+import { Megaphone, Rocket } from "lucide-react";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { SponsorBanner } from "@/components/SponsorBanner";
 import { trackAdClick, trackAdImpression } from "@/lib/ad-tracking";
+import { useAuth } from "@/hooks/useAuth";
+import { usePaymentsStatus } from "@/lib/features";
+import { isAdminEmail } from "@/lib/constants";
 
 type Slide = {
   badge: string;
@@ -17,26 +20,44 @@ type Slide = {
   adId?: string;
 };
 
-/** Annonces "maison" affichées quand il n'y a aucune annonce programmée. */
-const HOUSE_SLIDES: Slide[] = [
-  {
-    badge: "Sponsorisé · XaalisPay",
-    title: "Encaissez avant de livrer avec XaalisPay",
-    description: "Le client paie d'abord (séquestre Wave & Orange Money), vous livrez, vous êtes payé.",
-    ctaLabel: "Découvrir",
-    href: "https://www.xaalispay.com/",
-    logoSrc: "/partners/xaalispay-mark.png",
-    logoAlt: "XaalisPay",
-  },
-  {
-    badge: "Annonce StockMe",
-    title: "Votre annonce ici pour seulement 500 FCFA / jour",
-    description: "Gagnez en visibilité dès aujourd'hui : votre annonce mise en avant sur l'accueil. Contactez-nous !",
-    ctaLabel: "Contacter",
-    href: "https://wa.me/221786635331?text=Bonjour%20StockMe%2C%20je%20souhaite%20mettre%20mon%20annonce%20en%20avant%20sur%20l%27accueil.",
-    icon: Megaphone,
-  },
-];
+/** Annonces "maison" toujours affichées (partenaire + offre de visibilité). */
+const XAALISPAY_SLIDE: Slide = {
+  badge: "Sponsorisé · XaalisPay",
+  title: "Encaissez avant de livrer avec XaalisPay",
+  description: "Le client paie d'abord (séquestre Wave & Orange Money), vous livrez, vous êtes payé.",
+  ctaLabel: "Découvrir",
+  href: "https://www.xaalispay.com/",
+  logoSrc: "/partners/xaalispay-mark.png",
+  logoAlt: "XaalisPay",
+};
+
+/**
+ * Offre de visibilité.
+ *  • Une fois la sponsorisation en libre-service ouverte aux vendeurs, le
+ *    bouton envoie DIRECTEMENT vers l'espace du vendeur pour booster un
+ *    produit (plus besoin de contacter StockMe).
+ *  • Tant que ce n'est pas ouvert au public, on garde le contact WhatsApp :
+ *    on ne promet jamais un bouton qui ne mène nulle part.
+ */
+const visibilitySlide = (selfService: boolean, loggedIn: boolean): Slide =>
+  selfService
+    ? {
+        badge: "Sponsorisé",
+        title: "Boostez vos produits — 500 FCFA / jour",
+        description:
+          "Mettez vos produits en tête de l'accueil et suivez les résultats (vues, clics, contacts). Rechargez votre solde, puis boostez en 2 clics.",
+        ctaLabel: loggedIn ? "Booster mes produits" : "Créer mon compte",
+        href: loggedIn ? "/profile" : "/auth",
+        icon: Rocket,
+      }
+    : {
+        badge: "Annonce StockMe",
+        title: "Votre annonce ici pour seulement 500 FCFA / jour",
+        description: "Gagnez en visibilité dès aujourd'hui : votre annonce mise en avant sur l'accueil. Contactez-nous !",
+        ctaLabel: "Contacter",
+        href: "https://wa.me/221786635331?text=Bonjour%20StockMe%2C%20je%20souhaite%20mettre%20mon%20annonce%20en%20avant%20sur%20l%27accueil.",
+        icon: Megaphone,
+      };
 
 type AdRow = {
   id: string;
@@ -61,6 +82,12 @@ export function SponsorCarousel() {
   const [ads, setAds] = useState<AdRow[] | null>(null);
   const [index, setIndex] = useState(0);
   const touchX = useRef<number | null>(null);
+  const { user } = useAuth();
+  const payments = usePaymentsStatus();
+
+  // Sponsorisation en libre-service réellement disponible ?
+  const selfService = payments.enabled || (isAdminEmail(user?.email) && payments.methods.length > 0);
+  const loggedIn = !!user;
 
   useEffect(() => {
     supabase.rpc("get_active_ads", {}).then(({ data }) => setAds((data as AdRow[] | null) ?? []));
@@ -99,8 +126,8 @@ export function SponsorCarousel() {
             },
       );
 
-    return [...fromAds, ...HOUSE_SLIDES];
-  }, [ads]);
+    return [...fromAds, XAALISPAY_SLIDE, visibilitySlide(selfService, loggedIn)];
+  }, [ads, selfService, loggedIn]);
 
   useEffect(() => {
     const t = window.setInterval(() => setIndex((i) => (i + 1) % slides.length), ROTATE_MS);
