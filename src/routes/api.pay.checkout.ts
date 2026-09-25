@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { availableProviders, resolveProvider } from "@/lib/payments/registry.server";
 import { userClient } from "@/lib/payments/supabase-server";
 import type { PaymentMethod } from "@/lib/payments/types";
+import { planById } from "@/lib/pricing";
 
 /**
  * Point d'entrée unique du paiement (portefeuille, boost, abonnement).
@@ -80,6 +81,13 @@ export const Route = createFileRoute("/api/pay/checkout")({
 
           // 2) Session de paiement chez le fournisseur
           const origin = new URL(request.url).origin;
+          // Carte : prélèvement mensuel automatique UNIQUEMENT pour l'offre PRO
+          // mensuelle. Le badge (5 000 F/an) et le PRO à l'année (25 000 F/an)
+          // sont des paiements uniques : on ne doit jamais les prélever chaque
+          // mois. La décision vient de pricing.ts, jamais d'un test de montant.
+          const metaPlan = typeof body.metadata?.plan === "string" ? planById(body.metadata.plan) : null;
+          const recurring =
+            purpose === "subscription" && method === "card" && metaPlan?.recurring === "month" ? "month" : null;
           const created = await provider.createPayment({
             amount: Math.round(amount),
             method,
@@ -89,8 +97,7 @@ export const Route = createFileRoute("/api/pay/checkout")({
             successUrl: `${origin}/paiement/retour?intent=${intentId}&status=ok`,
             cancelUrl: `${origin}/paiement/retour?intent=${intentId}&status=cancel`,
             customerEmail: userData.user.email ?? null,
-            // Carte + abonnement → vrai prélèvement mensuel automatique.
-            recurring: purpose === "subscription" && method === "card" ? "month" : null,
+            recurring,
           });
 
           // 3) On garde la référence du fournisseur pour que le webhook retrouve la commande
