@@ -236,6 +236,33 @@ function ProfilePage() {
     );
   }
 
+  // Les deux actions du profil : même style, même hauteur, même largeur sur
+  // mobile (deux colonnes alignées sous l'avatar) — voir le rendu ci-dessous.
+  const profileActions = (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-10 w-full justify-center sm:w-auto"
+        onClick={() => setEditOpen(true)}
+      >
+        <Pencil className="mr-1.5 h-3.5 w-3.5" /> Modifier le profil
+      </Button>
+      {user?.id && (
+        <Link
+          to="/vendeur/$id"
+          params={{ id: user.id }}
+          className="w-full sm:w-auto"
+          aria-label="Voir ma boutique publique"
+        >
+          <Button variant="outline" size="sm" className="h-10 w-full justify-center sm:w-auto">
+            <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> Ma boutique
+          </Button>
+        </Link>
+      )}
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -247,16 +274,16 @@ function ProfilePage() {
             <ShopBanner
               src={profile?.banner_url ?? null}
               position={profile?.banner_position ?? 50}
-              className="h-28 sm:h-40 sm:rounded-3xl"
+              className="h-32 sm:h-40 sm:rounded-3xl"
               overlay
             />
           </div>
 
-          <div className="px-4 pb-7 sm:px-6">
-            {/* Avatar qui chevauche la bannière + identité compacte */}
-            <div className="-mt-10 flex items-end gap-3 sm:-mt-12 sm:gap-4">
+          <div className="px-4 pb-6 sm:px-6">
+            {/* Avatar qui chevauche la bannière + identité */}
+            <div className="-mt-12 flex items-end gap-3 sm:-mt-14 sm:gap-4">
               <div className="relative shrink-0">
-                <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl border-4 border-background bg-volt text-xl font-bold text-volt-foreground sm:h-24 sm:w-24">
+                <div className="grid h-24 w-24 place-items-center overflow-hidden rounded-2xl border-4 border-background bg-volt text-2xl font-bold text-volt-foreground">
                   {profile?.avatar_url ? (
                     <img src={profile.avatar_url} alt={displayName} className="h-full w-full object-cover" />
                   ) : (
@@ -286,9 +313,10 @@ function ProfilePage() {
                 />
               </div>
 
-              <div className="min-w-0 flex-1 pb-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="truncate font-display text-xl font-bold tracking-tight sm:text-2xl">{displayName}</h1>
+              {/* Nom + badge, alignés sur la même ligne que l'avatar */}
+              <div className="min-w-0 flex-1 pb-0.5">
+                <h1 className="truncate font-display text-xl font-bold tracking-tight sm:text-2xl">{displayName}</h1>
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   {isVerified ? (
                     isLifetime ? (
                       <VerifiedBadgeGold />
@@ -302,23 +330,16 @@ function ProfilePage() {
                   )}
                 </div>
                 {profile?.full_name && (
-                  <p className="mt-0.5 truncate text-sm text-muted-foreground">{profile.full_name}</p>
+                  <p className="mt-1 truncate text-xs text-muted-foreground">{profile.full_name}</p>
                 )}
-
-                <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                  <Button variant="outline" size="sm" className="h-9" onClick={() => setEditOpen(true)}>
-                    <Pencil className="mr-1.5 h-3.5 w-3.5" /> Modifier le profil
-                  </Button>
-                  {user?.id && (
-                    <Link to="/vendeur/$id" params={{ id: user.id }}>
-                      <Button variant="ghost" size="sm" className="h-9">
-                        <ExternalLink className="mr-1 h-3.5 w-3.5" /> Ma boutique publique
-                      </Button>
-                    </Link>
-                  )}
-                </div>
+                {/* Sur ordinateur, les actions restent à côté du nom */}
+                <div className="mt-2.5 hidden sm:flex sm:flex-wrap sm:items-center sm:gap-2">{profileActions}</div>
               </div>
             </div>
+
+            {/* Sur mobile, les deux boutons passent SOUS l'avatar, même largeur,
+                alignés exactement sur le bord gauche de la photo de profil. */}
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:hidden">{profileActions}</div>
           </div>
         </div>
       </section>
