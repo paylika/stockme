@@ -11,6 +11,7 @@ import { IntensityGauge, computeIntensity } from "@/components/IntensityGauge";
 import { JsonLd } from "@/components/JsonLd";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { BackLink } from "@/components/BackLink";
+import { ProductReviews } from "@/components/ProductReviews";
 import { normalizeTiers, tierRangeLabel, lowestTierPrice } from "@/lib/price-tiers";
 import { clearMobileAction, setMobileAction } from "@/lib/mobile-action";
 import { buildSeoHead, productLd, breadcrumbLd } from "@/lib/seo";
@@ -703,6 +704,9 @@ function ProductPage() {
             )}
           </div>
         </div>
+
+        {/* ===== Avis et notes des acheteurs ===== */}
+        <ProductReviews productId={product.id} sellerId={product.owner_id} />
 
         {similar.length > 0 && (
           <section className="mt-12">

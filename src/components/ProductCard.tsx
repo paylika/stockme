@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Eye, Heart, MessageCircle, Megaphone, Tag } from "lucide-react";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { normalizeTiers, lowestTierPrice } from "@/lib/price-tiers";
+import { Stars } from "@/components/ProductReviews";
 import { formatFCFA } from "@/lib/format";
 import { IconPin as MapPin, IconBox as Package } from "@/components/icons";
 
@@ -26,6 +27,9 @@ export type ListingProduct = {
   is_boosted?: boolean;
   /** Paliers de prix par quantité (jsonb côté base). */
   price_tiers?: unknown;
+  /** Note moyenne des acheteurs (1 à 5) et nombre d'avis. */
+  rating_avg?: number | null;
+  rating_count?: number | null;
   views?: number;
   contacts?: number;
   favorites?: number;
@@ -137,6 +141,15 @@ export function ProductCard({ product, delayMs = 0, sponsored = false, sellerVer
                 <span className="font-semibold text-destructive">dès {formatFCFA(bestTier)}</span>
               </>
             )}
+          </div>
+        )}
+        {/* Note des acheteurs : la preuve sociale, comme sur Alibaba. */}
+        {!!product.rating_count && product.rating_count > 0 && (
+          <div className="mt-1 flex items-center gap-1.5">
+            <Stars value={product.rating_avg ?? 0} size="xs" />
+            <span className="text-[10px] font-semibold text-muted-foreground sm:text-[11px]">
+              {(product.rating_avg ?? 0).toFixed(1).replace(".", ",")} ({product.rating_count})
+            </span>
           </div>
         )}
         {showStats && (

@@ -68,6 +68,8 @@ export type Database = {
           promo_price_fcfa: number | null
           published: boolean
           quantity: number
+          rating_avg: number | null
+          rating_count: number
           revenue_fcfa: number | null
           sizes: string[]
           sold_out: boolean
@@ -118,6 +120,8 @@ export type Database = {
           promo_price_fcfa?: number | null
           published?: boolean
           quantity?: number
+          rating_avg?: number | null
+          rating_count?: number
           revenue_fcfa?: number | null
           sizes?: string[]
           sold_out?: boolean
@@ -125,6 +129,39 @@ export type Database = {
           weight_grams?: number | null
           whatsapp?: string | null
           zone?: string | null
+        }
+        Relationships: []
+      }
+      product_reviews: {
+        Row: {
+          id: string
+          product_id: string
+          user_id: string
+          rating: number
+          comment: string | null
+          images: string[]
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          product_id: string
+          user_id: string
+          rating: number
+          comment?: string | null
+          images?: string[]
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          product_id?: string
+          user_id?: string
+          rating?: number
+          comment?: string | null
+          images?: string[]
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -622,6 +659,14 @@ export type Database = {
           contacts_by_country: { country: string | null; value: number }[]
           top_categories: { name: string; value: number }[]
         }
+      }
+      get_product_reviews: {
+        Args: {
+          p_product_id: string
+          p_limit?: number
+          p_offset?: number
+        }
+        Returns: Record<string, unknown>
       }
       get_ranked_products: {
         Args: {
