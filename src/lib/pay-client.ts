@@ -47,7 +47,7 @@ export async function goToCheckout(input: Parameters<typeof startCheckout>[0]): 
 }
 
 export const METHOD_LABELS: Record<PayMethod, string> = {
-  card: "Carte bancaire",
+  card: "Carte bancaire (Visa / Mastercard)",
   wave: "Wave",
   orange_money: "Orange Money",
 };

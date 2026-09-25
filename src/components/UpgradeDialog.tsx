@@ -13,7 +13,8 @@ import { Label } from "@/components/ui/label";
 import { formatFCFA } from "@/lib/format";
 import { PAID_PLANS, PACK_TOTAL, VERIFICATION_BONUS_FCFA, type Plan, type PlanId } from "@/lib/pricing";
 import { METHOD_LABELS, goToCheckout, type PayMethod } from "@/lib/pay-client";
-import { BadgeCheck, Check, CreditCard, Loader2, ShieldCheck, Smartphone, Sparkles, Zap } from "lucide-react";
+import stripeLogo from "@/assets/stripe-logo.svg";
+import { BadgeCheck, Check, CreditCard, Loader2, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 type Props = {
@@ -160,30 +161,34 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
                   active ? "border-volt bg-volt/10" : "border-border bg-background hover:bg-accent"
                 }`}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-2">
+                <div className="flex items-start justify-between gap-3">
+                  {/* Nom + étiquette sur leur propre ligne : le nom n'est jamais
+                      tronqué, même sur un petit écran. */}
+                  <div className="flex min-w-0 flex-1 items-start gap-2">
                     <span
-                      className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${
+                      className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border ${
                         active ? "border-volt bg-volt text-volt-foreground" : "border-input"
                       }`}
                     >
                       {active && <Check className="h-3 w-3" />}
                     </span>
-                    <span className="truncate text-sm font-bold">{p.name}</span>
-                    {p.badge && (
-                      <span className="shrink-0 rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">
-                        {p.badge}
-                      </span>
-                    )}
+                    <span className="min-w-0">
+                      <span className="block text-sm font-bold leading-snug">{p.name}</span>
+                      {p.badge && (
+                        <span className="mt-1 inline-block rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">
+                          {p.badge}
+                        </span>
+                      )}
+                    </span>
                   </div>
+                  {/* Prix sur 3 lignes courtes : la colonne reste étroite et le
+                      nom de l'offre garde toute la place à gauche. */}
                   <div className="shrink-0 text-right">
-                    <p className="text-sm font-bold">
-                      {formatFCFA(p.price)}
-                      <span className="text-[11px] font-normal text-muted-foreground"> {p.period}</span>
-                    </p>
+                    <p className="whitespace-nowrap text-sm font-bold">{formatFCFA(p.price)}</p>
+                    <p className="whitespace-nowrap text-[11px] text-muted-foreground">{p.period}</p>
                     {p.regularPrice && (
-                      <p className="text-[11px] text-muted-foreground line-through">
-                        {formatFCFA(p.regularPrice)} {p.period}
+                      <p className="whitespace-nowrap text-[11px] text-muted-foreground line-through">
+                        {formatFCFA(p.regularPrice)}
                       </p>
                     )}
                   </div>
@@ -204,36 +209,51 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
           })}
         </div>
 
-        {/* Pack « badge sécurisé 12 mois » : proposé discrètement, uniquement
-            dans le parcours PRO, et seulement si le badge n'est pas encore acquis. */}
-        {!badgeMode && !isVerified && (
-          <button
-            type="button"
-            onClick={() => setPack((v) => !v)}
-            className={`w-full rounded-xl border px-3 py-2.5 text-left text-[11px] leading-relaxed transition ${
+        {/* Le PRO à l'année inclut déjà le badge 12 mois : on le dit clairement,
+            et on ne propose donc aucune option de vérification en plus. */}
+        {!badgeMode && selected === "pro_annuel" && (
+          <p className="flex items-start gap-2 rounded-xl border border-primary/25 bg-primary/5 px-3 py-2.5 text-[11px] leading-relaxed">
+            <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <span>
+              <strong className="text-foreground">Badge Fournisseur vérifié inclus.</strong> Avec PRO à l'année, vous
+              devenez vendeur vérifié et PRO en même temps, pour 12 mois — rien d'autre à payer.
+            </span>
+          </p>
+        )}
+
+        {/* On ne propose l'option « badge 12 mois » que sur le PRO MENSUEL : c'est
+            le seul cas où le badge s'arrêterait avec l'abonnement. Simple case à
+            cocher, comme partout ailleurs. */}
+        {!badgeMode && !isVerified && selected === "pro" && (
+          <label
+            className={`flex w-full cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 text-left transition ${
               pack ? "border-volt bg-volt/10" : "border-dashed border-volt/50 bg-volt/5 hover:bg-volt/10"
             }`}
           >
-            <span className="flex items-center gap-1.5 text-xs font-bold">
-              <Zap className="h-3.5 w-3.5 shrink-0 text-volt" />
-              {pack
-                ? "Retirer le badge 12 mois"
-                : `Sécuriser mon badge 12 mois (+${formatFCFA(badgePlan.price)})`}
+            <input
+              type="checkbox"
+              checked={pack}
+              onChange={(e) => setPack(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-volt"
+            />
+            <span className="text-[11px] leading-relaxed">
+              <span className="block text-xs font-bold">
+                Sécuriser mon badge 12 mois (+{formatFCFA(badgePlan.price)})
+              </span>
+              <span className="mt-0.5 block text-muted-foreground">
+                {pack ? (
+                  <>
+                    Vous payez <strong className="text-foreground">{formatFCFA(PACK_TOTAL)}</strong> aujourd'hui, puis{" "}
+                    {formatFCFA(proPlan.price)}/mois. Votre badge reste acquis 12 mois, même si vous arrêtez PRO ensuite.
+                  </>
+                ) : (
+                  <>
+                    Sans cocher : votre badge s'arrête si vous arrêtez PRO. En cochant : il reste acquis toute l'année.
+                  </>
+                )}
+              </span>
             </span>
-            <span className="mt-0.5 block text-muted-foreground">
-              {pack ? (
-                <>
-                  Ajouté : vous payez <strong className="text-foreground">{formatFCFA(PACK_TOTAL)}</strong> aujourd'hui,
-                  puis {formatFCFA(proPlan.price)}/mois. Votre badge reste acquis 12 mois, même si vous arrêtez PRO ensuite.
-                </>
-              ) : (
-                <>
-                  Sans cette option, votre badge s'arrête avec l'abonnement. En ajoutant {formatFCFA(badgePlan.price)} une
-                  fois, il reste acquis toute l'année.
-                </>
-              )}
-            </span>
-          </button>
+          </label>
         )}
 
         {/* Lien discret vers l'autre parcours (jamais les deux offres mélangées) */}
@@ -283,12 +303,21 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
                     key={m}
                     type="button"
                     onClick={() => setMethod(value)}
-                    className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition ${
+                    className={`flex w-full items-start gap-3 rounded-xl border px-3 py-3 text-left transition ${
                       active ? "border-volt bg-volt/10" : "border-border bg-background hover:bg-accent"
                     }`}
                   >
-                    <Icon className={`h-5 w-5 shrink-0 ${active ? "text-volt" : "text-muted-foreground"}`} />
-                    <span className="text-sm font-semibold">{METHOD_LABELS[value] ?? m}</span>
+                    <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${active ? "text-volt" : "text-muted-foreground"}`} />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold">{METHOD_LABELS[value] ?? m}</span>
+                      {value === "card" && (
+                        <span className="mt-0.5 block text-[11px] font-normal leading-relaxed text-muted-foreground">
+                          Paiement sécurisé par <strong className="font-semibold text-foreground">Stripe</strong>. Votre
+                          carte prépayée <strong className="font-semibold text-foreground">Wave</strong> ou{" "}
+                          <strong className="font-semibold text-foreground">Orange Money</strong> fonctionne aussi.
+                        </span>
+                      )}
+                    </span>
                   </button>
                 );
               })}
@@ -359,8 +388,18 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
             : `Activer ${plan.name} — ${formatFCFA(plan.price)}`}
         </Button>
 
+        {/* Rassurance paiement : le vrai logo Stripe (marque officielle). */}
+        {methods.includes("card") && (
+          <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+            <span>Paiement sécurisé par</span>
+            <img src={stripeLogo} alt="Stripe" className="h-4 w-auto" />
+            <span className="basis-full text-center">
+              Vous saisissez votre carte sur la page de Stripe — StockMe ne voit jamais votre numéro.
+            </span>
+          </p>
+        )}
+
         <p className="text-center text-[11px] text-muted-foreground">
-          Paiement sécurisé.{" "}
           <Link to="/tarifs" className="underline underline-offset-2">
             Voir le détail des offres
           </Link>
