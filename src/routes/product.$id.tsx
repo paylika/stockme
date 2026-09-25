@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { IntensityGauge, computeIntensity } from "@/components/IntensityGauge";
 import { JsonLd } from "@/components/JsonLd";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { clearMobileAction, setMobileAction } from "@/lib/mobile-action";
 import { buildSeoHead, productLd, breadcrumbLd } from "@/lib/seo";
 import { countryOfCity, isAdminEmail } from "@/lib/constants";
 import { ArrowLeft, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Eye, Heart, Lock, MapPin, MessageCircle, Package, Phone, Share2, ShieldCheck, Store, Zap } from "lucide-react";
@@ -324,6 +325,40 @@ function ProductPage() {
   const stats = sellerStats;
   const contactRate = stats && stats.total_views > 0 ? Math.round((stats.total_contacts / stats.total_views) * 100) : 0;
   const intensity = stats ? computeIntensity(stats) : 0;
+
+  // Action d'achat intégrée à la barre de navigation mobile : la navigation
+  // reste visible et le contact est toujours à portée de pouce.
+  useEffect(() => {
+    if (!product || product.sold_out || authLoading) {
+      clearMobileAction();
+      return;
+    }
+
+    const priceLabel = formatFCFA(hasPromo ? (product.promo_price_fcfa as number) : product.price_fcfa);
+
+    if (!user) {
+      setMobileAction({
+        label: priceLabel,
+        href: `/auth?mode=signup&redirect=/product/${id}`,
+        icon: "login",
+        ariaLabel: "Se connecter pour voir le contact du vendeur",
+      });
+      return;
+    }
+
+    if (wa) {
+      setMobileAction({
+        label: priceLabel,
+        href: wa,
+        icon: "whatsapp",
+        ariaLabel: product.dropshipping ? "Commander sur WhatsApp" : "Contacter le vendeur sur WhatsApp",
+      });
+    } else {
+      clearMobileAction();
+    }
+
+    return () => clearMobileAction();
+  }, [product, wa, user, authLoading, hasPromo, id]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -674,57 +709,9 @@ function ProductPage() {
       </div>
       <MobileFooter />
 
-      {/* ===== Barre d'achat mobile : le contact reste à portée de pouce =====
-          Sur la fiche produit, on remplace la navigation générale par l'action
-          de vente (prix + Commander), qui suit l'acheteur pendant le scroll. */}
-      {!product.sold_out && (
-        <>
-          <div className="h-20 lg:hidden" aria-hidden />
-          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
-            <div className="mx-auto flex max-w-md items-center gap-2.5 px-3 py-2">
-              <Link
-                to="/"
-                aria-label="Retour aux produits"
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-border transition hover:bg-accent"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Link>
-
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Prix</p>
-                <p className="flex items-baseline gap-1.5 truncate text-sm font-bold">
-                  {formatFCFA(hasPromo ? (product.promo_price_fcfa as number) : product.price_fcfa)}
-                  {hasPromo && (
-                    <span className="text-[11px] font-normal line-through text-muted-foreground">
-                      {formatFCFA(product.price_fcfa)}
-                    </span>
-                  )}
-                </p>
-              </div>
-
-              {!authLoading &&
-                (user ? (
-                  wa ? (
-                    <a href={wa} target="_blank" rel="noopener noreferrer" onClick={() => logContact()} className="shrink-0">
-                      <Button variant="volt" className="h-11 px-4">
-                        <MessageCircle className="mr-1 h-4 w-4" />
-                        {product.dropshipping ? "Commander" : "WhatsApp"}
-                      </Button>
-                    </a>
-                  ) : (
-                    <Button variant="volt" disabled className="h-11 shrink-0 px-4">
-                      Indisponible
-                    </Button>
-                  )
-                ) : (
-                  <Link to="/auth" search={{ mode: "signup", redirect: `/product/${id}` }} className="shrink-0">
-                    <Button variant="volt" className="h-11 px-4">Voir le contact</Button>
-                  </Link>
-                ))}
-            </div>
-          </div>
-        </>
-      )}
+      {/* L'action d'achat est intégrée à la barre de navigation mobile
+          (voir <MobileNav />) : la navigation reste entièrement visible. */}
+      <MobileNav />
     </div>
   );
 }

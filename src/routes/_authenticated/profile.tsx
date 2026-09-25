@@ -10,7 +10,7 @@ import { VerifiedBadge, VerifiedBadgeGold } from "@/components/VerifiedBadge";
 import { VerifiedPaymentDialog } from "@/components/VerifiedPaymentDialog";
 import { BoostButton, SellerMoneyProvider, useSellerMoney } from "@/components/SellerMoneyProvider";
 import { WalletCard } from "@/components/WalletCard";
-import { EditableField } from "@/components/EditableField";
+import { ProfileEditDialog } from "@/components/ProfileEditDialog";
 import { UpgradeDialog } from "@/components/UpgradeDialog";
 import { usePaymentsStatus } from "@/lib/features";
 import { PLANS, VERIFICATION_BONUS_FCFA, planById, planOf, type PlanId } from "@/lib/pricing";
@@ -22,7 +22,6 @@ import {
   COUNTRY_FLAGS,
   SERVICE_WHATSAPP_DISPLAY,
   VERIFIED_BADGE_PRICE_FCFA,
-  WEST_AFRICA_CITIES,
   countryOfCity,
 } from "@/lib/constants";
 import { toast } from "sonner";
@@ -106,6 +105,7 @@ function ProfilePage() {
   const [tab, setTab] = useState<TabId>("produits");
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradePlan, setUpgradePlan] = useState<"verifie" | "pro">("pro");
+  const [editOpen, setEditOpen] = useState(false);
   const payments = usePaymentsStatus();
   const [savingId, setSavingId] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -269,17 +269,11 @@ function ProfilePage() {
             </div>
 
             <div className="min-w-0 flex-1">
-              {/* Nom de la boutique (modifiable) + badge */}
+              {/* Identité compacte : tout se modifie dans une seule fenêtre */}
               <div className="flex flex-wrap items-center gap-2">
-                <EditableField
-                  field="shop_name"
-                  value={profile?.shop_name}
-                  placeholder="Ajouter le nom de ma boutique"
-                  ariaLabel="nom de la boutique"
-                  maxLength={60}
-                  onSaved={load}
-                  className="font-display text-2xl font-bold tracking-tight"
-                />
+                <h1 className="font-display text-2xl font-bold tracking-tight truncate">
+                  {displayName}
+                </h1>
                 {isVerified ? (
                   isLifetime ? (
                     <VerifiedBadgeGold />
@@ -293,25 +287,17 @@ function ProfilePage() {
                 )}
               </div>
 
-              {/* Nom du responsable (modifiable) */}
-              <div className="mt-1 text-sm text-muted-foreground">
-                <EditableField
-                  field="full_name"
-                  value={profile?.full_name}
-                  placeholder="Ajouter mon nom"
-                  ariaLabel="nom du responsable"
-                  maxLength={60}
-                  onSaved={load}
-                />
-              </div>
+              {profile?.full_name && (
+                <p className="mt-0.5 truncate text-sm text-muted-foreground">{profile.full_name}</p>
+              )}
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <Link to="/profile/edit">
-                  <Button variant="outline" size="sm">Formulaire complet</Button>
-                </Link>
+                <Button variant="outline" size="sm" className="h-10" onClick={() => setEditOpen(true)}>
+                  <Pencil className="mr-1.5 h-3.5 w-3.5" /> Modifier le profil
+                </Button>
                 {user?.id && (
                   <Link to="/vendeur/$id" params={{ id: user.id }}>
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" className="h-10">
                       <ExternalLink className="mr-1 h-3.5 w-3.5" /> Ma boutique publique
                     </Button>
                   </Link>
@@ -321,7 +307,7 @@ function ProfilePage() {
               {!profile?.avatar_url && (
                 <button
                   type="button"
-                  onClick={() => avatarInputRef.current?.click()}
+                  onClick={() => setEditOpen(true)}
                   className="mt-2 text-xs font-medium text-volt underline underline-offset-2"
                 >
                   Ajoutez votre photo de profil — les acheteurs y font plus confiance.
@@ -337,66 +323,34 @@ function ProfilePage() {
             </div>
           </div>
 
-          {/* ===== À propos (bio) — modifiable ===== */}
-          <div className="mt-6 text-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">À propos</p>
-            <div className="mt-2 flex items-start gap-2">
-              <EditableField
-                field="bio"
-                value={profile?.bio}
-                placeholder="Décrivez votre activité : ce que vous vendez, vos délais de livraison, vos conditions de gros…"
-                ariaLabel="description de la boutique"
-                multiline
-                maxLength={600}
-                onSaved={load}
-                className="flex-1 leading-relaxed text-muted-foreground"
-                inputClassName="text-sm"
-              />
-            </div>
-          </div>
-
-          {/* ===== Coordonnées — toutes modifiables sauf l'e-mail ===== */}
+          {/* ===== Coordonnées (lecture seule : tout se modifie dans la fenêtre) ===== */}
           <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
-            <EditableField
-              field="city"
-              value={profile?.city}
-              placeholder="Ajouter ma ville"
-              ariaLabel="ville"
-              icon={MapPin}
-              listId="profile-cities"
-              render={(v) => `${COUNTRY_FLAGS[countryOfCity(v)] ?? ""} ${v}`}
-              onSaved={load}
-            />
-            <EditableField
-              field="whatsapp"
-              value={profile?.whatsapp}
-              placeholder="Ajouter mon WhatsApp"
-              ariaLabel="numéro WhatsApp"
-              type="tel"
-              icon={MessageCircle}
-              onSaved={load}
-            />
-            <EditableField
-              field="phone"
-              value={profile?.phone}
-              placeholder="Ajouter mon téléphone"
-              ariaLabel="numéro de téléphone"
-              type="tel"
-              icon={Phone}
-              onSaved={load}
-            />
             <span className="inline-flex items-center gap-1.5">
-              <Mail className="h-3.5 w-3.5" />
-              {user?.email}
-              <span className="text-[10px] uppercase tracking-wider">compte</span>
+              <MapPin className="h-3.5 w-3.5" />
+              {profile?.city ? `${COUNTRY_FLAGS[countryOfCity(profile.city)] ?? ""} ${profile.city}` : "Ville non renseignée"}
+            </span>
+            {profile?.whatsapp && (
+              <span className="inline-flex items-center gap-1.5">
+                <MessageCircle className="h-3.5 w-3.5" /> {profile.whatsapp}
+              </span>
+            )}
+            {profile?.phone && (
+              <span className="inline-flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5" /> {profile.phone}
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1.5">
+              <Mail className="h-3.5 w-3.5" /> {user?.email}
             </span>
           </div>
 
-          <datalist id="profile-cities">
-            {WEST_AFRICA_CITIES.map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
+          {/* ===== À propos (lecture seule) ===== */}
+          {profile?.bio && (
+            <div className="mt-4 text-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">À propos</p>
+              <p className="mt-1 leading-relaxed text-muted-foreground">{profile.bio}</p>
+            </div>
+          )}
 
           {/* ===== Badge « Fournisseur vérifié » — version compacte ===== */}
           {isVerified ? (
@@ -462,7 +416,7 @@ function ProfilePage() {
           <div className="relative grid grid-cols-3">
             <span
               aria-hidden
-              className="absolute inset-y-0 left-0 w-1/3 rounded-xl bg-background shadow-sm transition-transform duration-300 ease-out"
+              className="absolute inset-y-0 left-0 w-1/3 rounded-xl bg-volt shadow-sm transition-transform duration-300 ease-out"
               style={{ transform: `translateX(${TAB_IDS.indexOf(tab) * 100}%)` }}
             />
             {TAB_IDS.map((id) => {
@@ -475,14 +429,14 @@ function ProfilePage() {
                   aria-selected={active}
                   role="tab"
                   className={`relative z-10 flex items-center justify-center gap-1 rounded-xl px-2 py-2.5 text-[11px] font-semibold transition-colors sm:text-sm ${
-                    active ? "text-foreground" : "text-muted-foreground"
+                    active ? "text-volt-foreground" : "text-muted-foreground"
                   }`}
                 >
                   {TAB_LABELS[id]}
                   {count !== null && (
                     <span
                       className={`rounded-full px-1.5 py-0.5 text-[10px] ${
-                        active ? "bg-volt/20 text-foreground" : "bg-muted-foreground/15"
+                        active ? "bg-volt-foreground/20 text-volt-foreground" : "bg-muted-foreground/15"
                       }`}
                     >
                       {count}
@@ -704,6 +658,15 @@ function ProfilePage() {
         onOpenChange={setPayOpen}
         shopName={profile?.shop_name}
         contactName={profile?.full_name}
+      />
+
+      {/* Fenêtre unique de modification du profil */}
+      <ProfileEditDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        profile={profile}
+        email={user?.email}
+        onSaved={load}
       />
 
       {/* Passage à une offre payante (badge / PRO) */}

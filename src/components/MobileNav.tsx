@@ -1,10 +1,15 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { IconHome, IconHeart, IconSell, IconUser, IconStock } from "@/components/icons";
+import { Lock, MessageCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useMobileAction } from "@/lib/mobile-action";
 
 export function MobileNav() {
   const { user } = useAuth();
   const { pathname } = useLocation();
+  // Sur une fiche produit, le bouton central devient l'action d'achat :
+  // la navigation reste entièrement visible (on ne masque plus la barre).
+  const action = useMobileAction();
 
   // Same 5 icons whether logged in or not.
   // Unauthenticated taps go through /auth with a redirect back.
@@ -47,6 +52,45 @@ export function MobileNav() {
               pathname === matchPath ||
               (matchPath !== "/" && pathname.startsWith(matchPath));
             if ((it as any).primary) {
+              // Action d'achat prioritaire sur une fiche produit
+              if (action) {
+                const external = action.href.startsWith("http");
+                const inner = (
+                  <>
+                    <span className="grid h-12 w-12 place-items-center rounded-full bg-volt text-volt-foreground shadow-lg shadow-volt/40">
+                      {action.icon === "login" ? (
+                        <Lock className="h-5 w-5" strokeWidth={2.25} />
+                      ) : (
+                        <MessageCircle className="h-5 w-5" strokeWidth={2.25} />
+                      )}
+                    </span>
+                    <span className="mt-0.5 text-[10px] font-bold">{action.label}</span>
+                  </>
+                );
+
+                return external ? (
+                  <a
+                    key={idx}
+                    href={action.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={action.ariaLabel}
+                    className="flex flex-col items-center justify-center py-2 -mt-5"
+                  >
+                    {inner}
+                  </a>
+                ) : (
+                  <a
+                    key={idx}
+                    href={action.href}
+                    aria-label={action.ariaLabel}
+                    className="flex flex-col items-center justify-center py-2 -mt-5"
+                  >
+                    {inner}
+                  </a>
+                );
+              }
+
               return (
                 <Link
                   key={idx}
