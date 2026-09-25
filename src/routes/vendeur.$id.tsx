@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { MobileFooter } from "@/components/MobileFooter";
 import { MobileNav } from "@/components/MobileNav";
 import { ProductCard, type ListingProduct } from "@/components/ProductCard";
+import { BackLink } from "@/components/BackLink";
 import { Button } from "@/components/ui/button";
 import { JsonLd } from "@/components/JsonLd";
 import { VerifiedBadge, VerifiedBadgeGold } from "@/components/VerifiedBadge";
@@ -13,7 +14,7 @@ import { buildSeoHead, breadcrumbLd, SITE_URL } from "@/lib/seo";
 import { COUNTRY_FLAGS, countryOfCity } from "@/lib/constants";
 import { whatsappLink } from "@/lib/format";
 import { toast } from "sonner";
-import { ArrowLeft, Copy, Eye, Heart, MapPin, MessageCircle, Package, Phone, Share2, Store } from "lucide-react";
+import { Copy, Eye, Heart, MapPin, MessageCircle, Package, Phone, Share2, Store } from "lucide-react";
 
 const formatCount = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n));
 
@@ -162,12 +163,11 @@ function SellerPage() {
           </div>
 
           <div className="px-4 pb-5 sm:px-6">
-            <Link
-              to="/"
+            <BackLink
+              fallback="/"
+              label="Retour aux produits"
               className="inline-flex items-center gap-1.5 pt-3 text-xs text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" /> Retour aux produits
-            </Link>
+            />
 
             {!seller && products !== null && products.length === 0 ? (
               <div className="py-10 text-center">

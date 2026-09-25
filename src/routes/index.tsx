@@ -168,15 +168,56 @@ function Index() {
     return (data as Product[] | null) ?? [];
   };
 
+  // Mémoire de pagination : si l'acheteur revient sur l'accueil après avoir
+  // consulté une fiche, on recharge le même nombre de produits qu'avant son
+  // départ — sinon la page serait trop courte et il perdrait sa place.
+  const pageKey = `stockme:home:count:${JSON.stringify([
+    search.country,
+    search.city,
+    search.category,
+    search.q,
+    search.verified,
+    sort,
+  ])}`;
+
+  const rememberCount = (count: number) => {
+    try {
+      sessionStorage.setItem(pageKey, String(count));
+    } catch {
+      /* navigation privée : sans effet */
+    }
+  };
+
+  const readCount = () => {
+    try {
+      return Math.max(PAGE_SIZE, Number(sessionStorage.getItem(pageKey) ?? PAGE_SIZE) || PAGE_SIZE);
+    } catch {
+      return PAGE_SIZE;
+    }
+  };
+
+  /** Charge assez de pages pour atteindre `wanted` produits. */
+  const fetchMany = async (wanted: number) => {
+    const pages = Math.max(1, Math.ceil(wanted / PAGE_SIZE));
+    const all: Product[] = [];
+    let last: Product[] = [];
+    for (let i = 0; i < pages; i++) {
+      last = await fetchPage(i * PAGE_SIZE);
+      all.push(...last);
+      if (last.length < PAGE_SIZE) break;
+    }
+    return { list: all, more: last.length === PAGE_SIZE };
+  };
+
   useEffect(() => {
     let cancel = false;
     setItems(null);
     setHasMore(false);
     (async () => {
-      const list = await fetchPage(0);
+      const { list, more } = await fetchMany(readCount());
       if (cancel) return;
       setItems(list);
-      setHasMore(list.length === PAGE_SIZE);
+      setHasMore(more);
     })();
     return () => {
       cancel = true;
@@ -187,7 +228,11 @@ function Index() {
     if (!items || loadingMore) return;
     setLoadingMore(true);
     const list = await fetchPage(items.length);
-    setItems((prev) => [...(prev ?? []), ...list]);
+    setItems((prev) => {
+      const next = [...(prev ?? []), ...list];
+      rememberCount(next.length);
+      return next;
+    });
     setHasMore(list.length === PAGE_SIZE);
     setLoadingMore(false);
   };

@@ -10,10 +10,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { IntensityGauge, computeIntensity } from "@/components/IntensityGauge";
 import { JsonLd } from "@/components/JsonLd";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { BackLink } from "@/components/BackLink";
 import { clearMobileAction, setMobileAction } from "@/lib/mobile-action";
 import { buildSeoHead, productLd, breadcrumbLd } from "@/lib/seo";
 import { countryOfCity, isAdminEmail } from "@/lib/constants";
-import { ArrowLeft, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Eye, Heart, Lock, MapPin, MessageCircle, Package, Phone, Share2, ShieldCheck, Store, Zap } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Eye, Heart, Lock, MapPin, MessageCircle, Package, Phone, Share2, ShieldCheck, Store, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 type Product = {
@@ -379,9 +380,7 @@ function ProductPage() {
       <Header />
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-4 sm:py-8">
         <div className="flex items-center justify-between mb-4 sm:mb-6">
-          <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" /> Retour
-          </Link>
+          <BackLink fallback="/" label="Retour" />
           <div className="flex items-center gap-2">
             <button onClick={share} className="grid h-9 w-9 place-items-center rounded-full border border-border bg-card hover:bg-accent" aria-label="Partager">
               <Share2 className="h-4 w-4" />

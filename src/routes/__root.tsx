@@ -13,6 +13,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { JsonLd } from "@/components/JsonLd";
 import { WhatsAppGroupPopup } from "@/components/WhatsAppGroupPopup";
+import { ScrollKeeper } from "@/components/ScrollKeeper";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { useEffect } from "react";
 import {
@@ -144,6 +145,9 @@ function RootComponent() {
         </SidebarProvider>
       )}
       {!isAdminLayout && <WhatsAppGroupPopup />}
+      {/* Mémoire de défilement : le retour depuis une fiche produit ramène à la
+          position exacte dans la liste, sur tout le site. */}
+      <ScrollKeeper />
       <JsonLd data={organizationLd()} />
       <JsonLd data={webSiteLd()} />
       <Toaster richColors position="top-right" />
