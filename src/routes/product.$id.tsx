@@ -11,6 +11,7 @@ import { IntensityGauge, computeIntensity } from "@/components/IntensityGauge";
 import { JsonLd } from "@/components/JsonLd";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { BackLink } from "@/components/BackLink";
+import { normalizeTiers, tierRangeLabel, lowestTierPrice } from "@/lib/price-tiers";
 import { clearMobileAction, setMobileAction } from "@/lib/mobile-action";
 import { buildSeoHead, productLd, breadcrumbLd } from "@/lib/seo";
 import { countryOfCity, isAdminEmail } from "@/lib/constants";
@@ -24,6 +25,8 @@ type Product = {
   images: string[]; owner_id: string; whatsapp: string | null;
   published: boolean; sold_out: boolean; dropshipping: boolean;
   sizes: string[]; colors: string[]; weight_grams: number | null;
+  /** Paliers de prix par quantité (jsonb côté base). */
+  price_tiers?: unknown;
 };
 type Profile = { full_name: string | null; whatsapp: string | null; phone: string | null; city: string | null; shop_name: string | null; avatar_url?: string | null };
 type PublicSeller = {
@@ -369,6 +372,8 @@ function ProductPage() {
   const wa = waNumber ? whatsappLink(waNumber, waMsg) : null;
   const img = product.images[activeImg];
   const hasPromo = product.promo_price_fcfa && product.promo_price_fcfa < product.price_fcfa;
+  /** Paliers de prix dégressifs : plus l'acheteur prend, moins l'unité coûte. */
+  const tiers = normalizeTiers(product.price_tiers);
 
   const stats = sellerStats;
   const contactRate = stats && stats.total_views > 0 ? Math.round((stats.total_contacts / stats.total_views) * 100) : 0;
@@ -465,12 +470,41 @@ function ProductPage() {
                 <div className="flex items-baseline gap-3 flex-wrap">
                   <div className="text-3xl sm:text-4xl font-bold tracking-tight">{formatFCFA(product.promo_price_fcfa!)}</div>
                   <div className="text-base line-through text-muted-foreground">{formatFCFA(product.price_fcfa)}</div>
-                  <span className="rounded-full bg-volt text-volt-foreground px-2 py-0.5 text-[10px] font-bold">PROMO</span>
+                  <span className="rounded-full bg-destructive px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
+                    −{Math.round((1 - product.promo_price_fcfa! / product.price_fcfa) * 100)} %
+                  </span>
                 </div>
               ) : (
                 <div className="text-3xl sm:text-4xl font-bold tracking-tight">{formatFCFA(product.price_fcfa)}</div>
               )}
               <div className="mt-1 text-sm text-muted-foreground">prix unitaire</div>
+
+              {/* ---------- Prix dégressifs : plus l'acheteur prend, moins c'est cher ---------- */}
+              {tiers.length > 0 && (
+                <div className="mt-4 overflow-hidden rounded-xl border border-border">
+                  <div className="grid grid-cols-2 bg-muted/60 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <span>Quantité (pièces)</span>
+                    <span className="text-right">Prix unitaire</span>
+                  </div>
+                  {tiers.map((t, i) => {
+                    const best = t.price === lowestTierPrice(tiers);
+                    return (
+                      <div
+                        key={`${t.from}-${t.to ?? "plus"}`}
+                        className={`grid grid-cols-2 px-3 py-2 text-sm ${
+                          i % 2 ? "bg-background" : "bg-card"
+                        } ${best ? "font-semibold" : ""}`}
+                      >
+                        <span>
+                          {tierRangeLabel(t)}
+                          {best && <span className="ml-2 text-[10px] font-bold uppercase text-destructive">Meilleur prix</span>}
+                        </span>
+                        <span className="text-right font-semibold">{formatFCFA(t.price)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               <div className="mt-5 grid grid-cols-2 gap-4 text-sm">
                 <div>

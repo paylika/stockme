@@ -12,9 +12,11 @@ import {
   SENEGAL_REGIONS,
   SENEGAL_REGION_NAMES,
 } from "@/lib/constants";
-import { ImagePlus, X } from "lucide-react";
+import { ImagePlus, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { MAX_PHOTOS, MAX_PHOTO_SIZE } from "@/lib/image-upload";
+import { formatFCFA } from "@/lib/format";
+import { normalizeTiers, validateTiers, type PriceTier } from "@/lib/price-tiers";
 
 export type FormImage = { url?: string; file?: File; preview: string };
 
@@ -34,6 +36,8 @@ export type ProductFormValues = {
   sizes: string[];
   colors: string[];
   weight_grams: number | null;
+  /** Paliers de prix par quantité (facultatif) : plus on prend, moins c'est cher. */
+  price_tiers: PriceTier[] | null;
   existingImages: string[];
   newFiles: File[];
 };
@@ -54,6 +58,7 @@ export type ProductFormInitial = {
   sizes: string[];
   colors: string[];
   weight_grams: number | null;
+  price_tiers?: unknown;
   images: string[];
 };
 
@@ -93,8 +98,13 @@ export function ProductForm({
   });
   const [zone, setZone] = useState(initial?.zone ?? "");
   const [price, setPrice] = useState<number | "">(initial?.price_fcfa ?? "");
+  // Le prix promo est FACULTATIF : vide = pas de promotion, donc pas de badge.
   const [promoPrice, setPromoPrice] = useState<number | "">(
     initial?.promo_price_fcfa ?? "",
+  );
+  // Paliers de prix par quantité : de X à Y pièces → Z F l'unité.
+  const [tiers, setTiers] = useState<{ from: number | ""; to: number | ""; price: number | "" }[]>(
+    () => normalizeTiers(initial?.price_tiers).map((t) => ({ from: t.from, to: t.to ?? "", price: t.price })),
   );
   const [revenue, setRevenue] = useState<number | "">(initial?.revenue_fcfa ?? "");
   const [quantity, setQuantity] = useState<number | "">(initial?.quantity ?? "");
@@ -204,14 +214,23 @@ export function ProductForm({
     if (!category || !city) return stop("Catégorie et localité requises");
     if (totalImages < 1 || totalImages > maxPhotos)
       return stop(`Ajoutez entre 1 et ${maxPhotos} photos.`);
-    if (price === "" || promoPrice === "" || quantity === "" || moq === "")
-      return stop("Prix avant, prix maintenant, stock et MOQ requis");
-    if (Number(price) <= 0 || Number(promoPrice) <= 0)
-      return stop("Les prix doivent être supérieurs à 0");
-    if (Number(promoPrice) > Number(price)) {
-      return stop("Le prix maintenant ne peut pas dépasser le prix avant");
+    if (price === "" || quantity === "" || moq === "")
+      return stop("Prix, stock et MOQ requis");
+    if (Number(price) <= 0) return stop("Le prix doit être supérieur à 0");
+    const promoValue = promoPrice === "" ? null : Number(promoPrice);
+    if (promoValue !== null) {
+      if (promoValue <= 0) return stop("Le prix promo doit être supérieur à 0");
+      if (promoValue >= Number(price))
+        return stop("Le prix promo doit être INFÉRIEUR au prix normal (sinon il n'y a pas de promotion)");
     }
     if (Number(quantity) < 0 || Number(moq) < 1) return stop("Stock ou MOQ invalide");
+
+    // Paliers de prix : quantités croissantes, prix décroissants, dans le MOQ.
+    const cleanTiers: PriceTier[] = tiers
+      .filter((t) => t.from !== "" && t.price !== "")
+      .map((t) => ({ from: Number(t.from), to: t.to === "" ? null : Number(t.to), price: Number(t.price) }));
+    const tierError = validateTiers(cleanTiers, Number(moq), promoValue ?? Number(price));
+    if (tierError) return stop(tierError);
     if (normalizedWhatsapp.length < 9) {
       return stop("Numéro WhatsApp obligatoire avec indicatif");
     }
@@ -225,7 +244,7 @@ export function ProductForm({
         city,
         zone: zone || "",
         price_fcfa: Number(price),
-        promo_price_fcfa: Number(promoPrice),
+        promo_price_fcfa: promoValue,
         revenue_fcfa: revenue === "" ? null : Number(revenue),
         quantity: Number(quantity),
         moq: Number(moq),
@@ -234,6 +253,7 @@ export function ProductForm({
         sizes,
         colors,
         weight_grams: weightKg === "" ? null : Math.round(Number(weightKg) * 1000),
+        price_tiers: cleanTiers.length > 0 ? cleanTiers : null,
         existingImages,
         newFiles,
       });
@@ -393,7 +413,7 @@ export function ProductForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <Label htmlFor="price">Prix avant (FCFA) *</Label>
+          <Label htmlFor="price">Prix normal (FCFA) *</Label>
           <Input
             id="price"
             type="number"
@@ -404,17 +424,36 @@ export function ProductForm({
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="promo">Prix maintenant (FCFA) *</Label>
+          <Label htmlFor="promo">Prix promo (FCFA) — facultatif</Label>
           <Input
             id="promo"
             type="number"
             min={0}
-            required
+            placeholder="laisser vide = pas de promo"
             value={promoPrice}
             onChange={(e) => setPromoPrice(e.target.value === "" ? "" : Number(e.target.value))}
           />
         </div>
       </div>
+
+      {/* Aperçu du badge rouge : on montre au vendeur ce que l'acheteur verra. */}
+      {promoPrice !== "" && Number(price) > 0 && Number(promoPrice) < Number(price) && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs">
+          <span className="inline-flex items-center gap-1 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+            −{Math.round((1 - Number(promoPrice) / Number(price)) * 100)} % promo
+          </span>
+          <span className="text-muted-foreground">
+            Vos acheteurs verront{" "}
+            <strong className="text-foreground">{formatFCFA(Number(promoPrice))}</strong> au lieu de{" "}
+            <span className="line-through">{formatFCFA(Number(price))}</span>.
+          </span>
+        </div>
+      )}
+      {promoPrice !== "" && Number(price) > 0 && Number(promoPrice) >= Number(price) && (
+        <p className="rounded-xl border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+          Le prix promo doit être inférieur au prix normal.
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
@@ -439,6 +478,96 @@ export function ProductForm({
             onChange={(e) => setMoq(e.target.value === "" ? "" : Number(e.target.value))}
           />
         </div>
+      </div>
+
+      {/* ===== Paliers de prix (le cœur du gros) ===== */}
+      <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
+        <div>
+          <Label>Prix dégressifs par quantité — recommandé</Label>
+          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+            Comme sur Alibaba : plus l'acheteur prend de pièces, moins l'unité lui coûte. Exemple : de 10 à 99 pièces à
+            1 000 F, puis de 100 à 499 à 800 F, et 650 F au-delà de 500. Les acheteurs en gros cherchent exactement ça —
+            les fiches avec paliers reçoivent nettement plus de commandes.
+          </p>
+        </div>
+
+        {tiers.map((t, i) => (
+          <div key={i} className="flex flex-wrap items-end gap-2 rounded-xl border border-border bg-muted/30 p-2.5">
+            <div className="space-y-1">
+              <Label className="text-[11px]">De (pièces)</Label>
+              <Input
+                type="number"
+                min={1}
+                value={t.from}
+                onChange={(e) =>
+                  setTiers((prev) =>
+                    prev.map((row, j) => (j === i ? { ...row, from: e.target.value === "" ? "" : Number(e.target.value) } : row)),
+                  )
+                }
+                className="h-9 w-24"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px]">À (vide = et plus)</Label>
+              <Input
+                type="number"
+                min={1}
+                placeholder="et plus"
+                value={t.to}
+                onChange={(e) =>
+                  setTiers((prev) =>
+                    prev.map((row, j) => (j === i ? { ...row, to: e.target.value === "" ? "" : Number(e.target.value) } : row)),
+                  )
+                }
+                className="h-9 w-24"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px]">Prix unitaire (FCFA)</Label>
+              <Input
+                type="number"
+                min={1}
+                value={t.price}
+                onChange={(e) =>
+                  setTiers((prev) =>
+                    prev.map((row, j) => (j === i ? { ...row, price: e.target.value === "" ? "" : Number(e.target.value) } : row)),
+                  )
+                }
+                className="h-9 w-28"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setTiers((prev) => prev.filter((_, j) => j !== i))}
+              className="mb-0.5 grid h-9 w-9 place-items-center rounded-lg border border-border text-muted-foreground hover:border-destructive/50 hover:text-destructive"
+              aria-label="Retirer ce palier"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={() =>
+            setTiers((prev) => {
+              // Pré-remplissage intelligent : on enchaîne après le dernier palier.
+              const last = prev[prev.length - 1];
+              const from = prev.length === 0 ? (moq === "" ? 10 : Number(moq)) : Number(last.to || 0) + 1 || 0;
+              return [...prev, { from, to: "", price: "" }];
+            })
+          }
+          disabled={tiers.length >= 4}
+          className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-volt/50 bg-volt/10 px-3 text-xs font-semibold disabled:opacity-50"
+        >
+          <Plus className="h-4 w-4" /> Ajouter un palier
+        </button>
+        {tiers.length > 0 && (
+          <p className="text-[11px] text-muted-foreground">
+            Le premier palier doit commencer à votre commande minimum ({moq === "" ? "MOQ" : moq} pièces) ou après, et
+            les prix doivent baisser quand la quantité augmente.
+          </p>
+        )}
       </div>
 
       {/* ===== Variantes & poids (optionnel) ===== */}

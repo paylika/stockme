@@ -77,6 +77,7 @@ function EditProduct() {
         sizes: data.sizes ?? [],
         colors: data.colors ?? [],
         weight_grams: data.weight_grams,
+        price_tiers: data.price_tiers,
         images: data.images ?? [],
       });
       setLoading(false);
@@ -114,6 +115,7 @@ function EditProduct() {
         sizes: values.sizes,
         colors: values.colors,
         weight_grams: values.weight_grams,
+        price_tiers: values.price_tiers,
       })
       .eq("id", id);
     if (error) throw new Error(error.message);

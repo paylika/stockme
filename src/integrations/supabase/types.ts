@@ -57,6 +57,8 @@ export type Database = {
           name: string
           owner_id: string
           price_fcfa: number
+          /** Paliers de prix par quantité : [{from,to,price}], to=null = « et plus ». */
+          price_tiers: unknown | null
           promo_price_fcfa: number | null
           published: boolean
           quantity: number
@@ -81,6 +83,7 @@ export type Database = {
           name: string
           owner_id: string
           price_fcfa: number
+          price_tiers?: unknown | null
           promo_price_fcfa?: number | null
           published?: boolean
           quantity?: number
@@ -105,6 +108,7 @@ export type Database = {
           name?: string
           owner_id?: string
           price_fcfa?: number
+          price_tiers?: unknown | null
           promo_price_fcfa?: number | null
           published?: boolean
           quantity?: number

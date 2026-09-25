@@ -83,10 +83,12 @@ function NewProduct() {
       sizes: values.sizes,
       colors: values.colors,
       weight_grams: values.weight_grams,
+      price_tiers: values.price_tiers,
     };
 
     let insertError: string | null = null;
     let productId: string | null = null;
+    let priceTiersDropped = false;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         const { data, error } = await supabase.from("products").insert(payload).select("id").single();
@@ -96,10 +98,24 @@ function NewProduct() {
         break;
       } catch (err) {
         insertError = err instanceof Error ? err.message : "erreur réseau";
+        // La colonne `price_tiers` n'existe pas encore (SQL non collé) : on
+        // retire les paliers et on republie immédiatement, sans bloquer le vendeur.
+        if (!priceTiersDropped && /price_tiers/i.test(insertError) && "price_tiers" in payload) {
+          delete (payload as { price_tiers?: unknown }).price_tiers;
+          priceTiersDropped = true;
+          attempt = 0;
+          continue;
+        }
         if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 1000));
       }
     }
     if (insertError) throw new Error(`Produit non publié : ${insertError}`);
+
+    // Protecteur : si la colonne des paliers de prix n'existe pas encore en base
+    // (script SQL non collé), on publie quand même le produit sans les paliers.
+    if (priceTiersDropped) {
+      toast.warning("Produit publié, mais les prix dégressifs n'ont pas pu être enregistrés.");
+    }
 
     // Le numéro WhatsApp du profil suit celui du produit (best effort).
     if (values.whatsapp) {

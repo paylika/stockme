@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Eye, Heart, MessageCircle, Megaphone } from "lucide-react";
+import { Eye, Heart, MessageCircle, Megaphone, Tag } from "lucide-react";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { normalizeTiers, lowestTierPrice } from "@/lib/price-tiers";
 import { formatFCFA } from "@/lib/format";
 import { IconPin as MapPin, IconBox as Package } from "@/components/icons";
 
@@ -23,6 +24,8 @@ export type ListingProduct = {
   seller_verified?: boolean;
   /** Renseigné par get_ranked_products : mise en avant payée encore active. */
   is_boosted?: boolean;
+  /** Paliers de prix par quantité (jsonb côté base). */
+  price_tiers?: unknown;
   views?: number;
   contacts?: number;
   favorites?: number;
@@ -51,6 +54,10 @@ export function ProductCard({ product, delayMs = 0, sponsored = false, sellerVer
     : 0;
   const showStock = typeof product.moq === "number" && typeof product.quantity === "number";
   const showStats = typeof product.views === "number" && typeof product.contacts === "number";
+  /** Paliers de prix : on affiche « dès X F » sur la carte, comme en gros. */
+  const tiers = normalizeTiers(product.price_tiers);
+  const bestTier = lowestTierPrice(tiers);
+  const basePrice = hasPromo ? (product.promo_price_fcfa as number) : product.price_fcfa;
 
   return (
     <Link
@@ -84,11 +91,11 @@ export function ProductCard({ product, delayMs = 0, sponsored = false, sellerVer
         ) : null}
         {hasPromo && (
           <span
-            className={`absolute rounded-full bg-volt px-2 py-0.5 text-[10px] font-bold text-volt-foreground ${
+            className={`absolute inline-flex items-center gap-1 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm ${
               sponsored ? "left-2 top-9" : "left-2 top-2"
             }`}
           >
-            -{discount}%
+            <Tag className="h-2.5 w-2.5" /> −{discount} %
           </span>
         )}
         {product.sold_out && (
@@ -123,6 +130,13 @@ export function ProductCard({ product, delayMs = 0, sponsored = false, sellerVer
         {showStock && (
           <div className="mt-1 text-[10px] text-muted-foreground sm:text-[11px]">
             MOQ {product.moq} · Stock {product.quantity}
+            {/* Prix dégressif : on annonce tout de suite le meilleur tarif. */}
+            {bestTier !== null && bestTier < basePrice && (
+              <>
+                {" · "}
+                <span className="font-semibold text-destructive">dès {formatFCFA(bestTier)}</span>
+              </>
+            )}
           </div>
         )}
         {showStats && (
