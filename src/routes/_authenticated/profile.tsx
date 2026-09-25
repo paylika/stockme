@@ -666,6 +666,13 @@ function ProfilePage() {
         onOpenChange={setEditOpen}
         profile={profile}
         email={user?.email}
+        userId={user?.id ?? ""}
+        canEditBanner={isVerified}
+        onRequestUpgrade={() => {
+          setEditOpen(false);
+          setUpgradePlan("verifie");
+          setUpgradeOpen(true);
+        }}
         onSaved={load}
       />
 

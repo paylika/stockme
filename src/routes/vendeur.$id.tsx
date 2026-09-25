@@ -8,11 +8,12 @@ import { ProductCard, type ListingProduct } from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import { JsonLd } from "@/components/JsonLd";
 import { VerifiedBadge, VerifiedBadgeGold } from "@/components/VerifiedBadge";
+import { ShopBanner } from "@/components/ShopBanner";
 import { buildSeoHead, breadcrumbLd, SITE_URL } from "@/lib/seo";
 import { COUNTRY_FLAGS, countryOfCity } from "@/lib/constants";
 import { whatsappLink } from "@/lib/format";
 import { toast } from "sonner";
-import { ArrowLeft, Copy, Eye, Heart, MapPin, MessageCircle, Package, Phone, Store } from "lucide-react";
+import { ArrowLeft, Copy, Eye, Heart, MapPin, MessageCircle, Package, Phone, Share2, Store } from "lucide-react";
 
 const formatCount = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n));
 
@@ -29,6 +30,9 @@ type PublicSeller = {
   verified_until?: string | null;
   phone?: string | null;
   whatsapp?: string | null;
+  banner_url?: string | null;
+  banner_position?: number | null;
+  plan?: string | null;
 };
 
 type SellerStats = {
@@ -146,99 +150,136 @@ function SellerPage() {
       <Header />
 
       <section className="border-b border-border">
-        <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
-          <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" /> Retour aux produits
-          </Link>
+        <div className="mx-auto max-w-4xl">
+          {/* Bannière de la boutique */}
+          <div className="sm:px-6 sm:pt-5">
+            <ShopBanner
+              src={seller?.banner_url ?? null}
+              position={seller?.banner_position ?? 50}
+              className="h-32 sm:h-44 sm:rounded-3xl"
+              overlay
+            />
+          </div>
 
-          {!seller && products !== null && products.length === 0 ? (
-            <div className="mt-10 text-center">
-              <h1 className="text-2xl font-bold">Boutique introuvable</h1>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Ce vendeur n'existe pas ou n'a plus de produit en ligne.
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-center">
-                <div className="grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-full bg-volt text-2xl font-bold text-volt-foreground">
-                  {seller?.avatar_url ? (
-                    <img src={seller.avatar_url} alt={displayName} className="h-full w-full object-cover" />
-                  ) : (
-                    <span>{initials}</span>
-                  )}
-                </div>
+          <div className="px-4 pb-5 sm:px-6">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 pt-3 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" /> Retour aux produits
+            </Link>
 
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">{displayName}</h1>
-                    {seller?.is_verified &&
-                      (seller.verified_until ? (
-                        <VerifiedBadge size="md" />
-                      ) : (
-                        <VerifiedBadgeGold size="md" />
-                      ))}
-                  </div>
-
-                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                    {seller?.city && (
-                      <span className="inline-flex items-center gap-1.5">
-                        <MapPin className="h-3.5 w-3.5" /> {COUNTRY_FLAGS[country ?? ""] ?? ""} {seller.city}
-                      </span>
-                    )}
-                    {seller?.created_at && (
-                      <span className="inline-flex items-center gap-1.5">
-                        <Store className="h-3.5 w-3.5" /> Membre depuis{" "}
-                        {new Date(seller.created_at).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}
-                      </span>
+            {!seller && products !== null && products.length === 0 ? (
+              <div className="py-10 text-center">
+                <h1 className="text-2xl font-bold">Boutique introuvable</h1>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Ce vendeur n'existe pas ou n'a plus de produit en ligne.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Avatar qui chevauche la bannière + identité */}
+                <div className="-mt-9 flex items-end gap-3 sm:-mt-12 sm:gap-4">
+                  <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-2xl border-4 border-background bg-volt text-xl font-bold text-volt-foreground sm:h-24 sm:w-24">
+                    {seller?.avatar_url ? (
+                      <img src={seller.avatar_url} alt={displayName} className="h-full w-full object-cover" />
+                    ) : (
+                      <span>{initials}</span>
                     )}
                   </div>
 
-                  {seller?.bio && (
-                    <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{seller.bio}</p>
-                  )}
+                  <div className="min-w-0 flex-1 pb-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h1 className="truncate font-display text-xl font-bold tracking-tight sm:text-2xl">
+                        {displayName}
+                      </h1>
+                      {seller?.is_verified && (seller.verified_until ? <VerifiedBadge compact /> : <VerifiedBadgeGold />)}
+                    </div>
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                      {seller?.city && (
+                        <span className="inline-flex items-center gap-1">
+                          <MapPin className="h-3 w-3" /> {COUNTRY_FLAGS[country ?? ""] ?? ""} {seller.city}
+                        </span>
+                      )}
+                      {seller?.created_at && (
+                        <span className="inline-flex items-center gap-1">
+                          <Store className="h-3 w-3" /> Membre depuis{" "}
+                          {new Date(seller.created_at).toLocaleDateString("fr-FR", {
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </span>
+                      )}
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="mt-6 grid max-w-lg grid-cols-2 gap-3 sm:grid-cols-4">
-                <Stat icon={<Package className="h-3.5 w-3.5" />} value={online} label="Produits" />
-                <Stat icon={<Eye className="h-3.5 w-3.5" />} value={stats?.total_views ?? 0} label="Vues" />
-                <Stat icon={<MessageCircle className="h-3.5 w-3.5" />} value={stats?.total_contacts ?? 0} label="Contacts" />
-                <Stat icon={<Heart className="h-3.5 w-3.5" />} value={stats?.total_favorites ?? 0} label="Favoris" />
-              </div>
+                {seller?.bio && (
+                  <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                    {seller.bio}
+                  </p>
+                )}
 
-              {/* ===== Contact direct du vendeur (bien visible) ===== */}
-              {sellerContact && (
-                <div className="mt-6 rounded-2xl border border-volt/40 bg-volt/10 p-4 sm:p-5">
-                  <div className="flex flex-wrap items-start gap-3">
-                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-volt text-volt-foreground">
-                      <MessageCircle className="h-5 w-5" />
-                    </span>
+                {/* Statistiques compactes sur une seule ligne */}
+                <div className="mt-3.5 flex flex-wrap items-center gap-2">
+                  <PillStat icon={Package} label="produits" value={online} />
+                  <PillStat icon={Eye} label="vues" value={stats?.total_views ?? 0} />
+                  <PillStat icon={MessageCircle} label="contacts" value={stats?.total_contacts ?? 0} />
+                  <PillStat icon={Heart} label="favoris" value={stats?.total_favorites ?? 0} />
 
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                        Numéro du vendeur — contact direct
-                      </p>
-                      <p className="mt-0.5 text-xl font-bold tracking-tight">{sellerContact}</p>
-                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                        C'est bien le numéro de <strong className="text-foreground">{displayName}</strong>. StockMe ne
-                        vend pas ces produits et ne reçoit pas les commandes : écrivez directement au vendeur.
-                      </p>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const link = `${SITE_URL}/vendeur/${id}`;
+                      try {
+                        if (navigator.share) await navigator.share({ title: displayName, url: link });
+                        else {
+                          await navigator.clipboard.writeText(link);
+                          toast.success("Lien de la boutique copié");
+                        }
+                      } catch {
+                        /* partage annulé */
+                      }
+                    }}
+                    className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-full border border-border px-3 text-[11px] font-semibold transition hover:bg-accent"
+                  >
+                    <Share2 className="h-3.5 w-3.5" /> Partager
+                  </button>
+                </div>
 
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <a href={waLink} target="_blank" rel="noopener noreferrer">
-                          <Button variant="volt" className="h-11">
-                            <MessageCircle className="mr-1.5 h-4 w-4" /> Écrire sur WhatsApp
-                          </Button>
+                {/* Contact : une ligne claire */}
+                {sellerContact && (
+                  <div className="mt-4 rounded-2xl border border-volt/40 bg-volt/10 px-3 py-2.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-volt text-volt-foreground">
+                        <MessageCircle className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                          Numéro du vendeur — contact direct
+                        </p>
+                        <p className="truncate text-base font-bold tracking-tight">{sellerContact}</p>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <a
+                          href={waLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex h-9 items-center gap-1.5 rounded-full bg-volt px-3 text-xs font-bold text-volt-foreground transition hover:brightness-110"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
                         </a>
-                        <a href={`tel:${sellerContact}`}>
-                          <Button variant="outline" className="h-11">
-                            <Phone className="mr-1.5 h-4 w-4" /> Appeler
-                          </Button>
+                        <a
+                          href={`tel:${sellerContact}`}
+                          aria-label="Appeler le vendeur"
+                          className="grid h-9 w-9 place-items-center rounded-full border border-border bg-background transition hover:bg-accent"
+                        >
+                          <Phone className="h-3.5 w-3.5" />
                         </a>
-                        <Button
-                          variant="outline"
-                          className="h-11"
+                        <button
+                          type="button"
+                          aria-label="Copier le numéro"
                           onClick={async () => {
                             try {
                               await navigator.clipboard.writeText(sellerContact);
@@ -247,16 +288,21 @@ function SellerPage() {
                               toast.error("Copie impossible");
                             }
                           }}
+                          className="grid h-9 w-9 place-items-center rounded-full border border-border bg-background transition hover:bg-accent"
                         >
-                          <Copy className="mr-1.5 h-4 w-4" /> Copier
-                        </Button>
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                     </div>
+                    <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+                      C'est bien le numéro de <strong className="text-foreground">{displayName}</strong>. StockMe ne
+                      vend pas ces produits et ne reçoit pas les commandes.
+                    </p>
                   </div>
-                </div>
-              )}
-            </>
-          )}
+                )}
+              </>
+            )}
+          </div>
         </div>
       </section>
 
@@ -310,5 +356,24 @@ function Stat({ icon, value, label }: { icon: React.ReactNode; value: number; la
       </div>
       <div className="mt-1 text-lg font-bold">{formatCount(value)}</div>
     </div>
+  );
+}
+
+/** Statistique compacte : une pastille, alignée sur une seule ligne. */
+function PillStat({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: number;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-[11px]">
+      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+      <strong className="font-bold">{formatCount(value)}</strong>
+      <span className="text-muted-foreground">{label}</span>
+    </span>
   );
 }

@@ -121,6 +121,8 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          banner_position: number
+          banner_url: string | null
           bio: string | null
           city: string | null
           created_at: string
@@ -138,6 +140,8 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          banner_position?: number
+          banner_url?: string | null
           bio?: string | null
           city?: string | null
           created_at?: string
@@ -154,6 +158,8 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          banner_position?: number
+          banner_url?: string | null
           bio?: string | null
           city?: string | null
           created_at?: string
@@ -799,6 +805,9 @@ export type Database = {
           verified_until: string | null
           phone: string | null
           whatsapp: string | null
+          banner_url: string | null
+          banner_position: number
+          plan: string | null
         } | null
       }
       get_verified_sellers: {

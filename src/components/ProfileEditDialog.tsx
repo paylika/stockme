@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { requireUserId } from "@/lib/current-user";
 import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
+import { BannerEditor } from "@/components/BannerEditor";
 import { COUNTRY_FLAGS, WEST_AFRICA_CITIES, countryOfCity } from "@/lib/constants";
 import { Camera, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -30,17 +31,31 @@ export type EditableProfile = {
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  profile: EditableProfile | null;
+  profile: (EditableProfile & { banner_url?: string | null; banner_position?: number | null }) | null;
   email?: string | null;
+  /** Identifiant du vendeur (pour le téléversement). */
+  userId: string;
+  /** La personnalisation de la bannière est réservée aux comptes vérifiés. */
+  canEditBanner: boolean;
+  onRequestUpgrade?: () => void;
   onSaved: () => void;
 };
 
 /**
- * UNE seule fenêtre pour tout modifier : photo, boutique, nom, description,
- * ville, téléphone et WhatsApp. L'e-mail est l'identifiant de connexion :
- * il reste en lecture seule.
+ * UNE seule fenêtre pour tout modifier : photo, bannière, boutique, nom,
+ * description, ville, téléphone et WhatsApp. L'e-mail est l'identifiant de
+ * connexion : il reste en lecture seule.
  */
-export function ProfileEditDialog({ open, onOpenChange, profile, email, onSaved }: Props) {
+export function ProfileEditDialog({
+  open,
+  onOpenChange,
+  profile,
+  email,
+  userId,
+  canEditBanner,
+  onRequestUpgrade,
+  onSaved,
+}: Props) {
   const [form, setForm] = useState<EditableProfile>({
     shop_name: "",
     full_name: "",
@@ -146,6 +161,23 @@ export function ProfileEditDialog({ open, onOpenChange, profile, email, onSaved 
             </label>
           </div>
         </div>
+
+        {/* Bannière de la boutique (réservée aux vérifiés, avec cadrage au doigt) */}
+        <BannerEditor
+          canEdit={canEditBanner}
+          bannerUrl={profile?.banner_url ?? null}
+          bannerPosition={profile?.banner_position ?? 50}
+          userId={userId}
+          onRequestUpgrade={onRequestUpgrade}
+          onChange={async (url, position) => {
+            const { error } = await supabase
+              .from("profiles")
+              .update({ banner_url: url, banner_position: position })
+              .eq("id", userId);
+            if (error) throw new Error(error.message);
+            onSaved();
+          }}
+        />
 
         {/* Identité */}
         <div className="grid gap-3 sm:grid-cols-2">
