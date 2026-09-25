@@ -345,7 +345,7 @@ function Index() {
             <div className="flex gap-3 sm:gap-4 px-4 sm:px-0 snap-x snap-mandatory">
               {winnerList.map((p, i) => (
                 <div key={p.id} className="w-[70%] sm:w-64 shrink-0 snap-start">
-                  <ProductCard product={p} sellerVerified={!!p.seller_verified} delayMs={i * 40} />
+                  <ProductCard product={p} sellerVerified={!!p.seller_verified} sponsored={!!p.is_boosted} delayMs={i * 40} />
                 </div>
               ))}
             </div>
@@ -430,7 +430,7 @@ function Index() {
                 </p>
                 <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
                   {elsewhere.map((p, i) => (
-                    <ProductCard key={p.id} product={p} sellerVerified={!!p.seller_verified} delayMs={i * 40} />
+                    <ProductCard key={p.id} product={p} sellerVerified={!!p.seller_verified} sponsored={!!p.is_boosted} delayMs={i * 40} />
                   ))}
                 </div>
               </section>
@@ -443,7 +443,7 @@ function Index() {
                 <ProductCard
                   key={row.adId ? `ad-${row.adId}` : row.product.id}
                   product={row.product}
-                  sponsored={!!row.adId}
+                  sponsored={!!row.adId || !!row.product.is_boosted}
                   sellerVerified={!!row.product.seller_verified}
                   onOpen={row.adId ? () => trackAdClick(row.adId) : undefined}
                   delayMs={(i % PAGE_SIZE) * 40}

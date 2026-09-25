@@ -9,7 +9,9 @@ import { usePaymentsStatus } from "@/lib/features";
 import { useAuth } from "@/hooks/useAuth";
 import { isAdminEmail } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
-import { CheckCircle2, Clock, XCircle } from "lucide-react";
+import { goToCheckout } from "@/lib/pay-client";
+import { planById } from "@/lib/pricing";
+import { CheckCircle2, Clock, XCircle, Sparkles } from "lucide-react";
 
 /**
  * Retour du navigateur après un paiement (Wave, Orange Money, carte).
@@ -24,6 +26,7 @@ type Intent = {
   status: string;
   provider: string;
   method: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 const LABELS: Record<string, string> = {
@@ -51,6 +54,8 @@ function PaymentReturn() {
   const [intent, setIntent] = useState<Intent | null>(null);
   const [loading, setLoading] = useState(true);
   const [tries, setTries] = useState(0);
+  const [stepLoading, setStepLoading] = useState(false);
+  const [stepError, setStepError] = useState<string | null>(null);
 
   // Même règle de visibilité que le reste du paiement : ouverte au public le
   // jour où l'interrupteur est activé, visible en aperçu pour les admins.
@@ -67,7 +72,7 @@ function PaymentReturn() {
     const check = async () => {
       const { data } = await supabase
         .from("payment_intents")
-        .select("id,purpose,amount_fcfa,status,provider,method")
+        .select("id,purpose,amount_fcfa,status,provider,method,metadata")
         .eq("id", intentId)
         .maybeSingle();
       if (cancel) return;
@@ -93,6 +98,29 @@ function PaymentReturn() {
 
   const paid = intent?.status === "paid";
   const cancelled = callbackStatus === "cancel";
+
+  // Pack « badge 1 an + PRO » : le badge est encaissé d'abord, puis on propose
+  // la 2e étape (PRO mensuel) sans que le vendeur ait à retrouver la fenêtre
+  // d'abonnement. Le montant vient de pricing.ts, jamais écrit en dur ici.
+  const proPlan = planById("pro");
+  const proMonthly = proPlan?.price ?? 2500;
+  const packStep2 = paid && intent?.metadata?.next_step === "pro";
+
+  const activatePro = async () => {
+    setStepError(null);
+    setStepLoading(true);
+    try {
+      await goToCheckout({
+        purpose: "subscription",
+        amount: proMonthly,
+        method: "card",
+        metadata: { days: proPlan?.days ?? 30, plan: "pro", source: "pack_step2" },
+      });
+    } catch (e) {
+      setStepError(e instanceof Error ? e.message : "Paiement impossible pour le moment.");
+      setStepLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -130,14 +158,39 @@ function PaymentReturn() {
             <p className="mt-2 text-sm text-muted-foreground">
               {formatFCFA(intent?.amount_fcfa ?? 0)} — {LABELS[intent?.purpose ?? ""] ?? "Paiement"}
             </p>
-            <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
-              <Link to="/profile">
-                <Button variant="volt" className="h-11 w-full">Voir mon compte</Button>
-              </Link>
-              <Link to="/dashboard">
-                <Button variant="outline" className="h-11 w-full">Mon stock</Button>
-              </Link>
-            </div>
+            {packStep2 ? (
+              <div className="mt-6 rounded-2xl border border-volt/40 bg-volt/5 p-4 text-left">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-volt" />
+                  <p className="text-sm font-semibold">Votre badge est actif ✓</p>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Dernière étape : activez StockMe PRO — {formatFCFA(proMonthly)}/mois (au lieu de 3 500 F).
+                  Mise en avant à 400 F/jour et 72 h offertes chaque mois. Résiliable à tout moment.
+                </p>
+                <Button
+                  variant="volt"
+                  className="mt-3 h-11 w-full"
+                  disabled={stepLoading}
+                  onClick={activatePro}
+                >
+                  {stepLoading ? "Ouverture du paiement…" : `Activer PRO — ${formatFCFA(proMonthly)}/mois`}
+                </Button>
+                {stepError ? <p className="mt-2 text-xs text-destructive">{stepError}</p> : null}
+                <Link to="/profile" className="mt-2 block text-center text-xs text-muted-foreground underline">
+                  Plus tard
+                </Link>
+              </div>
+            ) : (
+              <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+                <Link to="/profile">
+                  <Button variant="volt" className="h-11 w-full">Voir mon compte</Button>
+                </Link>
+                <Link to="/dashboard">
+                  <Button variant="outline" className="h-11 w-full">Mon stock</Button>
+                </Link>
+              </div>
+            )}
           </div>
         ) : cancelled ? (
           <div className="text-center">

@@ -32,6 +32,7 @@ import {
   Check,
   Eye,
   ExternalLink,
+  CreditCard,
   Heart,
   LogOut,
   Mail,
@@ -390,18 +391,47 @@ function ProfilePage() {
                   Le badge <strong className="text-foreground">Fournisseur vérifié</strong> rassure les acheteurs et
                   s'affiche sur toutes vos cartes produit. Nous contrôlons votre numéro WhatsApp et votre activité.
                 </p>
-                <ol className="space-y-0.5 text-[11px] text-muted-foreground">
-                  <li>1. Payez {VERIFIED_BADGE_PRICE_FCFA.toLocaleString("fr-FR")} FCFA (Wave / Orange Money) au {SERVICE_WHATSAPP_DISPLAY}</li>
-                  <li>2. Envoyez la capture sur WhatsApp</li>
-                  <li>3. Badge activé après vérification</li>
-                </ol>
-                <button
-                  type="button"
-                  onClick={() => setPayOpen(true)}
-                  className="inline-flex h-10 items-center gap-2 rounded-full bg-volt px-4 text-xs font-bold text-volt-foreground transition hover:brightness-110"
-                >
-                  <MessageCircle className="h-3.5 w-3.5" /> Payer {VERIFIED_BADGE_PRICE_FCFA.toLocaleString("fr-FR")} FCFA
-                </button>
+                {payments.enabled ? (
+                  <>
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                      Paiement par carte : le badge s'active <strong className="text-foreground">tout de suite</strong> après
+                      le paiement. Pas de carte ? Payez par Wave ou Orange Money et envoyez la capture.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUpgradePlan("verifie");
+                        setUpgradeOpen(true);
+                      }}
+                      className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-volt px-4 text-xs font-bold text-volt-foreground transition hover:brightness-110"
+                    >
+                      <CreditCard className="h-3.5 w-3.5" /> Payer par carte —{" "}
+                      {VERIFIED_BADGE_PRICE_FCFA.toLocaleString("fr-FR")} FCFA
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPayOpen(true)}
+                      className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full border border-volt/40 bg-transparent px-4 text-xs font-semibold text-foreground transition hover:bg-volt/10"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" /> Wave / Orange Money au {SERVICE_WHATSAPP_DISPLAY}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <ol className="space-y-0.5 text-[11px] text-muted-foreground">
+                      <li>1. Payez {VERIFIED_BADGE_PRICE_FCFA.toLocaleString("fr-FR")} FCFA (Wave / Orange Money) au {SERVICE_WHATSAPP_DISPLAY}</li>
+                      <li>2. Envoyez la capture sur WhatsApp</li>
+                      <li>3. Badge activé après vérification</li>
+                    </ol>
+                    <button
+                      type="button"
+                      onClick={() => setPayOpen(true)}
+                      className="inline-flex h-10 items-center gap-2 rounded-full bg-volt px-4 text-xs font-bold text-volt-foreground transition hover:brightness-110"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" /> Payer {VERIFIED_BADGE_PRICE_FCFA.toLocaleString("fr-FR")} FCFA
+                    </button>
+                  </>
+                )}
               </div>
             </details>
           )}

@@ -19,6 +19,8 @@ export type ListingProduct = {
   owner_id?: string | null;
   /** Renseigné par les fonctions de liste (le vendeur a le badge). */
   seller_verified?: boolean;
+  /** Renseigné par get_ranked_products : mise en avant payée encore active. */
+  is_boosted?: boolean;
   views?: number;
   contacts?: number;
   favorites?: number;
