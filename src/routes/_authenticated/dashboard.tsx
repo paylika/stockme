@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { formatFCFA } from "@/lib/format";
 import { AlertTriangle, BadgeCheck, Camera, Edit2, MapPin, Package, Pencil, Plus, Save, Trash2, UserRound, X } from "lucide-react";
 import { StatusSwitch } from "@/components/StatusSwitch";
+import { BoostButton, SellerMoneyProvider } from "@/components/SellerMoneyProvider";
 import { toast } from "sonner";
 
 type P = {
@@ -154,6 +155,8 @@ function Dashboard() {
           </div>
         )}
 
+        <SellerMoneyProvider defaultPhone={null} onChanged={load}>
+
         <div className="mt-8">
           {items === null ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -258,6 +261,9 @@ function Dashboard() {
                       >
                         <Pencil className="h-3.5 w-3.5" /> Modifier le produit
                       </Link>
+                      <div className="flex justify-center pt-1">
+                        <BoostButton productId={p.id} productName={p.name} />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -265,6 +271,7 @@ function Dashboard() {
             </div>
           )}
         </div>
+        </SellerMoneyProvider>
       </div>
       <MobileFooter />
       <MobileNav />

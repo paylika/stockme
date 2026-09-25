@@ -445,6 +445,20 @@ export type Database = {
         Args: Record<string, never>
         Returns: Record<string, unknown>
       }
+      boost_start: {
+        Args: {
+          p_product_id: string
+          p_daily_budget?: number
+        }
+        Returns: Record<string, unknown>
+      }
+      boost_set_status: {
+        Args: {
+          p_campaign_id: string
+          p_status: string
+        }
+        Returns: Record<string, unknown>
+      }
       admin_payments_overview: {
         Args: Record<string, never>
         Returns: Record<string, unknown>

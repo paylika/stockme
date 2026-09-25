@@ -19,6 +19,7 @@ import { Route as LegalRouteImport } from './routes/legal'
 import { Route as AdminAdminRouteImport } from './routes/_admin/admin'
 import { Route as AdminAdsRouteImport } from './routes/_admin/ads'
 import { Route as AdminProductsRouteImport } from './routes/_admin/products'
+import { Route as AdminRevenueRouteImport } from './routes/_admin/revenue'
 import { Route as AdminUsersRouteImport } from './routes/_admin/users'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedFavoritesRouteImport } from './routes/_authenticated/favorites'
@@ -85,6 +86,11 @@ const AdminAdsRoute = AdminAdsRouteImport.update({
 const AdminProductsRoute = AdminProductsRouteImport.update({
   id: '/products',
   path: '/products',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminRevenueRoute = AdminRevenueRouteImport.update({
+  id: '/revenue',
+  path: '/revenue',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
@@ -195,6 +201,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminAdminRoute
   '/ads': typeof AdminAdsRoute
   '/products': typeof AdminProductsRoute
+  '/revenue': typeof AdminRevenueRoute
   '/users': typeof AdminUsersRoute
   '/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/favorites': typeof AuthenticatedFavoritesRoute
@@ -224,6 +231,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminAdminRoute
   '/ads': typeof AdminAdsRoute
   '/products': typeof AdminProductsRoute
+  '/revenue': typeof AdminRevenueRoute
   '/users': typeof AdminUsersRoute
   '/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/favorites': typeof AuthenticatedFavoritesRoute
@@ -256,6 +264,7 @@ export interface FileRoutesById {
   '/_admin/admin': typeof AdminAdminRoute
   '/_admin/ads': typeof AdminAdsRoute
   '/_admin/products': typeof AdminProductsRoute
+  '/_admin/revenue': typeof AdminRevenueRoute
   '/_admin/users': typeof AdminUsersRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/_authenticated/favorites': typeof AuthenticatedFavoritesRoute
@@ -287,6 +296,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/ads'
     | '/products'
+    | '/revenue'
     | '/users'
     | '/dashboard'
     | '/favorites'
@@ -316,6 +326,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/ads'
     | '/products'
+    | '/revenue'
     | '/users'
     | '/dashboard'
     | '/favorites'
@@ -347,6 +358,7 @@ export interface FileRouteTypes {
     | '/_admin/admin'
     | '/_admin/ads'
     | '/_admin/products'
+    | '/_admin/revenue'
     | '/_admin/users'
     | '/_authenticated/dashboard'
     | '/_authenticated/favorites'
@@ -456,6 +468,13 @@ declare module '@tanstack/react-router' {
       path: '/products'
       fullPath: '/products'
       preLoaderRoute: typeof AdminProductsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/revenue': {
+      id: '/_admin/revenue'
+      path: '/revenue'
+      fullPath: '/revenue'
+      preLoaderRoute: typeof AdminRevenueRouteImport
       parentRoute: typeof AdminRoute
     }
     '/_admin/users': {
@@ -598,6 +617,7 @@ interface AdminRouteChildren {
   AdminAdminRoute: typeof AdminAdminRoute
   AdminAdsRoute: typeof AdminAdsRoute
   AdminProductsRoute: typeof AdminProductsRoute
+  AdminRevenueRoute: typeof AdminRevenueRoute
   AdminUsersRoute: typeof AdminUsersRoute
 }
 
@@ -605,6 +625,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAdminRoute: AdminAdminRoute,
   AdminAdsRoute: AdminAdsRoute,
   AdminProductsRoute: AdminProductsRoute,
+  AdminRevenueRoute: AdminRevenueRoute,
   AdminUsersRoute: AdminUsersRoute,
 }
 

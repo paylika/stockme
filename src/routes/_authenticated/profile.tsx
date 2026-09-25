@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { StatusSwitch } from "@/components/StatusSwitch";
 import { VerifiedBadge, VerifiedBadgeGold } from "@/components/VerifiedBadge";
 import { VerifiedPaymentDialog } from "@/components/VerifiedPaymentDialog";
+import { BoostButton, SellerMoneyProvider } from "@/components/SellerMoneyProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
@@ -390,6 +391,8 @@ function ProfilePage() {
           Activez ou désactivez chaque réglage d'un simple appui : la ligne entière est cliquable.
         </p>
 
+        <SellerMoneyProvider defaultPhone={profile?.whatsapp} onChanged={load}>
+
         {products === null ? (
           <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-3">
             {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-56 rounded-2xl shimmer bg-muted" />)}
@@ -466,14 +469,17 @@ function ProfilePage() {
                       />
                     </div>
 
-                    <div className="mt-auto flex items-center justify-between border-t border-border pt-2">
-                      <Link
-                        to="/dashboard/edit/$id"
-                        params={{ id: p.id }}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold hover:text-primary"
-                      >
-                        <Pencil className="h-3.5 w-3.5" /> Modifier
-                      </Link>
+                    <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-2">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to="/dashboard/edit/$id"
+                          params={{ id: p.id }}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold hover:text-primary"
+                        >
+                          <Pencil className="h-3.5 w-3.5" /> Modifier
+                        </Link>
+                        <BoostButton productId={p.id} productName={p.name} />
+                      </div>
                       <button
                         onClick={() => remove(p)}
                         className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive"
@@ -488,6 +494,8 @@ function ProfilePage() {
             })}
           </div>
         )}
+
+        </SellerMoneyProvider>
 
         {/* Logout */}
         <div className="mt-8 border-t border-dashed border-border pt-6">
