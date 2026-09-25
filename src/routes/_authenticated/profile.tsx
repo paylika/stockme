@@ -13,7 +13,7 @@ import { ProfileEditDialog } from "@/components/ProfileEditDialog";
 import { ShopBanner } from "@/components/ShopBanner";
 import { UpgradeDialog } from "@/components/UpgradeDialog";
 import { usePaymentsStatus } from "@/lib/features";
-import { PAID_PLANS, PRO_AVAILABLE, VERIFICATION_BONUS_FCFA, planById, planOf, type PlanId } from "@/lib/pricing";
+import { PAID_PLANS, PRO_AVAILABLE, FREE_PRODUCTS, VERIFICATION_BONUS_FCFA, planById, planOf, type PlanId } from "@/lib/pricing";
 import { useAuth } from "@/hooks/useAuth";
 import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
@@ -809,9 +809,9 @@ function SponsorshipPanel({
     plan === "gratuit" ? "Gratuit" : plan === "verifie" ? "Fournisseur vérifié" : "StockMe PRO";
   const currentNote =
     plan === "gratuit"
-      ? "10 produits · 2 photos · mise en avant à 700 F/jour"
+      ? `${FREE_PRODUCTS} produits · 10 photos · mise en avant à 500 F/jour`
       : plan === "verifie"
-      ? "Badge actif · produits illimités · 10 photos · mise en avant à 500 F/jour"
+      ? "Badge actif · priorité dans la recherche · 1 500 F de mise en avant offerts"
       : "Badge actif · mise en avant à 400 F/jour · statistiques avancées";
 
   // Tant que PRO est masqué, la seule montée possible est le badge.
@@ -850,8 +850,9 @@ function SponsorshipPanel({
             {next.id === "verifie" ? (
               <>
                 Avec <strong className="text-foreground">Fournisseur vérifié</strong> : le badge sur toutes vos annonces,
-                10 photos, produits illimités, mise en avant à 500 F/jour et{" "}
-                <strong className="text-foreground">{formatFCFA(VERIFICATION_BONUS_FCFA)} de boost offerts</strong>.
+                la priorité dans la recherche, et{" "}
+                <strong className="text-foreground">{formatFCFA(VERIFICATION_BONUS_FCFA)} de mise en avant offerts</strong>{" "}
+                pour essayer (72 h).
                 {PRO_AVAILABLE && <> Ensuite, PRO se rajoute pour {formatFCFA(2500)}/mois.</>}
               </>
             ) : (

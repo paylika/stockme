@@ -142,9 +142,9 @@ function Dashboard() {
               <p className="text-sm font-bold">Votre boutique n'est pas encore vérifiée</p>
               <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
                 Le badge <strong className="text-foreground">Fournisseur vérifié</strong> s'affiche sur toutes vos
-                cartes produit et vous fait <strong className="text-foreground">remonter dans la recherche</strong>.
-                Sans lui : 2 photos par produit et 10 produits publiés maximum. Vérifié : 10 photos, publications
-                illimitées.
+                cartes produit et vous fait <strong className="text-foreground">remonter dans la recherche</strong>, y
+                compris dans les résultats de recherche par image. Il débloque aussi{" "}
+                <strong className="text-foreground">1 500 F de mise en avant offerts</strong> pour tester.
               </p>
             </div>
             <Link to="/profile">

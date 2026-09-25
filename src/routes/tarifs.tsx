@@ -9,7 +9,7 @@ import { UpgradeDialog } from "@/components/UpgradeDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { usePaymentsStatus } from "@/lib/features";
 import { buildSeoHead, SITE_URL } from "@/lib/seo";
-import { ALL_PLANS, PACK_TOTAL, PRO_AVAILABLE, SATISFACTION_GUARANTEE, VERIFICATION_BONUS_FCFA, planById } from "@/lib/pricing";
+import { ALL_PLANS, PACK_TOTAL, PRO_AVAILABLE, SATISFACTION_GUARANTEE, VERIFICATION_BONUS_FCFA, FREE_PRODUCTS, EXTRA_PUBLICATION_PRICE, MAX_PHOTOS_PER_PRODUCT, planById } from "@/lib/pricing";
 import { formatFCFA } from "@/lib/format";
 import { BadgeCheck, Check, Minus, Rocket, ShieldCheck, Sparkles, TrendingUp, X } from "lucide-react";
 
@@ -332,7 +332,19 @@ function PricingPage() {
 
       {/* ---------- Comparatif rapide ---------- */}
       <section className="mx-auto max-w-4xl px-4 pb-10 pt-8 sm:px-6">
-        <h2 className="text-lg font-bold tracking-tight sm:text-xl">Ce que ça change, concrètement</h2>
+        <h2 className="text-lg font-bold tracking-tight sm:text-xl">
+          {PRO_AVAILABLE ? "Ce que ça change, concrètement" : "Ce que ça change : gratuit ou vérifié"}
+        </h2>
+
+        {/* Ce qui est identique pour tout le monde : on le dit une fois, au lieu
+            de répéter les mêmes lignes dans un tableau. */}
+        <div className="mt-3 rounded-2xl border border-border bg-muted/40 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+          <strong className="text-foreground">Identique pour tout le monde :</strong> {FREE_PRODUCTS} produits publiés
+          offerts, {MAX_PHOTOS_PER_PRODUCT} photos par produit, et la mise en avant à 500 F par jour. Au-delà de{" "}
+          {FREE_PRODUCTS} produits, chaque publication coûte {formatFCFA(EXTRA_PUBLICATION_PRICE)}, prélevés sur votre
+          solde.
+        </div>
+
         <div className="mt-4 overflow-x-auto rounded-2xl border border-border bg-card">
           <table className="w-full min-w-[520px] text-sm">
             <thead className="bg-muted/50 text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -344,13 +356,12 @@ function PricingPage() {
             </thead>
             <tbody className="text-[13px]">
               {[
-                ["Produits publiés", "10 max", "Illimité"],
-                ["Photos par produit", "2", "10"],
                 ["Badge « Fournisseur vérifié »", "—", "Sur toutes vos annonces"],
                 ["Priorité dans la recherche", "—", "Oui"],
-                ["Mise en avant (par jour)", "700 F", PRO_AVAILABLE ? "500 F · 400 F en PRO" : "500 F"],
+                ["Recherche par image", "—", "Vos produits remontent d'abord"],
                 ["Mise en avant offerte", "—", `${formatFCFA(VERIFICATION_BONUS_FCFA)} (72 h)`],
                 ["Statistiques (vues, clics, contacts)", "De base", "Avancées"],
+                ["Assistance", "Standard", "Prioritaire WhatsApp"],
               ].map(([label, free, pro]) => (
                 <tr key={label} className="border-t border-border">
                   <td className="px-4 py-3 font-medium">{label}</td>

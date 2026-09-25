@@ -16,6 +16,17 @@
 
 export type PlanId = "gratuit" | "verifie" | "pro" | "pro_annuel";
 
+/**
+ * QUOTAS ET PRIX DE PUBLICATION — les mêmes pour tout le monde :
+ *   • 20 produits publiés offerts (gratuit compris) ;
+ *   • 10 photos par produit (gratuit compris) ;
+ *   • au-delà de 20 produits : 500 F par publication, prélevés sur le solde ;
+ *   • mise en avant : 500 F/jour, pour tous.
+ */
+export const FREE_PRODUCTS = 20;
+export const EXTRA_PUBLICATION_PRICE = 500;
+export const MAX_PHOTOS_PER_PRODUCT = 10;
+
 export type Plan = {
   id: PlanId;
   name: string;
@@ -46,15 +57,16 @@ export const FREE_PLAN = {
   name: "Gratuit",
   price: 0,
   period: "pour toujours",
-  boostPerDay: 700,
-  tagline: "Pour tester et vendre tranquillement",
+  boostPerDay: 500,
+  tagline: "Publiez vos produits et vendez dès aujourd'hui",
   features: [
-    "10 produits publiés",
-    "2 photos par produit",
+    `${FREE_PRODUCTS} produits publiés`,
+    `${MAX_PHOTOS_PER_PRODUCT} photos par produit`,
     "Statistiques de base (vues, contacts, favoris)",
-    "Mise en avant à 700 F/jour",
+    "Mise en avant à 500 F/jour",
+    `Au-delà de ${FREE_PRODUCTS} produits : ${EXTRA_PUBLICATION_PRICE} F par publication`,
   ],
-  missing: ["Fournisseur vérifié", "10 photos par produit", "Tarif réduit sur les mises en avant"],
+  missing: ["Badge Fournisseur vérifié", "Priorité dans la recherche", "1 500 F de mise en avant offerts"],
 };
 
 /** Type commun (offre gratuite incluse) pour l'affichage public. */
@@ -89,14 +101,12 @@ export const PAID_PLANS: Plan[] = [
     dbPlan: "verifie",
     boostPerDay: 500,
     tagline: "La confiance qui fait écrire les acheteurs",
-    badge: "L'étape 1",
+    badge: "Le badge",
     features: [
-      "Fournisseur vérifié sur toutes vos annonces",
-      "Produits illimités",
-      "10 photos par produit",
-      "Mise en avant à 500 F/jour au lieu de 700",
-      "72 h de mise en avant offertes (1 500 F crédités)",
-      "Priorité dans la recherche",
+      "Badge « Fournisseur vérifié » sur toutes vos annonces",
+      "Priorité dans la recherche (et dans les résultats de recherche par image)",
+      "1 500 F de mise en avant offerts pour essayer (72 h)",
+      "Statistiques avancées (vues, clics, contacts)",
       "Assistance prioritaire WhatsApp",
     ],
   },
@@ -147,12 +157,12 @@ export const PAID_PLANS: Plan[] = [
 /** Les 4 offres alignées, pour la page d'offres publique. */
 export const ALL_PLANS: AnyPlan[] = [FREE_PLAN, ...PAID_PLANS];
 
-/** Prix d'une journée de mise en avant selon l'offre. */
+/** Prix d'une journée de mise en avant — le MÊME pour tout le monde. */
 export const BOOST_DAILY_PRICE: Record<PlanId, number> = {
-  gratuit: 700,
+  gratuit: 500,
   verifie: 500,
-  pro: 400,
-  pro_annuel: 400,
+  pro: 500,
+  pro_annuel: 500,
 };
 
 /** Durée du bonus offert à la vérification (jours de mise en avant). */

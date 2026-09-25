@@ -6,7 +6,7 @@ import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
 import { ProductForm, ProductFormInitial, ProductFormValues } from "@/components/ProductForm";
 import { PhotoFailurePanel } from "@/components/PhotoFailurePanel";
-import { uploadImagesResilient, MAX_PHOTOS, FREE_MAX_PHOTOS, type UploadFailure } from "@/lib/image-upload";
+import { uploadImagesResilient, MAX_PHOTOS, type UploadFailure } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
 import { toast } from "sonner";
 
@@ -217,7 +217,7 @@ function EditProduct() {
             onSubmit={submit}
             submitLabel="Enregistrer"
             uploadingStatus={uploadingStatus}
-            maxPhotos={verifiedSeller ? MAX_PHOTOS : Math.max(FREE_MAX_PHOTOS, product?.images?.length ?? 0)}
+            maxPhotos={MAX_PHOTOS}
             onCancel={() => navigate({ to: "/dashboard" })}
           />
         </div>

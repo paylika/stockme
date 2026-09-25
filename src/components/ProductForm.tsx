@@ -334,12 +334,6 @@ export function ProductForm({
         <p className="text-xs text-muted-foreground">
           Ajoutez 1 à {maxPhotos} photos nettes du produit. Elles sont <strong className="text-foreground">compressées automatiquement</strong> avant l'envoi : la publication fonctionne même avec une connexion lente.
         </p>
-        {maxPhotos < MAX_PHOTOS && (
-          <p className="rounded-xl border border-volt/40 bg-volt/10 px-3 py-2 text-xs leading-relaxed">
-            Compte non vérifié : <strong>2 photos par produit</strong> et 10 produits publiés maximum. Faites vérifier
-            votre boutique (2 000 FCFA par an) pour aller jusqu'à 10 photos et publier sans limite.
-          </p>
-        )}
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">

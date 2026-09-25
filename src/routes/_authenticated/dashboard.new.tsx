@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { Header } from "@/components/Header";
@@ -9,6 +9,9 @@ import { PhotoFailurePanel } from "@/components/PhotoFailurePanel";
 import { Button } from "@/components/ui/button";
 import { uploadImagesResilient, MAX_PHOTOS, FREE_MAX_PHOTOS, type UploadFailure } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
+import { FREE_PRODUCTS, EXTRA_PUBLICATION_PRICE } from "@/lib/pricing";
+import { formatFCFA } from "@/lib/format";
+import { Package } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/dashboard/new")({
@@ -27,18 +30,25 @@ function NewProduct() {
   const [uploadingStatus, setUploadingStatus] = useState("");
   const [pending, setPending] = useState<Pending | null>(null);
   const [retrying, setRetrying] = useState(false);
-  // Compte gratuit : 2 photos. Fournisseur vérifié : 5.
+  // 10 photos par produit pour tout le monde (gratuit compris).
   const [maxPhotos, setMaxPhotos] = useState(FREE_MAX_PHOTOS);
+  /** Publications déjà en ligne, et solde : sert à prévenir du prix de 500 F. */
+  const [quota, setQuota] = useState<{ published: number; balance: number } | null>(null);
 
   useEffect(() => {
     (async () => {
       const { data: s } = await supabase.auth.getSession();
       const uid = s.session?.user?.id;
       if (!uid) return;
-      const { data } = await supabase.from("profiles").select("verified,verified_until").eq("id", uid).maybeSingle();
-      const p = data as { verified: boolean; verified_until: string | null } | null;
+      const [{ data: prof }, { count }, { data: wallet }] = await Promise.all([
+        supabase.from("profiles").select("verified,verified_until").eq("id", uid).maybeSingle(),
+        supabase.from("products").select("id", { count: "exact", head: true }).eq("owner_id", uid).eq("published", true),
+        supabase.from("wallets").select("balance_fcfa").eq("user_id", uid).maybeSingle(),
+      ]);
+      const p = prof as { verified: boolean; verified_until: string | null } | null;
       const ok = !!p?.verified && (!p.verified_until || new Date(p.verified_until) > new Date());
       setMaxPhotos(ok ? MAX_PHOTOS : FREE_MAX_PHOTOS);
+      setQuota({ published: count ?? 0, balance: (wallet as { balance_fcfa: number } | null)?.balance_fcfa ?? 0 });
     })();
   }, []);
 
@@ -188,6 +198,42 @@ function NewProduct() {
         <p className="mt-1 text-sm text-muted-foreground">
           Photos, prix, localité et WhatsApp sont obligatoires.
         </p>
+
+        {/* Prix de la publication au-delà du quota offert : le vendeur doit le
+            savoir AVANT de remplir le formulaire, pas au moment de publier. */}
+        {quota && quota.published >= FREE_PRODUCTS && !pending && (
+          <div
+            className={`mt-4 flex flex-wrap items-start gap-3 rounded-2xl border p-4 ${
+              quota.balance >= EXTRA_PUBLICATION_PRICE
+                ? "border-volt/40 bg-volt/10"
+                : "border-destructive/30 bg-destructive/5"
+            }`}
+          >
+            <Package className="mt-0.5 h-5 w-5 shrink-0 text-volt" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold">
+                Cette publication coûtera {formatFCFA(EXTRA_PUBLICATION_PRICE)}
+              </p>
+              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                Vous avez déjà {quota.published} produits en ligne (vos {FREE_PRODUCTS} premiers sont offerts). Le
+                montant est prélevé sur votre solde : {formatFCFA(quota.balance)} disponible.
+                {quota.balance < EXTRA_PUBLICATION_PRICE && (
+                  <>
+                    {" "}
+                    <strong className="text-destructive">
+                      Rechargez d'abord votre solde, sinon la publication sera refusée.
+                    </strong>
+                  </>
+                )}
+              </p>
+            </div>
+            <Link to="/profile" search={{ tab: "promo" }}>
+              <Button variant="volt" className="h-10">
+                Recharger
+              </Button>
+            </Link>
+          </div>
+        )}
 
         {pending ? (
           // Le produit est déjà publié : on masque le formulaire pour éviter
