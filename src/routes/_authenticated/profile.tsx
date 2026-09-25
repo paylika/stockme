@@ -755,6 +755,7 @@ function SponsorshipPanel() {
         wallet={money.wallet}
         loading={money.loading}
         onRecharge={money.openTopUp}
+        onEditPending={(p) => money.resumePending(p)}
         onChanged={money.refresh}
       />
     </div>

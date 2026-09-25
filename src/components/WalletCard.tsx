@@ -2,10 +2,11 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { formatFCFA } from "@/lib/format";
-import type { BoostRow, WalletData } from "@/hooks/useWallet";
+import type { BoostRow, PendingPayment, WalletData } from "@/hooks/useWallet";
 import { toggleBoostStatus } from "@/components/SellerMoneyProvider";
 import {
   ArrowDownLeft,
+  Clock,
   Eye,
   Heart,
   MessageCircle,
@@ -21,11 +22,13 @@ type Props = {
   wallet: WalletData | null;
   loading: boolean;
   onRecharge: () => void;
+  /** Reprendre un paiement en attente : on modifie le montant et on repart. */
+  onEditPending: (pending: PendingPayment) => void;
   onChanged?: () => void;
 };
 
 /** Présentation pure : solde, performance des mises en avant, mouvements. */
-export function WalletCard({ wallet, loading, onRecharge, onChanged }: Props) {
+export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChanged }: Props) {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   if (loading) return <div className="h-40 rounded-2xl shimmer bg-muted" />;
@@ -87,6 +90,60 @@ export function WalletCard({ wallet, loading, onRecharge, onChanged }: Props) {
           </Button>
         </div>
       </div>
+
+      {/* ---------- Paiement en attente : on le reprend, on n'en crée pas un autre ---------- */}
+      {wallet.pending.length > 0 && (
+        <div className="rounded-2xl border border-volt/40 bg-volt/10 p-4">
+          <div className="flex flex-wrap items-start gap-3">
+            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-volt" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold">
+                {wallet.pending.length === 1
+                  ? "Un paiement attend d'être finalisé"
+                  : `${wallet.pending.length} paiements attendent d'être finalisés`}
+              </p>
+              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                Vous n'avez pas terminé ce paiement. Reprenez-le plutôt que d'en créer un nouveau — le lien reste
+                valable 24 h.
+              </p>
+
+              <ul className="mt-2 space-y-2">
+                {wallet.pending.map((p) => (
+                  <li key={p.id} className="rounded-xl border border-volt/30 bg-background/70 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold">
+                          {formatFCFA(p.amount_fcfa)}
+                          {p.purpose === "wallet_topup" && (
+                            <span className="ml-2 text-[11px] font-normal text-muted-foreground">rechargement</span>
+                          )}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {new Date(p.created_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}
+                          {p.method ? ` · ${p.method}` : ""}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {p.checkout_url ? (
+                          <a href={p.checkout_url}>
+                            <Button variant="volt" size="sm" className="h-9">
+                              Reprendre le paiement
+                            </Button>
+                          </a>
+                        ) : null}
+                        <Button variant="outline" size="sm" className="h-9" onClick={() => onEditPending(p)}>
+                          Modifier le montant
+                        </Button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ---------- Performance globale ---------- */}
       {wallet.boosts.length > 0 && (

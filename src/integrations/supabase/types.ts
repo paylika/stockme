@@ -441,6 +441,25 @@ export type Database = {
             product_views: number
             product_contacts: number
           }[]
+          pending: {
+            id: string
+            purpose: string
+            amount_fcfa: number
+            provider: string
+            method: string | null
+            checkout_url: string | null
+            created_at: string
+          }[]
+        }
+      }
+      payment_cancel_pending: {
+        Args: {
+          p_purpose: string
+          p_min_age_seconds?: number
+        }
+        Returns: {
+          ok: boolean
+          cancelled: number
         }
       }
       boost_run_daily: {

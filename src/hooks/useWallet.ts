@@ -27,10 +27,21 @@ export type BoostRow = {
   product_contacts: number;
 };
 
+export type PendingPayment = {
+  id: string;
+  purpose: string;
+  amount_fcfa: number;
+  provider: string;
+  method: string | null;
+  checkout_url: string | null;
+  created_at: string;
+};
+
 export type WalletData = {
   balance_fcfa: number;
   transactions: WalletTx[];
   boosts: BoostRow[];
+  pending: PendingPayment[];
 };
 
 /**

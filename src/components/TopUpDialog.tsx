@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/stockme-client";
 import { formatFCFA } from "@/lib/format";
 import { METHOD_LABELS, goToCheckout, type PayMethod } from "@/lib/pay-client";
 import { CreditCard, Loader2, Smartphone, Wallet } from "lucide-react";
@@ -19,6 +20,8 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   methods: string[];
   defaultPhone?: string | null;
+  /** Montant pré-rempli (reprise d'un paiement en attente). */
+  initialAmount?: number | null;
 };
 
 const PRESETS = [1000, 2000, 5000, 10000];
@@ -27,8 +30,11 @@ const PRESETS = [1000, 2000, 5000, 10000];
  * Rechargement du portefeuille : le vendeur choisit un montant et un moyen de
  * paiement, puis part chez le fournisseur (carte Stripe ou mobile money).
  * Le solde est crédité automatiquement dès la confirmation.
+ *
+ * On annule d'abord les demandes de paiement abandonnées (plus de 5 minutes)
+ * pour ne jamais empiler les paiements en attente.
  */
-export function TopUpDialog({ open, onOpenChange, methods, defaultPhone }: Props) {
+export function TopUpDialog({ open, onOpenChange, methods, defaultPhone, initialAmount }: Props) {
   const [amount, setAmount] = useState<number>(2000);
   const [customAmount, setCustomAmount] = useState("");
   const [method, setMethod] = useState<PayMethod>("card");
@@ -40,7 +46,16 @@ export function TopUpDialog({ open, onOpenChange, methods, defaultPhone }: Props
     const first = (methods[0] as PayMethod | undefined) ?? "card";
     setMethod(first);
     setBusy(false);
-  }, [open, methods]);
+    // Reprise d'un paiement en attente : on repart de son montant.
+    if (initialAmount && initialAmount >= 100) {
+      if (PRESETS.includes(initialAmount)) {
+        setAmount(initialAmount);
+        setCustomAmount("");
+      } else {
+        setCustomAmount(String(initialAmount));
+      }
+    }
+  }, [open, methods, initialAmount]);
 
   useEffect(() => {
     if (defaultPhone) setPhone(defaultPhone);
@@ -56,6 +71,10 @@ export function TopUpDialog({ open, onOpenChange, methods, defaultPhone }: Props
     }
     setBusy(true);
     try {
+      // On nettoie les demandes abandonnées (jamais celles de moins de 5 min,
+      // le vendeur est peut-être en train de valider sur son téléphone).
+      await supabase.rpc("payment_cancel_pending", { p_purpose: "wallet_topup", p_min_age_seconds: 300 });
+
       await goToCheckout({
         purpose: "wallet_topup",
         amount: finalAmount,

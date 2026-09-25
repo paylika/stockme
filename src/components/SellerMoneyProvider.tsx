@@ -56,6 +56,8 @@ export type SellerMoneyCtx = {
   balance: number;
   refresh: () => void;
   openTopUp: () => void;
+  /** Reprendre un paiement en attente en modifiant son montant. */
+  resumePending: (pending: { amount_fcfa: number }) => void;
   openBoost: (product: BoostTarget) => void;
 };
 
@@ -89,6 +91,7 @@ export function SellerMoneyProvider({
   const { wallet, loading, refresh } = useWallet();
 
   const [topUpOpen, setTopUpOpen] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState<number | null>(null);
   const [boost, setBoost] = useState<BoostTarget | null>(null);
 
   const visible = payments.enabled || (isAdminEmail(user?.email) && payments.methods.length > 0);
@@ -104,7 +107,15 @@ export function SellerMoneyProvider({
     };
   }, [visible]);
 
-  const openTopUp = useCallback(() => setTopUpOpen(true), []);
+  const openTopUp = useCallback(() => {
+    setTopUpAmount(null);
+    setTopUpOpen(true);
+  }, []);
+
+  const resumePending = useCallback((pending: { amount_fcfa: number }) => {
+    setTopUpAmount(pending.amount_fcfa);
+    setTopUpOpen(true);
+  }, []);
 
   const value = useMemo<SellerMoneyCtx>(
     () => ({
@@ -113,9 +124,10 @@ export function SellerMoneyProvider({
       balance: wallet?.balance_fcfa ?? 0,
       refresh,
       openTopUp,
+      resumePending,
       openBoost: setBoost,
     }),
-    [wallet, loading, refresh, openTopUp],
+    [wallet, loading, refresh, openTopUp, resumePending],
   );
 
   if (!visible) return <>{children}</>;
@@ -126,9 +138,13 @@ export function SellerMoneyProvider({
 
       <TopUpDialog
         open={topUpOpen}
-        onOpenChange={setTopUpOpen}
+        onOpenChange={(o) => {
+          setTopUpOpen(o);
+          if (!o) setTopUpAmount(null);
+        }}
         methods={payments.methods}
         defaultPhone={defaultPhone}
+        initialAmount={topUpAmount}
       />
 
       {boost && (
