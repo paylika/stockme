@@ -177,9 +177,14 @@ function ImageSearchPage() {
 
             <div className="min-w-0 flex-1">
               {loading ? (
-                <p className="inline-flex items-center gap-2 text-sm font-semibold">
-                  <Loader2 className="h-4 w-4 animate-spin text-volt" /> Analyse de votre photo…
-                </p>
+                <>
+                  <p className="inline-flex items-center gap-2 text-sm font-semibold">
+                    <Loader2 className="h-4 w-4 animate-spin text-volt" /> Analyse de votre photo…
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    La reconnaissance prend quelques secondes. Ne fermez pas la page.
+                  </p>
+                </>
               ) : !pending ? (
                 <>
                   <p className="text-sm font-semibold">Aucune photo pour l'instant</p>
