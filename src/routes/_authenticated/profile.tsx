@@ -85,6 +85,12 @@ type Stats = {
 };
 
 export const Route = createFileRoute("/_authenticated/profile")({
+  // ?tab=promo permet d'ouvrir directement l'onglet Sponsorisation depuis le
+  // sidebar (Portefeuille & pub) ou un lien externe.
+  validateSearch: (s: Record<string, unknown>): { tab?: "produits" | "stats" | "promo" } => {
+    const t = typeof s.tab === "string" ? s.tab : undefined;
+    return { tab: t === "produits" || t === "stats" || t === "promo" ? t : undefined };
+  },
   component: ProfilePage,
 });
 
@@ -101,11 +107,17 @@ const TAB_LABELS: Record<TabId, string> = {
 function ProfilePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { tab: tabParam } = Route.useSearch();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [products, setProducts] = useState<Product[] | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<TabId>("produits");
+  // L'onglet est piloté par l'adresse (?tab=promo) : le sidebar peut donc ouvrir
+  // directement la Sponsorisation, et un lien partagé garde le bon onglet.
+  const tab: TabId = tabParam ?? "produits";
+  const setTab = (id: TabId) => {
+    navigate({ to: "/profile", search: { tab: id === "produits" ? undefined : id }, replace: true });
+  };
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradePlan, setUpgradePlan] = useState<"verifie" | "pro">("pro");
   const [editOpen, setEditOpen] = useState(false);
