@@ -36,6 +36,7 @@ import { Route as AuthenticatedDashboardNewRouteImport } from './routes/_authent
 import { Route as AuthenticatedProfileEditRouteImport } from './routes/_authenticated/profile.edit'
 import { Route as ApiJobsBoostDailyRouteImport } from './routes/api.jobs.boost-daily'
 import { Route as ApiPayCheckoutRouteImport } from './routes/api.pay.checkout'
+import { Route as ApiPayReconcileRouteImport } from './routes/api.pay.reconcile'
 import { Route as ApiPayStripeCheckRouteImport } from './routes/api.pay.stripe-check'
 import { Route as AuthenticatedDashboardEditIdRouteImport } from './routes/_authenticated/dashboard.edit.$id'
 import { Route as ApiPayWebhookProviderRouteImport } from './routes/api.pay.webhook.$provider'
@@ -175,6 +176,11 @@ const ApiPayCheckoutRoute = ApiPayCheckoutRouteImport.update({
   path: '/api/pay/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPayReconcileRoute = ApiPayReconcileRouteImport.update({
+  id: '/api/pay/reconcile',
+  path: '/api/pay/reconcile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPayStripeCheckRoute = ApiPayStripeCheckRouteImport.update({
   id: '/api/pay/stripe-check',
   path: '/api/pay/stripe-check',
@@ -218,6 +224,7 @@ export interface FileRoutesByFullPath {
   '/profile/edit': typeof AuthenticatedProfileEditRoute
   '/api/jobs/boost-daily': typeof ApiJobsBoostDailyRoute
   '/api/pay/checkout': typeof ApiPayCheckoutRoute
+  '/api/pay/reconcile': typeof ApiPayReconcileRoute
   '/api/pay/stripe-check': typeof ApiPayStripeCheckRoute
   '/dashboard/edit/$id': typeof AuthenticatedDashboardEditIdRoute
   '/api/pay/webhook/$provider': typeof ApiPayWebhookProviderRoute
@@ -248,6 +255,7 @@ export interface FileRoutesByTo {
   '/profile/edit': typeof AuthenticatedProfileEditRoute
   '/api/jobs/boost-daily': typeof ApiJobsBoostDailyRoute
   '/api/pay/checkout': typeof ApiPayCheckoutRoute
+  '/api/pay/reconcile': typeof ApiPayReconcileRoute
   '/api/pay/stripe-check': typeof ApiPayStripeCheckRoute
   '/dashboard/edit/$id': typeof AuthenticatedDashboardEditIdRoute
   '/api/pay/webhook/$provider': typeof ApiPayWebhookProviderRoute
@@ -281,6 +289,7 @@ export interface FileRoutesById {
   '/_authenticated/profile/edit': typeof AuthenticatedProfileEditRoute
   '/api/jobs/boost-daily': typeof ApiJobsBoostDailyRoute
   '/api/pay/checkout': typeof ApiPayCheckoutRoute
+  '/api/pay/reconcile': typeof ApiPayReconcileRoute
   '/api/pay/stripe-check': typeof ApiPayStripeCheckRoute
   '/_authenticated/dashboard/edit/$id': typeof AuthenticatedDashboardEditIdRoute
   '/api/pay/webhook/$provider': typeof ApiPayWebhookProviderRoute
@@ -313,6 +322,7 @@ export interface FileRouteTypes {
     | '/profile/edit'
     | '/api/jobs/boost-daily'
     | '/api/pay/checkout'
+    | '/api/pay/reconcile'
     | '/api/pay/stripe-check'
     | '/dashboard/edit/$id'
     | '/api/pay/webhook/$provider'
@@ -343,6 +353,7 @@ export interface FileRouteTypes {
     | '/profile/edit'
     | '/api/jobs/boost-daily'
     | '/api/pay/checkout'
+    | '/api/pay/reconcile'
     | '/api/pay/stripe-check'
     | '/dashboard/edit/$id'
     | '/api/pay/webhook/$provider'
@@ -375,6 +386,7 @@ export interface FileRouteTypes {
     | '/_authenticated/profile/edit'
     | '/api/jobs/boost-daily'
     | '/api/pay/checkout'
+    | '/api/pay/reconcile'
     | '/api/pay/stripe-check'
     | '/_authenticated/dashboard/edit/$id'
     | '/api/pay/webhook/$provider'
@@ -394,6 +406,7 @@ export interface RootRouteChildren {
   VendeurIdRoute: typeof VendeurIdRoute
   ApiJobsBoostDailyRoute: typeof ApiJobsBoostDailyRoute
   ApiPayCheckoutRoute: typeof ApiPayCheckoutRoute
+  ApiPayReconcileRoute: typeof ApiPayReconcileRoute
   ApiPayStripeCheckRoute: typeof ApiPayStripeCheckRoute
   ApiPayWebhookProviderRoute: typeof ApiPayWebhookProviderRoute
 }
@@ -589,6 +602,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPayCheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/pay/reconcile': {
+      id: '/api/pay/reconcile'
+      path: '/api/pay/reconcile'
+      fullPath: '/api/pay/reconcile'
+      preLoaderRoute: typeof ApiPayReconcileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/pay/stripe-check': {
       id: '/api/pay/stripe-check'
       path: '/api/pay/stripe-check'
@@ -704,6 +724,7 @@ const rootRouteChildren: RootRouteChildren = {
   VendeurIdRoute: VendeurIdRoute,
   ApiJobsBoostDailyRoute: ApiJobsBoostDailyRoute,
   ApiPayCheckoutRoute: ApiPayCheckoutRoute,
+  ApiPayReconcileRoute: ApiPayReconcileRoute,
   ApiPayStripeCheckRoute: ApiPayStripeCheckRoute,
   ApiPayWebhookProviderRoute: ApiPayWebhookProviderRoute,
 }

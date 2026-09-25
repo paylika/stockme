@@ -24,6 +24,9 @@ import {
 const API = "https://api.stripe.com/v1";
 const XOF_PER_EUR = 655.957;
 
+/** Devises sans décimales (le montant est déjà l'unité entière). */
+const ZERO_DECIMAL_CURRENCIES = ["xof", "xaf", "jpy", "krw", "vnd", "clp", "gnf", "pyg", "rwf", "ugx", "vuv", "xpf"];
+
 const formEncode = (obj: Record<string, unknown>): string => {
   const parts: string[] = [];
   const walk = (prefix: string, value: unknown) => {
@@ -99,7 +102,7 @@ async function accountCurrency(): Promise<string> {
 /** Convertit un montant en FCFA vers la devise du compte Stripe. */
 async function toStripeAmount(amountFcfa: number): Promise<{ currency: string; amount: number }> {
   const currency = await accountCurrency();
-  const zeroDecimal = ["xof", "xaf", "jpy", "krw", "vnd", "clp", "gnf"].includes(currency);
+  const zeroDecimal = ZERO_DECIMAL_CURRENCIES.includes(currency);
 
   if (zeroDecimal) return { currency, amount: Math.round(amountFcfa) };
 
@@ -111,6 +114,43 @@ async function toStripeAmount(amountFcfa: number): Promise<{ currency: string; a
 
   // Repli : on passe par l'euro (parité fixe) pour ne jamais bloquer un paiement.
   return { currency: "eur", amount: Math.round(amountFcfa / XOF_PER_EUR * 100) / 100 };
+}
+
+/**
+ * CONVERSION INVERSE — indispensable au moment du webhook.
+ *
+ * Stripe renvoie le montant dans la plus petite unité de sa devise
+ * (152 = 1,52 €). Si on l'envoyait tel quel, on comparerait « 2 » à
+ * « 1 000 FCFA » et le crédit serait refusé : c'est exactement le bug qui a
+ * empêché le solde de se mettre à jour. On reconvertit donc en FCFA.
+ */
+async function fromStripeAmount(minorAmount: number, currency: string): Promise<number> {
+  const cur = (currency ?? "eur").toLowerCase();
+  const major = ZERO_DECIMAL_CURRENCIES.includes(cur) ? minorAmount : minorAmount / 100;
+
+  if (cur === "xof" || cur === "xaf") return Math.round(major);
+  if (cur === "eur") return Math.round(major * XOF_PER_EUR);
+
+  const rate = Number((await serverEnv("STRIPE_FCFA_RATE")) ?? 0);
+  if (rate > 0) return Math.round(major / rate);
+  return Math.round(major * XOF_PER_EUR); // repli : parité euro
+}
+
+/** État d'une session de paiement, pour la réconciliation. */
+export async function stripeCheckoutStatus(
+  sessionId: string,
+): Promise<{ paid: boolean; amountFcfa: number; raw: unknown }> {
+  const session = await stripeFetch<{
+    id: string;
+    payment_status?: string;
+    status?: string;
+    amount_total?: number;
+    currency?: string;
+  }>(`/checkout/sessions/${sessionId}`);
+
+  const paid = session.payment_status === "paid" || session.status === "complete";
+  const amountFcfa = session.amount_total ? await fromStripeAmount(session.amount_total, session.currency ?? "eur") : 0;
+  return { paid, amountFcfa, raw: session };
 }
 
 export const stripeProvider: PaymentProvider = {
@@ -192,6 +232,7 @@ export const stripeProvider: PaymentProvider = {
           id?: string;
           amount_total?: number;
           amount_paid?: number;
+          currency?: string;
           payment_status?: string;
           client_reference_id?: string;
           subscription?: string;
@@ -213,13 +254,15 @@ export const stripeProvider: PaymentProvider = {
     // ---- Échéance mensuelle d'un abonnement (renouvellement carte) ----
     if (type === "invoice.paid" || type === "invoice.payment_succeeded") {
       const subscriptionRef = typeof obj?.subscription === "string" ? obj.subscription : null;
+      const amountFcfa =
+        obj?.amount_paid != null ? await fromStripeAmount(obj.amount_paid, obj?.currency ?? "eur") : null;
       return {
         ok: true,
         status: "paid",
         kind: "subscription_invoice",
         subscriptionRef,
         providerRef: `invoice_${obj?.id ?? ""}`,
-        amount: obj?.amount_paid != null ? Math.round(obj.amount_paid / 100) : null,
+        amount: amountFcfa,
         payload: event,
       };
     }
@@ -231,13 +274,16 @@ export const stripeProvider: PaymentProvider = {
     // ---- Paiement unique ou première échéance d'un abonnement ----
     if (type === "checkout.session.completed" || type === "payment_intent.succeeded") {
       const isSubscription = typeof obj?.subscription === "string" && obj.subscription.length > 0;
+      const amountFcfa =
+        obj?.amount_total != null ? await fromStripeAmount(obj.amount_total, obj?.currency ?? "eur") : null;
       return {
         ok: true,
         status: "paid",
         kind: "payment",
+        // Référence EXACTE telle qu'enregistrée à la création (id de session).
         providerRef: String(obj?.id ?? ""),
         subscriptionRef: isSubscription ? (obj?.subscription as string) : null,
-        amount: obj?.amount_total != null ? Math.round(obj.amount_total / 100) : null,
+        amount: amountFcfa,
         payload: event,
       };
     }

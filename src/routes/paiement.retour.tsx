@@ -6,6 +6,8 @@ import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
 import { Button } from "@/components/ui/button";
 import { usePaymentsStatus } from "@/lib/features";
+import { useAuth } from "@/hooks/useAuth";
+import { isAdminEmail } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
 import { CheckCircle2, Clock, XCircle } from "lucide-react";
 
@@ -45,9 +47,14 @@ export const Route = createFileRoute("/paiement/retour")({
 function PaymentReturn() {
   const { intent: intentId, status: callbackStatus } = Route.useSearch();
   const payments = usePaymentsStatus();
+  const { user } = useAuth();
   const [intent, setIntent] = useState<Intent | null>(null);
   const [loading, setLoading] = useState(true);
   const [tries, setTries] = useState(0);
+
+  // Même règle de visibilité que le reste du paiement : ouverte au public le
+  // jour où l'interrupteur est activé, visible en aperçu pour les admins.
+  const paymentsLive = payments.enabled || (isAdminEmail(user?.email) && payments.methods.length > 0);
 
   // On interroge la base quelques fois : le webhook du fournisseur peut
   // arriver 2 à 10 secondes après le retour du navigateur.
@@ -91,7 +98,7 @@ function PaymentReturn() {
     <div className="min-h-screen bg-background">
       <Header />
       <div className="mx-auto max-w-lg px-4 py-10 sm:px-6 sm:py-16">
-        {!payments.loading && !payments.enabled ? (
+        {!payments.loading && !paymentsLive ? (
           <div className="text-center">
             <Clock className="mx-auto h-12 w-12 text-muted-foreground" />
             <h1 className="mt-4 text-2xl font-bold">Paiement en ligne bientôt disponible</h1>
