@@ -234,94 +234,97 @@ function ProfilePage() {
     <div className="min-h-screen bg-background">
       <Header />
 
-      {/* ===== En-tête façon Instagram ===== */}
+      {/* ===== Bannière de la boutique (visible pour TOUS, modifiable en PRO/vérifié) ===== */}
       <section className="border-b border-border">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 py-8">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-            <div className="relative shrink-0">
-              <div className="grid h-24 w-24 place-items-center overflow-hidden rounded-full bg-volt text-2xl font-bold text-volt-foreground">
-                {profile?.avatar_url ? (
-                  <img src={profile.avatar_url} alt={displayName} className="h-full w-full object-cover" />
-                ) : (
-                  <span>{initials}</span>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => avatarInputRef.current?.click()}
-                disabled={uploadingAvatar}
-                aria-label={profile?.avatar_url ? "Changer ma photo de profil" : "Ajouter ma photo de profil"}
-                title={profile?.avatar_url ? "Changer ma photo de profil" : "Ajouter ma photo de profil"}
-                className="absolute -bottom-1 -right-1 grid h-9 w-9 place-items-center rounded-full border-2 border-background bg-foreground text-background shadow-md transition hover:brightness-110 disabled:opacity-60"
-              >
-                {uploadingAvatar ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
-                ) : (
-                  <Camera className="h-4 w-4" />
-                )}
-              </button>
-              <input
-                ref={avatarInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={onAvatarPick}
-              />
-            </div>
+        <div className="mx-auto max-w-4xl">
+          <div className="sm:px-6 sm:pt-5">
+            <ShopBanner
+              src={profile?.banner_url ?? null}
+              position={profile?.banner_position ?? 50}
+              className="h-28 sm:h-40 sm:rounded-3xl"
+              overlay
+            />
+          </div>
 
-            <div className="min-w-0 flex-1">
-              {/* Identité compacte : tout se modifie dans une seule fenêtre */}
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="font-display text-2xl font-bold tracking-tight truncate">
-                  {displayName}
-                </h1>
-                {isVerified ? (
-                  isLifetime ? (
-                    <VerifiedBadgeGold />
+          <div className="px-4 pb-7 sm:px-6">
+            {/* Avatar qui chevauche la bannière + identité compacte */}
+            <div className="-mt-10 flex items-end gap-3 sm:-mt-12 sm:gap-4">
+              <div className="relative shrink-0">
+                <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl border-4 border-background bg-volt text-xl font-bold text-volt-foreground sm:h-24 sm:w-24">
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt={displayName} className="h-full w-full object-cover" />
                   ) : (
-                    <VerifiedBadge />
-                  )
-                ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                    <ShieldQuestion className="h-3 w-3" /> Non vérifiée
-                  </span>
-                )}
-              </div>
-
-              {profile?.full_name && (
-                <p className="mt-0.5 truncate text-sm text-muted-foreground">{profile.full_name}</p>
-              )}
-
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" className="h-10" onClick={() => setEditOpen(true)}>
-                  <Pencil className="mr-1.5 h-3.5 w-3.5" /> Modifier le profil
-                </Button>
-                {user?.id && (
-                  <Link to="/vendeur/$id" params={{ id: user.id }}>
-                    <Button variant="ghost" size="sm" className="h-10">
-                      <ExternalLink className="mr-1 h-3.5 w-3.5" /> Ma boutique publique
-                    </Button>
-                  </Link>
-                )}
-              </div>
-
-              {!profile?.avatar_url && (
+                    <span>{initials}</span>
+                  )}
+                </div>
                 <button
                   type="button"
-                  onClick={() => setEditOpen(true)}
-                  className="mt-2 text-xs font-medium text-volt underline underline-offset-2"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  aria-label={profile?.avatar_url ? "Changer ma photo de profil" : "Ajouter ma photo de profil"}
+                  title={profile?.avatar_url ? "Changer ma photo de profil" : "Ajouter ma photo de profil"}
+                  className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full border-2 border-background bg-foreground text-background shadow-md transition hover:brightness-110 disabled:opacity-60"
                 >
-                  Ajoutez votre photo de profil — les acheteurs y font plus confiance.
+                  {uploadingAvatar ? (
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                  ) : (
+                    <Camera className="h-3.5 w-3.5" />
+                  )}
                 </button>
-              )}
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={onAvatarPick}
+                />
+              </div>
 
-              <div className="mt-4 grid max-w-md grid-cols-4 gap-4 text-center sm:text-left">
-                <Stat value={online} label="Produits" />
-                <Stat value={stats?.total_views ?? 0} label="Vues" />
-                <Stat value={stats?.total_contacts ?? 0} label="Contacts" />
-                <Stat value={stats?.total_favorites ?? 0} label="Favoris" />
+              <div className="min-w-0 flex-1 pb-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="truncate font-display text-xl font-bold tracking-tight sm:text-2xl">{displayName}</h1>
+                  {isVerified ? (
+                    isLifetime ? (
+                      <VerifiedBadgeGold />
+                    ) : (
+                      <VerifiedBadge />
+                    )
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      <ShieldQuestion className="h-3 w-3" /> Non vérifiée
+                    </span>
+                  )}
+                </div>
+                {profile?.full_name && (
+                  <p className="mt-0.5 truncate text-sm text-muted-foreground">{profile.full_name}</p>
+                )}
+
+                <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                  <Button variant="outline" size="sm" className="h-9" onClick={() => setEditOpen(true)}>
+                    <Pencil className="mr-1.5 h-3.5 w-3.5" /> Modifier le profil
+                  </Button>
+                  {user?.id && (
+                    <Link to="/vendeur/$id" params={{ id: user.id }}>
+                      <Button variant="ghost" size="sm" className="h-9">
+                        <ExternalLink className="mr-1 h-3.5 w-3.5" /> Ma boutique publique
+                      </Button>
+                    </Link>
+                  )}
+                </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Statistiques + à propos + coordonnées ===== */}
+      <section className="border-b border-border">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6">
+          <div className="grid max-w-md grid-cols-4 gap-4 text-center sm:text-left">
+            <Stat value={online} label="Produits" />
+            <Stat value={stats?.total_views ?? 0} label="Vues" />
+            <Stat value={stats?.total_contacts ?? 0} label="Contacts" />
+            <Stat value={stats?.total_favorites ?? 0} label="Favoris" />
           </div>
 
           {/* ===== Coordonnées (lecture seule : tout se modifie dans la fenêtre) ===== */}

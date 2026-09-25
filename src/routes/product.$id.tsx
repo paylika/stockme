@@ -326,40 +326,6 @@ function ProductPage() {
   const contactRate = stats && stats.total_views > 0 ? Math.round((stats.total_contacts / stats.total_views) * 100) : 0;
   const intensity = stats ? computeIntensity(stats) : 0;
 
-  // Action d'achat intégrée à la barre de navigation mobile : la navigation
-  // reste visible et le contact est toujours à portée de pouce.
-  useEffect(() => {
-    if (!product || product.sold_out || authLoading) {
-      clearMobileAction();
-      return;
-    }
-
-    const priceLabel = formatFCFA(hasPromo ? (product.promo_price_fcfa as number) : product.price_fcfa);
-
-    if (!user) {
-      setMobileAction({
-        label: priceLabel,
-        href: `/auth?mode=signup&redirect=/product/${id}`,
-        icon: "login",
-        ariaLabel: "Se connecter pour voir le contact du vendeur",
-      });
-      return;
-    }
-
-    if (wa) {
-      setMobileAction({
-        label: priceLabel,
-        href: wa,
-        icon: "whatsapp",
-        ariaLabel: product.dropshipping ? "Commander sur WhatsApp" : "Contacter le vendeur sur WhatsApp",
-      });
-    } else {
-      clearMobileAction();
-    }
-
-    return () => clearMobileAction();
-  }, [product, wa, user, authLoading, hasPromo, id]);
-
   return (
     <div className="min-h-screen bg-background">
       {seoLd}
