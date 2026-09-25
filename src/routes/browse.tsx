@@ -43,6 +43,7 @@ function Browse() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/browse" });
   const [items, setItems] = useState<Product[] | null>(null);
+  const [boostedIds, setBoostedIds] = useState<Set<string>>(new Set());
   const [q, setQ] = useState(search.q ?? "");
   const verified = useVerifiedSellers();
   const visitor = useVisitorCountry();
@@ -58,8 +59,21 @@ function Browse() {
       else if (visitorCities) query = query.in("city", visitorCities);
       if (search.category) query = query.eq("category", search.category);
       if (search.q) query = query.ilike("name", `%${search.q}%`);
-      const { data } = await query;
-      if (!cancel) setItems(data ?? []);
+
+      const [{ data }, { data: adData }] = await Promise.all([
+        query,
+        // Produits actuellement mis en avant : ils passent en tête des résultats.
+        supabase.rpc("get_sponsored_products", { p_limit: 6 }),
+      ]);
+      if (cancel) return;
+
+      const boosted = new Set(((adData as { id: string }[] | null) ?? []).map((p) => p.id));
+      setBoostedIds(boosted);
+      setItems(
+        ((data as Product[] | null) ?? [])
+          .slice()
+          .sort((a, b) => (boosted.has(a.id) ? 0 : 1) - (boosted.has(b.id) ? 0 : 1)),
+      );
     };
     run();
     return () => { cancel = true; };
@@ -154,6 +168,7 @@ function Browse() {
                 key={p.id}
                 product={p}
                 sellerVerified={!!p.owner_id && verified.has(p.owner_id)}
+                sponsored={boostedIds.has(p.id)}
                 delayMs={i * 45}
               />
             ))}

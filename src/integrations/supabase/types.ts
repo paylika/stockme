@@ -462,6 +462,13 @@ export type Database = {
           cancelled: number
         }
       }
+      grant_verification_bonus: {
+        Args: {
+          p_user_id: string
+          p_amount_fcfa?: number
+        }
+        Returns: Record<string, unknown>
+      }
       boost_run_daily: {
         Args: Record<string, never>
         Returns: Record<string, unknown>
@@ -621,6 +628,7 @@ export type Database = {
           dropshipping: boolean
           owner_id: string
           seller_verified: boolean
+          is_boosted: boolean
           score: number
           contacts_total: number
           views_30: number

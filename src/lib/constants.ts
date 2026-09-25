@@ -188,8 +188,8 @@ export const isAdminEmail = (email?: string | null) =>
  * Badge « Fournisseur vérifié » (payant, activé par l'admin)
  * ------------------------------------------------------------------ */
 
-/** Prix du badge, en FCFA. */
-export const VERIFIED_BADGE_PRICE_FCFA = 2000;
+/** Prix du badge, en FCFA — offre annuelle (voir la grille dans src/lib/pricing.ts). */
+export const VERIFIED_BADGE_PRICE_FCFA = 5000;
 
 /** Numéro WhatsApp du service client (format international, sans « + »). */
 export const SERVICE_WHATSAPP = "221786635331";
