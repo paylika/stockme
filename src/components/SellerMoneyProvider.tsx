@@ -1,11 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Rocket } from "lucide-react";
 import { supabase } from "@/integrations/supabase/stockme-client";
-import { useWallet } from "@/hooks/useWallet";
+import { useWallet, type WalletData } from "@/hooks/useWallet";
 import { useAuth } from "@/hooks/useAuth";
 import { usePaymentsStatus } from "@/lib/features";
 import { isAdminEmail } from "@/lib/constants";
-import { WalletCard } from "@/components/WalletCard";
 import { TopUpDialog } from "@/components/TopUpDialog";
 import { BoostDialog } from "@/components/BoostDialog";
 import { toast } from "sonner";
@@ -13,9 +12,9 @@ import { toast } from "sonner";
 type BoostTarget = { id: string; name: string };
 
 /* ------------------------------------------------------------------ *
- * Petit magasin réactif : permet à n'importe quelle carte produit
- * d'afficher un bouton « Booster » SANS refonte de la page, et seulement
- * quand le paiement est réellement actif.
+ * Magasin réactif : permet à n'importe quelle carte produit d'afficher
+ * un bouton « Booster » sans refonte de la page, et seulement quand le
+ * paiement est réellement actif.
  * ------------------------------------------------------------------ */
 let boostHandler: ((p: BoostTarget) => void) | null = null;
 let boostActive = false;
@@ -30,7 +29,6 @@ export const subscribeBoost = (cb: () => void) => {
   };
 };
 
-/** true si le bouton « Booster » doit être affiché. */
 export const boostAvailable = () => boostActive;
 
 /** Bouton « Booster » à poser sur les cartes produit de l'espace vendeur. */
@@ -52,16 +50,17 @@ export function BoostButton({ productId, productName }: { productId: string; pro
   );
 }
 
-type Ctx = {
+export type SellerMoneyCtx = {
+  wallet: WalletData | null;
+  loading: boolean;
   balance: number;
+  refresh: () => void;
   openTopUp: () => void;
   openBoost: (product: BoostTarget) => void;
-  refresh: () => void;
 };
 
-const SellerMoneyContext = createContext<Ctx | null>(null);
+const SellerMoneyContext = createContext<SellerMoneyCtx | null>(null);
 
-/** À utiliser depuis n'importe quelle carte produit de l'espace vendeur. */
 export function useSellerMoney() {
   return useContext(SellerMoneyContext);
 }
@@ -69,9 +68,12 @@ export function useSellerMoney() {
 /**
  * Regroupe tout l'argent du vendeur : solde, rechargement, boosts.
  *
- * VISIBILITÉ : l'ensemble reste invisible tant que le paiement n'est pas
- * réellement configuré (`usePaymentsStatus`). Pendant la phase de test,
- * l'administrateur peut tout voir (aperçu) ; les vendeurs ne voient rien.
+ * Ce composant ne dessine QUE les fenêtres de dialogue : la carte « Mon solde »
+ * est placée par la page (par exemple dans son onglet « Sponsorisation ») à
+ * partir des données exposées ici.
+ *
+ * VISIBILITÉ : invisible tant que le paiement n'est pas réellement configuré.
+ * Pendant la phase de test, seul l'administrateur voit l'ensemble.
  */
 export function SellerMoneyProvider({
   children,
@@ -88,12 +90,9 @@ export function SellerMoneyProvider({
 
   const [topUpOpen, setTopUpOpen] = useState(false);
   const [boost, setBoost] = useState<BoostTarget | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
 
-  // Aperçu admin : permet de tester de bout en bout avant l'ouverture au public.
   const visible = payments.enabled || (isAdminEmail(user?.email) && payments.methods.length > 0);
 
-  // On publie (ou retire) le bouton « Booster » selon la visibilité réelle.
   useEffect(() => {
     boostActive = visible;
     boostHandler = visible ? setBoost : null;
@@ -107,26 +106,16 @@ export function SellerMoneyProvider({
 
   const openTopUp = useCallback(() => setTopUpOpen(true), []);
 
-  const toggleBoost = useCallback(
-    async (campaignId: string, next: "active" | "paused") => {
-      setBusyId(campaignId);
-      const { data, error } = await supabase.rpc("boost_set_status", { p_campaign_id: campaignId, p_status: next });
-      setBusyId(null);
-      if (error) return toast.error(error.message);
-      const res = data as { ok?: boolean; reason?: string } | null;
-      if (res?.ok === false && res.reason === "insufficient_balance") {
-        return toast.error("Solde insuffisant pour reprendre ce boost.");
-      }
-      toast.success(next === "active" ? "Boost repris" : "Boost mis en pause");
-      refresh();
-      onChanged?.();
-    },
-    [refresh, onChanged],
-  );
-
-  const value = useMemo<Ctx>(
-    () => ({ balance: wallet?.balance_fcfa ?? 0, openTopUp, openBoost: setBoost, refresh }),
-    [wallet?.balance_fcfa, openTopUp, refresh],
+  const value = useMemo<SellerMoneyCtx>(
+    () => ({
+      wallet,
+      loading,
+      balance: wallet?.balance_fcfa ?? 0,
+      refresh,
+      openTopUp,
+      openBoost: setBoost,
+    }),
+    [wallet, loading, refresh, openTopUp],
   );
 
   if (!visible) return <>{children}</>;
@@ -134,14 +123,6 @@ export function SellerMoneyProvider({
   return (
     <SellerMoneyContext.Provider value={value}>
       {children}
-
-      <WalletCard
-        wallet={wallet}
-        loading={loading}
-        busyId={busyId}
-        onRecharge={openTopUp}
-        onToggleBoost={toggleBoost}
-      />
 
       <TopUpDialog
         open={topUpOpen}
@@ -166,4 +147,20 @@ export function SellerMoneyProvider({
       )}
     </SellerMoneyContext.Provider>
   );
+}
+
+/** Pause / reprise d'une campagne (utilisé par la carte « Mon solde »). */
+export async function toggleBoostStatus(campaignId: string, next: "active" | "paused"): Promise<boolean> {
+  const { data, error } = await supabase.rpc("boost_set_status", { p_campaign_id: campaignId, p_status: next });
+  if (error) {
+    toast.error(error.message);
+    return false;
+  }
+  const res = data as { ok?: boolean; reason?: string } | null;
+  if (res?.ok === false && res.reason === "insufficient_balance") {
+    toast.error("Solde insuffisant pour reprendre ce boost.");
+    return false;
+  }
+  toast.success(next === "active" ? "Boost repris" : "Boost mis en pause");
+  return true;
 }

@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { StatusSwitch } from "@/components/StatusSwitch";
 import { VerifiedBadge, VerifiedBadgeGold } from "@/components/VerifiedBadge";
 import { VerifiedPaymentDialog } from "@/components/VerifiedPaymentDialog";
-import { BoostButton, SellerMoneyProvider } from "@/components/SellerMoneyProvider";
+import { BoostButton, SellerMoneyProvider, useSellerMoney } from "@/components/SellerMoneyProvider";
+import { WalletCard } from "@/components/WalletCard";
 import { useAuth } from "@/hooks/useAuth";
 import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
@@ -25,6 +26,7 @@ import {
   Camera,
   Eye,
   ExternalLink,
+  Heart,
   LogOut,
   Mail,
   MapPin,
@@ -69,6 +71,8 @@ type Stats = {
   total_views: number;
   total_contacts: number;
   total_favorites: number;
+  stock_value?: number;
+  countries?: { country: string | null; value: number }[];
 };
 
 export const Route = createFileRoute("/_authenticated/profile")({
@@ -82,6 +86,7 @@ function ProfilePage() {
   const [products, setProducts] = useState<Product[] | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<"produits" | "stats" | "promo">("produits");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
@@ -379,64 +384,94 @@ function ProfilePage() {
         </div>
       </section>
 
-      {/* ===== Produits (Mon stock déplacé ici) ===== */}
+      {/* ===== Espace vendeur : Produits · Statistiques · Sponsorisation ===== */}
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg sm:text-xl font-bold tracking-tight">Mes produits ({products?.length ?? 0})</h2>
+        <SellerMoneyProvider defaultPhone={profile?.whatsapp} onChanged={load}>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight">Mon espace vendeur</h2>
           <Link to="/dashboard/new">
             <Button variant="volt" size="sm"><Package className="mr-1 h-4 w-4" /> Ajouter</Button>
           </Link>
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Activez ou désactivez chaque réglage d'un simple appui : la ligne entière est cliquable.
-        </p>
 
-        <SellerMoneyProvider defaultPhone={profile?.whatsapp} onChanged={load}>
+        {/* Onglets */}
+        <div className="mt-4 flex gap-2 overflow-x-auto no-scrollbar border-b border-border pb-2">
+          {([
+            { id: "produits", label: `Produits (${products?.length ?? 0})` },
+            { id: "stats", label: "Statistiques" },
+            { id: "promo", label: "Sponsorisation" },
+          ] as const).map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                tab === t.id ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-        {products === null ? (
-          <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-3">
-            {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-56 rounded-2xl shimmer bg-muted" />)}
-          </div>
-        ) : products.length === 0 ? (
-          <div className="mt-5 grid place-items-center py-16 text-center border border-dashed border-border rounded-3xl bg-muted/30">
-            <Package className="h-10 w-10 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">Aucun produit</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Listez votre premier produit pour le vendre en gros ou en dropshipping.</p>
-            <Link to="/dashboard/new" className="mt-4"><Button variant="volt">Ajouter un produit</Button></Link>
-          </div>
-        ) : (
-          <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-3">
-            {products.map((p) => {
-              const hasPromo = p.promo_price_fcfa && p.promo_price_fcfa < p.price_fcfa;
-              const saving = savingId === p.id;
-              return (
-                <div key={p.id} className="flex gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm">
-                  <Link
-                    to="/product/$id"
-                    params={{ id: p.id }}
-                    className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-muted sm:h-28 sm:w-28"
-                  >
-                    {p.images[0] ? (
-                      <img src={p.images[0]} alt={p.name} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="grid h-full place-items-center text-muted-foreground"><Package className="h-8 w-8" /></div>
-                    )}
-                    {p.dropshipping && (
-                      <span className="absolute inset-x-0 bottom-0 bg-background/90 py-0.5 text-center text-[10px] font-semibold text-volt">
-                        Dropshipping
-                      </span>
-                    )}
-                  </Link>
+        {/* ---------- Produits ---------- */}
+        {tab === "produits" && (
+          <>
+            <p className="mt-4 text-xs text-muted-foreground">
+              Activez ou désactivez chaque réglage d'un simple appui : la ligne entière est cliquable.
+            </p>
 
-                  <div className="flex min-w-0 flex-1 flex-col gap-2">
-                    <div className="min-w-0">
-                      <p className="line-clamp-1 text-sm font-semibold">{p.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatFCFA(hasPromo ? p.promo_price_fcfa! : p.price_fcfa)}
-                        {" · "}Stock {p.quantity}
-                        {p.moq > 1 ? ` · MOQ ${p.moq}` : ""}
-                      </p>
-                    </div>
+            {products === null ? (
+              <div className="mt-5 grid grid-cols-1 gap-3">
+                {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-64 rounded-2xl shimmer bg-muted" />)}
+              </div>
+            ) : products.length === 0 ? (
+              <div className="mt-5 grid place-items-center rounded-3xl border border-dashed border-border bg-muted/30 py-16 text-center">
+                <Package className="h-10 w-10 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold">Aucun produit</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Listez votre premier produit pour le vendre en gros ou en dropshipping.
+                </p>
+                <Link to="/dashboard/new" className="mt-4"><Button variant="volt">Ajouter un produit</Button></Link>
+              </div>
+            ) : (
+              <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {products.map((p) => {
+                  const hasPromo = p.promo_price_fcfa && p.promo_price_fcfa < p.price_fcfa;
+                  const saving = savingId === p.id;
+                  return (
+                    <div key={p.id} className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+                      {/* Photo du produit en grand */}
+                      <Link
+                        to="/product/$id"
+                        params={{ id: p.id }}
+                        className="relative block aspect-[16/10] w-full overflow-hidden bg-muted"
+                      >
+                        {p.images[0] ? (
+                          <img src={p.images[0]} alt={p.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="grid h-full place-items-center text-muted-foreground">
+                            <Package className="h-9 w-9" />
+                          </div>
+                        )}
+                        <span className="absolute left-2 top-2 rounded-full bg-background/95 px-2.5 py-1 text-[11px] font-bold backdrop-blur">
+                          {formatFCFA(hasPromo ? (p.promo_price_fcfa as number) : p.price_fcfa)}
+                        </span>
+                        {p.dropshipping && (
+                          <span className="absolute right-2 top-2 rounded-full bg-foreground/90 px-2.5 py-1 text-[11px] font-semibold text-background backdrop-blur">
+                            Dropshipping
+                          </span>
+                        )}
+                      </Link>
+
+                      <div className="space-y-2.5 p-3.5">
+                        <div className="min-w-0">
+                          <p className="line-clamp-1 text-base font-semibold">{p.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Stock {p.quantity}
+                            {p.moq > 1 ? ` · MOQ ${p.moq}` : ""}
+                            {p.category ? ` · ${p.category}` : ""}
+                          </p>
+                        </div>
 
                     <div className="space-y-1.5">
                       <StatusSwitch
@@ -469,7 +504,7 @@ function ProfilePage() {
                       />
                     </div>
 
-                    <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-2">
+                    <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-2.5">
                       <div className="flex items-center gap-2">
                         <Link
                           to="/dashboard/edit/$id"
@@ -488,12 +523,81 @@ function ProfilePage() {
                         <Trash2 className="h-3.5 w-3.5" /> Supprimer
                       </button>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ---------- Statistiques ---------- */}
+        {tab === "stats" && (
+          <div className="mt-5 space-y-4">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <StatCard label="Produits en ligne" value={online} icon={Package} />
+              <StatCard label="Vues totales" value={stats?.total_views ?? 0} icon={Eye} />
+              <StatCard label="Contacts reçus" value={stats?.total_contacts ?? 0} icon={MessageCircle} />
+              <StatCard label="Favoris" value={stats?.total_favorites ?? 0} icon={Heart} />
+            </div>
+
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Taux de contact (contacts ÷ vues)
+              </p>
+              <p className="mt-1 text-2xl font-bold tracking-tight">
+                {(stats?.total_views ?? 0) > 0
+                  ? `${Math.round(((stats?.total_contacts ?? 0) / (stats?.total_views ?? 1)) * 100)} %`
+                  : "—"}
+              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Au-dessus de 5 %, vos fiches convertissent bien : gardez des photos nettes et un prix clair.
+              </p>
+            </div>
+
+            {stats?.countries && stats.countries.length > 0 && (
+              <div className="rounded-2xl border border-border bg-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  D'où viennent vos acheteurs
+                </p>
+                <ul className="mt-3 space-y-2">
+                  {stats.countries.slice(0, 8).map((c) => {
+                    const total = (stats.countries ?? []).reduce((s, x) => s + x.value, 0) || 1;
+                    const pct = Math.round((c.value / total) * 100);
+                    return (
+                      <li key={c.country ?? "?"}>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-medium">
+                            {COUNTRY_FLAGS[c.country ?? ""] ?? ""} {c.country || "Non identifié"}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {c.value} vue{c.value > 1 ? "s" : ""} · {pct} %
+                          </span>
+                        </div>
+                        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+                          <div className="h-full rounded-full bg-volt" style={{ width: `${pct}%` }} />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
+            {stats?.stock_value ? (
+              <div className="rounded-2xl border border-border bg-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Valeur de votre stock en ligne
+                </p>
+                <p className="mt-1 text-2xl font-bold tracking-tight">{formatFCFA(stats.stock_value)}</p>
+              </div>
+            ) : null}
           </div>
         )}
+
+        {/* ---------- Sponsorisation ---------- */}
+        {tab === "promo" && <SponsorshipPanel />}
 
         </SellerMoneyProvider>
 
@@ -527,6 +631,59 @@ function Stat({ value, label }: { value: number; label: string }) {
     <div>
       <div className="text-lg font-bold">{value}</div>
       <div className="text-xs text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+/** Carte d'indicateur utilisée dans l'onglet Statistiques. */
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: number;
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-3.5">
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Icon className="h-4 w-4" />
+        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] sm:text-[11px]">{label}</span>
+      </div>
+      <p className="mt-1.5 text-2xl font-bold tracking-tight">{value.toLocaleString("fr-FR")}</p>
+    </div>
+  );
+}
+
+/**
+ * Onglet « Sponsorisation » : solde, rechargement, mises en avant.
+ * Le contenu vient du contexte vendeur (il n'apparaît que si le paiement est
+ * réellement actif).
+ */
+function SponsorshipPanel() {
+  const money = useSellerMoney();
+
+  if (!money) {
+    return (
+      <div className="mt-5 rounded-2xl border border-dashed border-border bg-muted/30 p-8 text-center">
+        <Zap className="mx-auto h-7 w-7 text-muted-foreground" />
+        <h3 className="mt-3 font-semibold">Sponsorisation bientôt disponible</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          La mise en avant payante de vos produits arrive très bientôt sur StockMe.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-5">
+      <WalletCard
+        wallet={money.wallet}
+        loading={money.loading}
+        onRecharge={money.openTopUp}
+        onChanged={money.refresh}
+      />
     </div>
   );
 }
