@@ -137,6 +137,47 @@ $$;
 REVOKE EXECUTE ON FUNCTION public.log_ad_event(uuid, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.log_ad_event(uuid, text) TO anon, authenticated;
 
+-- ------------------------------------------------------------------
+-- 4. Réparation automatique, côté vendeur
+--
+--    Appelée quand le vendeur ouvre son portefeuille. Si une campagne est
+--    ACTIVE et FINANCÉE mais que son annonce n'est plus servie (annonce
+--    expirée, journée manquée par la tâche quotidienne), on la remet en
+--    service jusqu'à la fin de la journée. Aucun débit : la journée est déjà
+--    payée. Le vendeur ne paie donc plus pour une mise en avant morte.
+-- ------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.boost_self_heal()
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_fixed int := 0;
+BEGIN
+  IF v_uid IS NULL THEN RAISE EXCEPTION 'Connexion requise'; END IF;
+
+  UPDATE public.ads a
+     SET active = true,
+         starts_at = least(coalesce(a.starts_at, now()), now()),
+         ends_at = greatest(coalesce(a.ends_at, now()), date_trunc('day', now()) + interval '1 day'),
+         weight = public.boost_weight(c.daily_budget_fcfa)
+    FROM public.boost_campaigns c
+    JOIN public.wallets w ON w.user_id = c.user_id
+   WHERE c.ad_id = a.id
+     AND c.user_id = v_uid
+     AND c.status = 'active'
+     AND coalesce(w.balance_fcfa, 0) >= c.daily_budget_fcfa
+     AND (a.active = false OR a.ends_at IS NULL OR a.ends_at < now());
+
+  GET DIAGNOSTICS v_fixed = ROW_COUNT;
+  RETURN json_build_object('ok', true, 'repaired', v_fixed);
+END;
+$$;
+REVOKE EXECUTE ON FUNCTION public.boost_self_heal() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.boost_self_heal() TO authenticated;
+
 -- ============================================================
 -- CONTRÔLES À LANCER APRÈS (copier les résultats)
 -- ============================================================

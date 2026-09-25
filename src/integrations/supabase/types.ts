@@ -494,6 +494,10 @@ export type Database = {
         }
         Returns: Record<string, unknown>
       }
+      boost_self_heal: {
+        Args: Record<string, never>
+        Returns: Record<string, unknown>
+      }
       admin_payments_overview: {
         Args: Record<string, never>
         Returns: Record<string, unknown>

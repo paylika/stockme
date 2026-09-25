@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { formatFCFA } from "@/lib/format";
+import { supabase } from "@/integrations/supabase/stockme-client";
 import type { BoostRow, PendingPayment, WalletData } from "@/hooks/useWallet";
 import { toggleBoostStatus } from "@/components/SellerMoneyProvider";
 import {
+  AlertTriangle,
   ArrowDownLeft,
   Clock,
   Eye,
@@ -30,6 +32,24 @@ type Props = {
 /** Présentation pure : solde, performance des mises en avant, mouvements. */
 export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChanged }: Props) {
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  // Réparation automatique : quand le vendeur ouvre son portefeuille, si une
+  // campagne est active et financée mais que son annonce n'est plus servie
+  // (annonce expirée, journée manquée par la tâche quotidienne), on la remet en
+  // service. Aucun débit : la journée est déjà payée.
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      const { data } = await supabase.rpc("boost_self_heal");
+      if (cancel) return;
+      const repaired = (data as { repaired?: number } | null)?.repaired ?? 0;
+      if (repaired > 0) onChanged?.();
+    })();
+    return () => {
+      cancel = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) return <div className="h-40 rounded-2xl shimmer bg-muted" />;
   if (!wallet) return null;
@@ -90,6 +110,27 @@ export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChang
           </Button>
         </div>
       </div>
+
+      {/* ---------- Alerte : la mise en avant va s'arrêter faute de solde ---------- */}
+      {dailySpend > 0 && daysLeft <= 1 && (
+        <div className="flex flex-wrap items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold">
+              {daysLeft === 0
+                ? "Votre mise en avant ne peut plus être payée"
+                : "Il reste 1 jour de mise en avant"}
+            </p>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+              Il faut {formatFCFA(dailySpend)} par jour et votre solde est de {formatFCFA(balance)}. Sans recharge, la
+              diffusion s'arrête : votre produit disparaît des emplacements mis en avant.
+            </p>
+          </div>
+          <Button variant="volt" className="h-10" onClick={onRecharge}>
+            <ArrowDownLeft className="mr-1.5 h-4 w-4" /> Recharger
+          </Button>
+        </div>
+      )}
 
       {/* ---------- Paiement en attente : on le reprend, on n'en crée pas un autre ---------- */}
       {wallet.pending.length > 0 && (
