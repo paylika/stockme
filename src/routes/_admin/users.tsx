@@ -173,7 +173,7 @@ function AdminUsersPage() {
   const admins = (filtered ?? []).filter((u) => u.is_admin);
   const verifiedCount = Object.values(badges).filter((b) => b.verified).length;
 
-  // ===== Badge « Fournisseur vérifié » (5 000 FCFA/an, activation manuelle) =====
+  // ===== Badge « Fournisseur vérifié » (2 000 FCFA/an, activation manuelle) =====
   const setVerified = async (u: AdminUser, months: number | null, on: boolean) => {
     if (!on && !confirm(`Retirer le badge « Fournisseur vérifié » de ${u.email || u.full_name} ?`)) return;
     setBadgeBusyId(u.id);
@@ -295,7 +295,7 @@ function AdminUsersPage() {
                     )}
                   </td>
 
-                  {/* Badge « Fournisseur vérifié » — 5 000 FCFA/an, activation manuelle */}
+                  {/* Badge « Fournisseur vérifié » — 2 000 FCFA/an, activation manuelle */}
                   <td className="px-4 py-3">
                     {badges[u.id]?.verified ? (
                       <div className="flex flex-col items-start gap-1">

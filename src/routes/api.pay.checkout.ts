@@ -82,7 +82,7 @@ export const Route = createFileRoute("/api/pay/checkout")({
           // 2) Session de paiement chez le fournisseur
           const origin = new URL(request.url).origin;
           // Carte : prélèvement mensuel automatique UNIQUEMENT pour l'offre PRO
-          // mensuelle. Le badge (5 000 F/an) et le PRO à l'année (25 000 F/an)
+          // mensuelle. Le badge (2 000 F/an) et le PRO à l'année (25 000 F/an)
           // sont des paiements uniques : on ne doit jamais les prélever chaque
           // mois. La décision vient de pricing.ts, jamais d'un test de montant.
           const metaPlan = typeof body.metadata?.plan === "string" ? planById(body.metadata.plan) : null;

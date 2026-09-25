@@ -16,9 +16,9 @@ import { BadgeCheck, Check, Minus, Rocket, ShieldCheck, Sparkles, TrendingUp, X 
 export const Route = createFileRoute("/tarifs")({
   head: () => {
     const { meta, links } = buildSeoHead({
-      title: "Tarifs StockMe — Badge fournisseur vérifié 5 000 F/an et StockMe PRO",
+      title: "Tarifs StockMe — Badge fournisseur vérifié 2 000 F/an et StockMe PRO",
       description:
-        "Publiez gratuitement sur StockMe. Le badge Fournisseur vérifié coûte 5 000 FCFA/an, StockMe PRO 2 500 FCFA/mois (25 000 FCFA l'année). Mise en avant dès 400 FCFA/jour.",
+        "Publiez gratuitement sur StockMe. Le badge Fournisseur vérifié coûte 2 000 FCFA/an, StockMe PRO 2 500 FCFA/mois (25 000 FCFA l'année). Mise en avant dès 400 FCFA/jour.",
       path: "/tarifs",
       keywords:
         "tarif marketplace Afrique, prix badge vendeur, fournisseur vérifié, publicité stock en gros, boost annonce, StockMe PRO, vendre en gros Sénégal",

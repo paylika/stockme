@@ -19,7 +19,7 @@ type Props = {
  * (« FOURNISSEUR » en bleu profond + « VÉRIFIÉ » en bleu vif).
  *
  * Deux tons :
- *   • bleu  = fournisseur vérifié (achat du badge 5 000 FCFA/an) — la confiance ;
+ *   • bleu  = fournisseur vérifié (achat du badge 2 000 FCFA/an) — la confiance ;
  *   • or    = vérifié à vie (vérification manuelle par l'équipe StockMe).
  *
  * Le bleu est volontairement réservé à la confiance : l'orange `volt` reste la

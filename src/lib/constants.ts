@@ -189,7 +189,7 @@ export const isAdminEmail = (email?: string | null) =>
  * ------------------------------------------------------------------ */
 
 /** Prix du badge, en FCFA — offre annuelle (voir la grille dans src/lib/pricing.ts). */
-export const VERIFIED_BADGE_PRICE_FCFA = 5000;
+export const VERIFIED_BADGE_PRICE_FCFA = 2000;
 
 /** Numéro WhatsApp du service client (format international, sans « + »). */
 export const SERVICE_WHATSAPP = "221786635331";

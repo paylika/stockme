@@ -149,7 +149,7 @@ function Dashboard() {
             </div>
             <Link to="/profile">
               <Button variant="volt" className="h-11">
-                Vérifier ma boutique — 5 000 FCFA/an
+                Vérifier ma boutique — 2 000 FCFA/an
               </Button>
             </Link>
           </div>

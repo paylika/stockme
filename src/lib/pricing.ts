@@ -3,14 +3,14 @@
  *
  * LOGIQUE (décidée avec le fondateur) :
  *   PRO ⊃ Vérifié. Le badge est toujours ACQUIS :
- *     • soit par un achat annuel (5 000 F / 12 mois) ;
+ *     • soit par un achat annuel (2 000 F / 12 mois) ;
  *     • soit automatiquement tant que l'abonnement PRO est actif ;
  *     • soit par l'admin (vérification manuelle → à vie).
  *   Ce qui change, c'est ce qui RESTE si le vendeur arrête : avec le badge
  *   annuel, il garde son badge 12 mois ; avec PRO seul, il le perd.
  *
- * Le « pack 7 500 » (= badge annuel + PRO) se fait en 2 étapes dans la même
- * fenêtre : 5 000 F pour sécuriser l'année, puis 2 500 F/mois pour PRO.
+ * Le « pack 4 500 » (= badge annuel + PRO) se fait en 2 étapes dans la même
+ * fenêtre : 2 000 F pour sécuriser l'année, puis 2 500 F/mois pour PRO.
  * Aucun double paiement : le vendeur n'achète jamais deux fois le badge.
  */
 
@@ -81,9 +81,9 @@ export const PAID_PLANS: Plan[] = [
   {
     id: "verifie",
     name: "Fournisseur vérifié",
-    price: 5000,
+    price: 2000,
     period: "par an",
-    monthlyEquivalent: 417,
+    monthlyEquivalent: 167,
     days: 365,
     recurring: null,
     dbPlan: "verifie",
@@ -161,7 +161,7 @@ export const VERIFICATION_BONUS_DAYS = 3;
 export const VERIFICATION_BONUS_FCFA = 1500;
 
 /** Pack « badge annuel + PRO » : total payé le premier mois. */
-export const PACK_TOTAL = 5000 + 2500; // 7 500 F
+export const PACK_TOTAL = 2000 + 2500; // 4 500 F
 
 /** Garantie affichée (levier de conversion). */
 export const SATISFACTION_GUARANTEE =

@@ -317,7 +317,7 @@ export function ProductForm({
         {maxPhotos < MAX_PHOTOS && (
           <p className="rounded-xl border border-volt/40 bg-volt/10 px-3 py-2 text-xs leading-relaxed">
             Compte non vérifié : <strong>2 photos par produit</strong> et 10 produits publiés maximum. Faites vérifier
-            votre boutique (5 000 FCFA par an) pour aller jusqu'à 10 photos et publier sans limite.
+            votre boutique (2 000 FCFA par an) pour aller jusqu'à 10 photos et publier sans limite.
           </p>
         )}
       </div>
