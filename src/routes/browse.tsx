@@ -10,6 +10,7 @@ import { CATEGORIES, WEST_AFRICA_LOCATIONS } from "@/lib/constants";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { ProductCard, type ListingProduct } from "@/components/ProductCard";
 import { useVerifiedSellers } from "@/hooks/useVerifiedSellers";
+import { trackAdClick, trackAdImpression } from "@/lib/ad-tracking";
 import { ALL_COUNTRIES, useVisitorCountry } from "@/lib/geo";
 import { buildSeoHead } from "@/lib/seo";
 
@@ -44,6 +45,8 @@ function Browse() {
   const navigate = useNavigate({ from: "/browse" });
   const [items, setItems] = useState<Product[] | null>(null);
   const [boostedIds, setBoostedIds] = useState<Set<string>>(new Set());
+  /** produit → annonce : permet de compter les clics sur une mise en avant. */
+  const [adByProduct, setAdByProduct] = useState<Map<string, string>>(new Map());
   const [q, setQ] = useState(search.q ?? "");
   const verified = useVerifiedSellers();
   const visitor = useVisitorCountry();
@@ -67,13 +70,21 @@ function Browse() {
       ]);
       if (cancel) return;
 
-      const boosted = new Set(((adData as { id: string }[] | null) ?? []).map((p) => p.id));
+      const ads = (adData as { id: string; ad_id: string }[] | null) ?? [];
+      const boosted = new Set(ads.map((a) => a.id));
+      const adMap = new Map(ads.map((a) => [a.id, a.ad_id]));
       setBoostedIds(boosted);
-      setItems(
-        ((data as Product[] | null) ?? [])
-          .slice()
-          .sort((a, b) => (boosted.has(a.id) ? 0 : 1) - (boosted.has(b.id) ? 0 : 1)),
-      );
+      setAdByProduct(adMap);
+
+      const list = ((data as Product[] | null) ?? [])
+        .slice()
+        .sort((a, b) => (boosted.has(a.id) ? 0 : 1) - (boosted.has(b.id) ? 0 : 1));
+      setItems(list);
+
+      // Une mise en avant réellement affichée en tête de liste = une vue annonce.
+      // Sans ce comptage, le vendeur ne voyait AUCUN résultat alors que son
+      // produit était bien remonté en haut de « Parcourir le stock ».
+      list.filter((p) => boosted.has(p.id)).forEach((p) => trackAdImpression(adMap.get(p.id)));
     };
     run();
     return () => { cancel = true; };
@@ -169,6 +180,7 @@ function Browse() {
                 product={p}
                 sellerVerified={!!p.owner_id && verified.has(p.owner_id)}
                 sponsored={boostedIds.has(p.id)}
+                onOpen={adByProduct.has(p.id) ? () => trackAdClick(adByProduct.get(p.id)) : undefined}
                 delayMs={i * 45}
               />
             ))}

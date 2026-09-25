@@ -152,7 +152,12 @@ export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChang
           <p className="mt-0.5 text-[11px] text-muted-foreground">Depuis le premier jour de diffusion.</p>
 
           <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            <Kpi label="Vues annonce" value={totals.impressions.toLocaleString("fr-FR")} icon={Eye} />
+            <Kpi
+              label="Vues annonce"
+              value={totals.impressions.toLocaleString("fr-FR")}
+              icon={Eye}
+              hint="visiteurs uniques qui ont vu votre mise en avant"
+            />
             <Kpi label="Clics" value={totals.clicks.toLocaleString("fr-FR")} icon={MousePointerClick} />
             <Kpi
               label="Taux de clic"
@@ -167,6 +172,14 @@ export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChang
               tone={totals.contacts > 0 ? "success" : "muted"}
             />
           </div>
+
+          {/* Le vendeur confond souvent « vue annonce » et « fiche vue » : on explique. */}
+          <p className="mt-3 rounded-xl bg-muted/50 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+            <strong className="text-foreground">Vues annonce</strong> = nombre de visiteurs <em>uniques</em> qui ont vu
+            votre produit mis en avant (un même visiteur ne compte qu'une fois par jour).{" "}
+            <strong className="text-foreground">Fiche vue</strong> = nombre d'ouvertures de votre fiche produit, mises en
+            avant comprises.
+          </p>
 
           <div className="mt-2.5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             <Kpi label="Total dépensé" value={formatFCFA(totals.spent)} icon={Rocket} />

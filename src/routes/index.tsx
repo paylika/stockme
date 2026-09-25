@@ -120,18 +120,55 @@ function Index() {
   }, [winners, winnerRot]);
 
   // Grille affichée = produits naturels + emplacements sponsorisés (cartes n°2 et n°3).
+  //
+  // AVANT : les emplacements payants n'apparaissaient QUE si aucun filtre
+  // n'était actif. Or la page applique automatiquement le pays détecté du
+  // visiteur → la mise en avant payée n'était presque JAMAIS affichée (donc
+  // 0 vue annonce, alors que le vendeur payait). Désormais l'emplacement est
+  // servi dès que le produit mis en avant correspond au lieu consulté : c'est
+  // ce que le vendeur achète.
   const display = useMemo(() => {
     const list = items ?? [];
     const rows: { product: Product; adId?: string }[] = list.map((product) => ({ product }));
-    const isMainFeed = !search.country && !search.city && !search.category && !search.q;
-    if (!isMainFeed || list.length === 0) return rows;
+    if (list.length === 0) return rows;
 
-    const alreadyListed = new Set(list.map((p) => p.id));
-    const ads = sponsored.filter((a) => !alreadyListed.has(a.id)).slice(0, SPONSOR_SLOTS.length);
-    ads.forEach((ad, i) => {
-      const at = Math.min(SPONSOR_SLOTS[i] ?? rows.length, rows.length);
-      rows.splice(at, 0, { product: ad, adId: ad.ad_id });
-    });
+    // Une recherche texte ou une catégorie précise change l'intention : on ne
+    // glisse pas de mise en avant au milieu de ces résultats.
+    if (search.q || search.category) return rows;
+
+    // Lieu consulté : ville choisie, ou toutes les villes du pays détecté.
+    const cities = search.city
+      ? [search.city]
+      : search.country && WEST_AFRICA_LOCATIONS[search.country]
+      ? WEST_AFRICA_LOCATIONS[search.country]
+      : null;
+
+    const eligible = sponsored.filter((a) => !cities || (a.city ? cities.includes(a.city) : false));
+    if (eligible.length === 0) return rows;
+
+    const indexOf = () => {
+      const m = new Map<string, number>();
+      rows.forEach((r, i) => m.set(r.product.id, i));
+      return m;
+    };
+
+    let placed = 0;
+    for (const ad of eligible) {
+      if (placed >= SPONSOR_SLOTS.length) break;
+      const at = Math.min(SPONSOR_SLOTS[placed] ?? rows.length, Math.max(rows.length - 1, 0));
+      const pos = indexOf().get(ad.id);
+
+      if (pos !== undefined) {
+        // Déjà dans la liste naturelle : on la REMONTE à l'emplacement payant
+        // et on la marque sponsorisée (la vue est donc bien comptée).
+        const [row] = rows.splice(pos, 1);
+        row.adId = ad.ad_id;
+        rows.splice(Math.min(at, rows.length), 0, row);
+      } else {
+        rows.splice(at, 0, { product: ad, adId: ad.ad_id });
+      }
+      placed += 1;
+    }
     return rows;
   }, [items, sponsored, search.country, search.city, search.category, search.q]);
 
