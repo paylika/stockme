@@ -197,13 +197,10 @@ export const SERVICE_WHATSAPP = "221786635331";
 /** Même numéro, prêt à afficher : +221 78 663 53 31 */
 export const SERVICE_WHATSAPP_DISPLAY = "+221 78 663 53 31";
 
-/** Lien WhatsApp pré-rempli pour payer / demander la vérification. */
-export const verifiedBadgeWhatsAppLink = (shopName?: string | null, contactName?: string | null) => {
-  const boutique = shopName?.trim() || contactName?.trim() || "";
-  const message =
-    `Bonjour StockMe, je souhaite faire vérifier ma boutique (badge Fournisseur vérifié — ` +
-    `${VERIFIED_BADGE_PRICE_FCFA} FCFA).` +
-    (boutique ? `\n\nNom de la boutique : ${boutique}` : "") +
-    `\n\nJ'ai DÉJÀ envoyé les ${VERIFIED_BADGE_PRICE_FCFA} FCFA — voici la capture du paiement.`;
-  return `https://wa.me/${SERVICE_WHATSAPP}?text=${encodeURIComponent(message)}`;
-};
+/**
+ * Le badge s'achète UNIQUEMENT par carte bancaire (Stripe), dans l'application :
+ * il n'y a plus aucun paiement manuel par Wave / Orange Money via WhatsApp.
+ * Ce numéro sert seulement au support (questions sur les offres, aide).
+ */
+export const SUPPORT_WHATSAPP_LINK = (subject = "j'ai une question sur les offres (badge vérifié / PRO).") =>
+  `https://wa.me/${SERVICE_WHATSAPP}?text=${encodeURIComponent(`Bonjour StockMe, ${subject}`)}`;

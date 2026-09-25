@@ -143,13 +143,13 @@ function Dashboard() {
               <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
                 Le badge <strong className="text-foreground">Fournisseur vérifié</strong> s'affiche sur toutes vos
                 cartes produit et vous fait <strong className="text-foreground">remonter dans la recherche</strong>.
-                Sans lui : 2 photos par produit et 10 produits publiés maximum. Vérifié : 5 photos, publications
+                Sans lui : 2 photos par produit et 10 produits publiés maximum. Vérifié : 10 photos, publications
                 illimitées.
               </p>
             </div>
             <Link to="/profile">
               <Button variant="volt" className="h-11">
-                Vérifier ma boutique — 2 000 FCFA
+                Vérifier ma boutique — 5 000 FCFA/an
               </Button>
             </Link>
           </div>

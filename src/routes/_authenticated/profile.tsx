@@ -7,21 +7,19 @@ import { MobileFooter } from "@/components/MobileFooter";
 import { Button } from "@/components/ui/button";
 import { StatusSwitch } from "@/components/StatusSwitch";
 import { VerifiedBadge, VerifiedBadgeGold } from "@/components/VerifiedBadge";
-import { VerifiedPaymentDialog } from "@/components/VerifiedPaymentDialog";
 import { BoostButton, SellerMoneyProvider, useSellerMoney } from "@/components/SellerMoneyProvider";
 import { WalletCard } from "@/components/WalletCard";
 import { ProfileEditDialog } from "@/components/ProfileEditDialog";
 import { ShopBanner } from "@/components/ShopBanner";
 import { UpgradeDialog } from "@/components/UpgradeDialog";
 import { usePaymentsStatus } from "@/lib/features";
-import { PAID_PLANS, VERIFICATION_BONUS_FCFA, planOf, type PlanId } from "@/lib/pricing";
+import { PAID_PLANS, VERIFICATION_BONUS_FCFA, planById, planOf, type PlanId } from "@/lib/pricing";
 import { useAuth } from "@/hooks/useAuth";
 import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
 import { formatFCFA } from "@/lib/format";
 import {
   COUNTRY_FLAGS,
-  SERVICE_WHATSAPP_DISPLAY,
   VERIFIED_BADGE_PRICE_FCFA,
   countryOfCity,
 } from "@/lib/constants";
@@ -114,7 +112,9 @@ function ProfilePage() {
   const payments = usePaymentsStatus();
   const [savingId, setSavingId] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [payOpen, setPayOpen] = useState(false);
+  // Le bloc « faire vérifier ma boutique » est DÉPLIÉ par défaut (l'offre doit
+  // être vue immédiatement) tout en restant repliable d'un clic.
+  const [badgeOpen, setBadgeOpen] = useState(true);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Photo de profil : envoi immédiat depuis cette page (pas besoin de passer par « Modifier le profil »).
@@ -214,6 +214,8 @@ function ProfilePage() {
   const online = (products ?? []).filter((p) => p.published).length;
   const isVerified = !!profile?.verified && (!profile.verified_until || new Date(profile.verified_until) > new Date());
   const isLifetime = isVerified && !profile?.verified_until;
+  // Avantages affichés = exactement ceux de la page Tarifs (source unique).
+  const badgePlan = planById("verifie")!;
 
   if (loading) {
     return (
@@ -375,62 +377,58 @@ function ProfilePage() {
               </span>
             </div>
           ) : (
-            <details className="mt-4 rounded-xl border border-volt/40 bg-volt/10 px-3 py-2.5">
+            <details
+              open={badgeOpen}
+              onToggle={(e) => setBadgeOpen(e.currentTarget.open)}
+              className="mt-4 rounded-xl border border-volt/40 bg-volt/10 px-3 py-2.5"
+            >
               <summary className="flex cursor-pointer list-none items-center gap-2 text-xs">
                 <BadgeCheck className="h-4 w-4 shrink-0 text-primary" />
                 <span className="min-w-0 flex-1 font-semibold">
-                  Faites vérifier votre boutique — {VERIFIED_BADGE_PRICE_FCFA.toLocaleString("fr-FR")} FCFA
+                  Faites vérifier votre boutique — {formatFCFA(VERIFIED_BADGE_PRICE_FCFA)}{" "}
+                  <span className="font-normal text-muted-foreground">par an</span>
                 </span>
-                <span className="shrink-0 rounded-full bg-volt px-2.5 py-1 text-[11px] font-bold text-volt-foreground">
-                  Vérifier
+                <span className="shrink-0 text-[11px] font-semibold text-muted-foreground">
+                  {badgeOpen ? "Réduire" : "Voir"}
                 </span>
               </summary>
 
-              <div className="mt-3 space-y-2 border-t border-volt/30 pt-3">
+              <div className="mt-3 space-y-3 border-t border-volt/30 pt-3">
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  Le badge <strong className="text-foreground">Fournisseur vérifié</strong> rassure les acheteurs et
-                  s'affiche sur toutes vos cartes produit. Nous contrôlons votre numéro WhatsApp et votre activité.
+                  Le badge <strong className="text-foreground">Fournisseur vérifié</strong> s'affiche sur toutes vos
+                  annonces et vous fait remonter dans la recherche. Il est valable{" "}
+                  <strong className="text-foreground">12 mois</strong>.
                 </p>
-                {payments.enabled ? (
+                <ul className="space-y-1">
+                  {badgePlan.features.slice(0, 5).map((f) => (
+                    <li key={f} className="flex items-start gap-1.5 text-[11px] leading-snug">
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                {payments.enabled && payments.methods.includes("card") ? (
                   <>
-                    <p className="text-[11px] leading-relaxed text-muted-foreground">
-                      Paiement par carte : le badge s'active <strong className="text-foreground">tout de suite</strong> après
-                      le paiement. Pas de carte ? Payez par Wave ou Orange Money et envoyez la capture.
-                    </p>
                     <button
                       type="button"
                       onClick={() => {
                         setUpgradePlan("verifie");
                         setUpgradeOpen(true);
                       }}
-                      className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-volt px-4 text-xs font-bold text-volt-foreground transition hover:brightness-110"
+                      className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-volt px-4 text-xs font-bold text-volt-foreground transition hover:brightness-110"
                     >
-                      <CreditCard className="h-3.5 w-3.5" /> Payer par carte —{" "}
-                      {VERIFIED_BADGE_PRICE_FCFA.toLocaleString("fr-FR")} FCFA
+                      <CreditCard className="h-4 w-4" /> Payer par carte — {formatFCFA(VERIFIED_BADGE_PRICE_FCFA)} / an
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setPayOpen(true)}
-                      className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full border border-volt/40 bg-transparent px-4 text-xs font-semibold text-foreground transition hover:bg-volt/10"
-                    >
-                      <MessageCircle className="h-3.5 w-3.5" /> Wave / Orange Money au {SERVICE_WHATSAPP_DISPLAY}
-                    </button>
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                      Paiement sécurisé par carte bancaire (Visa / Mastercard). Le badge s'active automatiquement,
+                      sans aucune démarche à faire.
+                    </p>
                   </>
                 ) : (
-                  <>
-                    <ol className="space-y-0.5 text-[11px] text-muted-foreground">
-                      <li>1. Payez {VERIFIED_BADGE_PRICE_FCFA.toLocaleString("fr-FR")} FCFA (Wave / Orange Money) au {SERVICE_WHATSAPP_DISPLAY}</li>
-                      <li>2. Envoyez la capture sur WhatsApp</li>
-                      <li>3. Badge activé après vérification</li>
-                    </ol>
-                    <button
-                      type="button"
-                      onClick={() => setPayOpen(true)}
-                      className="inline-flex h-10 items-center gap-2 rounded-full bg-volt px-4 text-xs font-bold text-volt-foreground transition hover:brightness-110"
-                    >
-                      <MessageCircle className="h-3.5 w-3.5" /> Payer {VERIFIED_BADGE_PRICE_FCFA.toLocaleString("fr-FR")} FCFA
-                    </button>
-                  </>
+                  <p className="rounded-lg border border-border bg-background/60 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+                    Le paiement par carte est en cours d'activation. Revenez dans quelques heures : votre badge
+                    s'activera automatiquement après le paiement, sans aucune démarche.
+                  </p>
                 )}
               </div>
             </details>
@@ -688,14 +686,6 @@ function ProfilePage() {
 
       <MobileFooter />
       <MobileNav />
-
-      {/* Pop-up de paiement : on confirme l'envoi de l'argent AVANT WhatsApp */}
-      <VerifiedPaymentDialog
-        open={payOpen}
-        onOpenChange={setPayOpen}
-        shopName={profile?.shop_name}
-        contactName={profile?.full_name}
-      />
 
       {/* Fenêtre unique de modification du profil */}
       <ProfileEditDialog

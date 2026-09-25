@@ -12,8 +12,8 @@ type Props = {
 };
 
 /**
- * Badge officiel StockMe : attribué manuellement par l'équipe après paiement
- * (2 000 FCFA). Bleu profond = confiance, avec coche et bouclier.
+ * Badge officiel StockMe : attribué après paiement par carte (5 000 FCFA/an)
+ * ou manuellement par l'équipe. Bleu profond = confiance, coche et bouclier.
  */
 export function VerifiedBadge({ label = "Fournisseur vérifié", compact = false, sellerId, size = "sm" }: Props) {
   const pad = size === "md" ? "px-2.5 py-1 text-xs" : "px-2 py-0.5 text-[11px]";
