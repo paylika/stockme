@@ -158,6 +158,11 @@ export function SellerMoneyProvider({
           onStarted={() => {
             refresh();
             onChanged?.();
+            // Prévient la page affichée (ex. le profil) qu'un boost vient de
+            // démarrer, pour qu'elle recharge ses propres chiffres.
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("stockme:money-changed"));
+            }
           }}
         />
       )}

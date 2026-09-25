@@ -14,6 +14,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { JsonLd } from "@/components/JsonLd";
 import { WhatsAppGroupPopup } from "@/components/WhatsAppGroupPopup";
 import { ScrollKeeper } from "@/components/ScrollKeeper";
+import { SellerMoneyProvider } from "@/components/SellerMoneyProvider";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { useEffect } from "react";
 import {
@@ -137,12 +138,16 @@ function RootComponent() {
       {isAdminLayout ? (
         <Outlet />
       ) : (
-        <SidebarProvider>
-          <AppSidebar />
-          <SidebarInset className="min-w-0">
-            <Outlet />
-          </SidebarInset>
-        </SidebarProvider>
+        /* Un SEUL portefeuille pour tout le site : le sidebar peut donc ouvrir
+           directement les pop-up Recharger / Booster, sans passer par le profil. */
+        <SellerMoneyProvider>
+          <SidebarProvider>
+            <AppSidebar />
+            <SidebarInset className="min-w-0">
+              <Outlet />
+            </SidebarInset>
+          </SidebarProvider>
+        </SellerMoneyProvider>
       )}
       {!isAdminLayout && <WhatsAppGroupPopup />}
       {/* Mémoire de défilement : le retour depuis une fiche produit ramène à la

@@ -7,7 +7,7 @@ import { MobileFooter } from "@/components/MobileFooter";
 import { Button } from "@/components/ui/button";
 import { StatusSwitch } from "@/components/StatusSwitch";
 import { VerifiedBadge, VerifiedBadgeGold } from "@/components/VerifiedBadge";
-import { BoostButton, SellerMoneyProvider, useSellerMoney } from "@/components/SellerMoneyProvider";
+import { BoostButton, useSellerMoney } from "@/components/SellerMoneyProvider";
 import { WalletCard } from "@/components/WalletCard";
 import { ProfileEditDialog } from "@/components/ProfileEditDialog";
 import { ShopBanner } from "@/components/ShopBanner";
@@ -178,6 +178,16 @@ function ProfilePage() {
 
   useEffect(() => {
     load();
+  }, []);
+
+  // Un boost vient d'être lancé depuis le sidebar (ou la carte produit) :
+  // on recharge les chiffres de la page pour rester cohérent.
+  useEffect(() => {
+    const onChanged = () => {
+      void load();
+    };
+    window.addEventListener("stockme:money-changed", onChanged);
+    return () => window.removeEventListener("stockme:money-changed", onChanged);
   }, []);
 
   const toggle = async (p: Product, field: "published" | "sold_out" | "dropshipping", val: boolean) => {
@@ -475,7 +485,6 @@ function ProfilePage() {
 
       {/* ===== Espace vendeur : Produits · Statistiques · Sponsorisation ===== */}
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8">
-        <SellerMoneyProvider defaultPhone={profile?.whatsapp} onChanged={load}>
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg sm:text-xl font-bold tracking-tight">Mon espace vendeur</h2>
           <Link to="/dashboard/new">
@@ -707,8 +716,6 @@ function ProfilePage() {
         {tab === "promo" && (
           <SponsorshipPanel plan={planOf(profile)} onUpgrade={(target) => { setUpgradePlan(target); setUpgradeOpen(true); }} />
         )}
-
-        </SellerMoneyProvider>
 
         {/* Logout */}
         <div className="mt-8 border-t border-dashed border-border pt-6">
