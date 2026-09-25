@@ -14,7 +14,6 @@ import {
   IconHome,
   IconSell,
   IconStock,
-  IconStore,
   IconUser,
   IconWhatsApp,
 } from "@/components/icons";
@@ -73,7 +72,6 @@ export function AppSidebar() {
   const navigate = useNavigate();
 
   const [collapsed, setCollapsed] = useState(false);
-  const [moneyOpen, setMoneyOpen] = useState(true);
   const [checkOpen, setCheckOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -174,13 +172,6 @@ export function AppSidebar() {
       icon: IconUser,
       match: "/profile",
       authRedirect: user ? undefined : { redirect: "/profile", mode: "login" },
-    },
-    {
-      to: user ? "/profile/edit" : "/auth",
-      label: "Modifier mes infos",
-      icon: IconStore,
-      match: "/profile/edit",
-      authRedirect: user ? undefined : { redirect: "/profile/edit", mode: "login" },
     },
   ];
 
@@ -283,104 +274,47 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-2">
-        {/* ============ Mon argent (le levier : solde + mise en avant) ============ */}
+        {/* ============ Mon argent : compact, une information et deux actions ============ */}
         {user && wallet && isSeller && !collapsed && (
-          <div className="mb-2 rounded-2xl border border-border bg-muted/40 p-2.5">
-            <button
-              type="button"
-              onClick={() => setMoneyOpen((v) => !v)}
-              className="flex w-full items-center justify-between text-left"
-            >
-              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                Mon argent
-              </span>
-              <IconChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition ${moneyOpen ? "" : "-rotate-90"}`} />
-            </button>
-
-            {moneyOpen && (
-              <>
-                <p className="mt-1 text-lg font-bold tracking-tight">{formatFCFA(balance)}</p>
-                <p className="text-[11px] leading-snug text-muted-foreground">
-                  {activeBoosts > 0
-                    ? `${activeBoosts} mise${activeBoosts > 1 ? "s" : ""} en avant active${activeBoosts > 1 ? "s" : ""}`
-                    : "Aucune mise en avant en cours"}
-                </p>
-
-                {pendingCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => money?.resumePending({ amount_fcfa: wallet?.pending?.[0]?.amount_fcfa ?? 1000 })}
-                    className="mt-1.5 flex w-full items-center gap-1.5 rounded-lg border border-volt/40 bg-volt/10 px-2 py-1.5 text-left text-[11px] font-semibold"
-                  >
-                    <IconClock className="h-3.5 w-3.5 shrink-0 text-volt" />
-                    <span className="truncate">
-                      {pendingCount} paiement{pendingCount > 1 ? "s" : ""} en attente — reprendre
-                    </span>
-                  </button>
-                )}
-
-                {/* Actions directes : les pop-up s'ouvrent ici, sans passer par le profil. */}
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => (money ? money.openTopUp() : navigate({ to: "/profile", search: { tab: "promo" } }))}
-                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-foreground text-[11px] font-bold text-background transition hover:opacity-90"
-                  >
-                    <IconCoins className="h-3.5 w-3.5" /> Recharger
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => (money ? setPickerOpen(true) : navigate({ to: "/profile", search: { tab: "promo" } }))}
-                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-border text-[11px] font-bold transition hover:bg-background"
-                  >
-                    <IconFlame className="h-3.5 w-3.5 text-volt" /> Booster
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* ============ Checklist de démarrage ============ */}
-        {showChecklist && !collapsed && (
-          <div className="mb-3 rounded-2xl border border-volt/40 bg-volt/5 p-3">
-            <button
-              type="button"
-              onClick={() => setCheckOpen((v) => !v)}
-              className="flex w-full items-center justify-between text-left"
-            >
-              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                Complétez votre boutique
-              </span>
-              <span className="text-[10px] font-bold text-volt">
-                {doneCount}/{steps.length}
-              </span>
-            </button>
-
-            <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted">
-              <div className="h-full rounded-full bg-volt transition-[width] duration-500" style={{ width: `${progress}%` }} />
+          <div className="mb-3 rounded-2xl border border-border bg-muted/40 px-3 py-2.5">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Solde</span>
+              <span className="truncate text-base font-bold tracking-tight">{formatFCFA(balance)}</span>
             </div>
-
-            {checkOpen && (
-              <ul className="mt-2.5 space-y-1.5">
-                {steps.map((s) => (
-                  <li key={s.label}>
-                    {s.done ? (
-                      <span className="flex items-center gap-2 text-[11px] text-muted-foreground line-through">
-                        <IconCheck className="h-3.5 w-3.5 shrink-0 text-success" /> {s.label}
-                      </span>
-                    ) : (
-                      <Link
-                        to={s.to as never}
-                        className="flex items-center gap-2 text-[11px] font-medium hover:text-volt"
-                      >
-                        <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-muted-foreground/50" />
-                        {s.label}
-                      </Link>
-                    )}
-                  </li>
-                ))}
-              </ul>
+            <div className="mt-2 grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={() => (money ? money.openTopUp() : navigate({ to: "/profile", search: { tab: "promo" } }))}
+                className="inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-foreground text-[11px] font-bold text-background transition hover:opacity-90"
+              >
+                <IconCoins className="h-3.5 w-3.5" /> Recharger
+              </button>
+              <button
+                type="button"
+                onClick={() => (money ? setPickerOpen(true) : navigate({ to: "/profile", search: { tab: "promo" } }))}
+                className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-border text-[11px] font-bold transition hover:bg-background"
+              >
+                <IconFlame className="h-3.5 w-3.5 text-volt" /> Booster
+              </button>
+            </div>
+            {/* Une seule ligne d'état : en cours, à reprendre, ou rien. */}
+            {pendingCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => money?.resumePending({ amount_fcfa: wallet?.pending?.[0]?.amount_fcfa ?? 1000 })}
+                className="mt-1.5 flex w-full items-center gap-1.5 text-left text-[11px] font-semibold text-volt"
+              >
+                <IconClock className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">
+                  {pendingCount} paiement{pendingCount > 1 ? "s" : ""} à reprendre
+                </span>
+              </button>
+            ) : (
+              <p className="mt-1.5 truncate text-[11px] text-muted-foreground">
+                {activeBoosts > 0
+                  ? `${activeBoosts} mise${activeBoosts > 1 ? "s" : ""} en avant active${activeBoosts > 1 ? "s" : ""}`
+                  : "Aucune mise en avant en cours"}
+              </p>
             )}
           </div>
         )}
@@ -452,67 +386,107 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* ============ Administration : contexte séparé, style neutre ============ */}
-        {isAdmin && (
-          <SidebarGroup className="mt-3 p-0">
-            {!collapsed && (
-              <SidebarGroupLabel className="px-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                Administration
-              </SidebarGroupLabel>
+        {/* ============ Checklist de démarrage : une seule ligne, dépliable ============ */}
+        {showChecklist && !collapsed && (
+          <div className="mt-auto pt-3">
+            <button
+              type="button"
+              onClick={() => setCheckOpen((v) => !v)}
+              className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left text-[11px] text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            >
+              <span className="relative grid h-4 w-4 shrink-0 place-items-center">
+                <svg viewBox="0 0 36 36" className="h-4 w-4 -rotate-90">
+                  <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeOpacity="0.2" strokeWidth="6" />
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="15"
+                    fill="none"
+                    stroke="var(--volt)"
+                    strokeWidth="6"
+                    strokeLinecap="round"
+                    strokeDasharray={`${(progress / 100) * 94.2} 94.2`}
+                  />
+                </svg>
+              </span>
+              <span className="min-w-0 flex-1 truncate">Complétez votre boutique</span>
+              <span className="shrink-0 font-bold text-volt">{doneCount}/{steps.length}</span>
+            </button>
+
+            {checkOpen && (
+              <ul className="mt-1.5 space-y-1.5 px-2 pb-1">
+                {steps.map((s) => (
+                  <li key={s.label}>
+                    {s.done ? (
+                      <span className="flex items-center gap-2 text-[11px] text-muted-foreground line-through">
+                        <IconCheck className="h-3.5 w-3.5 shrink-0 text-success" /> {s.label}
+                      </span>
+                    ) : (
+                      <Link
+                        to={s.to as never}
+                        className="flex items-center gap-2 text-[11px] font-medium hover:text-volt"
+                      >
+                        <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-muted-foreground/50" />
+                        {s.label}
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
             )}
-            <SidebarGroupContent className="mt-1">
-              <SidebarMenu className="gap-1">
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive("/admin")}
-                    className={[
-                      "h-10 rounded-xl text-sm font-medium transition-all",
-                      collapsed ? "justify-center px-0" : "px-3",
-                      isActive("/admin")
-                        ? "bg-muted font-semibold text-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                    ].join(" ")}
-                  >
-                    <Link to="/admin" className="flex items-center gap-3" title="Administration">
-                      <IconAdmin className="h-[18px] w-[18px] shrink-0" />
-                      {!collapsed && <span className="truncate">Tableau de bord admin</span>}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          </div>
         )}
       </SidebarContent>
 
-      {/* ============ Pied : réduire le menu + support discret ============ */}
+      {/* ============ Pied : admin, réduire, support ============ */}
       <SidebarFooter className="border-t border-border/60 px-3 py-2">
-        <button
-          type="button"
-          onClick={toggleCollapsed}
-          title={collapsed ? "Agrandir le menu (Ctrl+B)" : "Réduire le menu (Ctrl+B)"}
-          aria-label={collapsed ? "Agrandir le menu" : "Réduire le menu"}
-          className={`flex items-center gap-2 rounded-xl py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground ${
-            collapsed ? "justify-center px-0" : "px-2"
-          }`}
-        >
-          <IconChevronDown className={`h-4 w-4 shrink-0 transition ${collapsed ? "-rotate-90" : "rotate-90"}`} />
-          {!collapsed && <span>Réduire le menu</span>}
-        </button>
+        {/* L'admin est un contexte à part : discret, en bas, sans titre de section. */}
+        {isAdmin && !collapsed && (
+          <Link
+            to="/admin"
+            className="mb-1 flex items-center gap-2 rounded-xl px-2 py-1.5 text-[11px] font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          >
+            <IconAdmin className="h-4 w-4 shrink-0" />
+            <span className="truncate">Administration</span>
+          </Link>
+        )}
+        {isAdmin && collapsed && (
+          <Link
+            to="/admin"
+            title="Administration"
+            className="mb-1 flex justify-center rounded-xl py-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          >
+            <IconAdmin className="h-4 w-4" />
+          </Link>
+        )}
 
-        <a
-          href="https://wa.me/221786635331"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Aide & support WhatsApp"
-          className={`mt-0.5 flex items-center gap-2 rounded-xl py-1.5 text-[11px] font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground ${
-            collapsed ? "justify-center px-0" : "px-2"
-          }`}
-        >
-          <IconWhatsApp className="h-4 w-4 shrink-0 text-volt" />
-          {!collapsed && <span className="truncate">Aide &amp; support</span>}
-        </a>
+        <div className={`flex items-center gap-1 ${collapsed ? "flex-col" : "justify-between"}`}>
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            title={collapsed ? "Agrandir le menu (Ctrl+B)" : "Réduire le menu (Ctrl+B)"}
+            aria-label={collapsed ? "Agrandir le menu" : "Réduire le menu"}
+            className={`flex items-center gap-2 rounded-xl py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground ${
+              collapsed ? "justify-center px-0" : "px-2"
+            }`}
+          >
+            <IconChevronDown className={`h-4 w-4 shrink-0 transition ${collapsed ? "-rotate-90" : "rotate-90"}`} />
+            {!collapsed && <span>Réduire</span>}
+          </button>
+
+          <a
+            href="https://wa.me/221786635331"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Aide & support WhatsApp"
+            className={`flex items-center gap-2 rounded-xl py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground ${
+              collapsed ? "justify-center px-0" : "px-2"
+            }`}
+          >
+            <IconWhatsApp className="h-4 w-4 shrink-0 text-volt" />
+            {!collapsed && <span className="truncate">Aide</span>}
+          </a>
+        </div>
       </SidebarFooter>
 
       {/* ============ Choix du produit à mettre en avant (pop-up direct) ============ */}
