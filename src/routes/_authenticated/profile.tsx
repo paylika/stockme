@@ -13,7 +13,7 @@ import { WalletCard } from "@/components/WalletCard";
 import { ProfileEditDialog } from "@/components/ProfileEditDialog";
 import { UpgradeDialog } from "@/components/UpgradeDialog";
 import { usePaymentsStatus } from "@/lib/features";
-import { PLANS, VERIFICATION_BONUS_FCFA, planById, planOf, type PlanId } from "@/lib/pricing";
+import { PAID_PLANS, VERIFICATION_BONUS_FCFA, planOf, type PlanId } from "@/lib/pricing";
 import { useAuth } from "@/hooks/useAuth";
 import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import {
   BadgeCheck,
   Camera,
+  Check,
   Eye,
   ExternalLink,
   Heart,
@@ -676,12 +677,12 @@ function ProfilePage() {
         onSaved={load}
       />
 
-      {/* Passage à une offre payante (badge / PRO) */}
+      {/* Passage à une offre supérieure (PRO si déjà vérifié, badge sinon) */}
       <UpgradeDialog
         open={upgradeOpen}
         onOpenChange={setUpgradeOpen}
         methods={payments.methods}
-        suggested={upgradePlan}
+        isVerified={isVerified}
         defaultPhone={profile?.whatsapp}
       />
     </div>
@@ -731,37 +732,62 @@ function SponsorshipPanel({
   onUpgrade: (target: "verifie" | "pro") => void;
 }) {
   const money = useSellerMoney();
-  const current = planById(plan);
-  const next = PLANS.find((p) => (plan === "pro" ? false : p.id === (plan === "gratuit" ? "verifie" : "pro")));
+
+  // Progression logique : Gratuit → Fournisseur vérifié → PRO
+  const currentLabel =
+    plan === "gratuit" ? "Gratuit" : plan === "verifie" ? "Fournisseur vérifié" : "StockMe PRO";
+  const currentNote =
+    plan === "gratuit"
+      ? "10 produits · 2 photos · mise en avant à 700 F/jour"
+      : plan === "verifie"
+      ? "Badge actif · produits illimités · 10 photos · mise en avant à 500 F/jour"
+      : "Badge actif · mise en avant à 400 F/jour · statistiques avancées";
+
+  const next = plan === "gratuit" ? PAID_PLANS[0] : plan === "verifie" ? PAID_PLANS[1] : null;
 
   return (
     <div className="mt-5 space-y-4">
       {/* Offre en cours + montée d'offre */}
       <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Mon offre</p>
-            <p className="mt-0.5 text-lg font-bold tracking-tight">{current.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {current.price === 0
-                ? "10 produits · 2 photos · mise en avant à 700 F/jour"
-                : `${formatFCFA(current.price)} ${current.period} · mise en avant à ${formatFCFA(current.boostPerDay)}/jour`}
-            </p>
+            <p className="mt-0.5 text-lg font-bold tracking-tight">{currentLabel}</p>
+            <p className="text-xs text-muted-foreground">{currentNote}</p>
           </div>
-          {next && (
-            <Button variant="volt" className="h-11" onClick={() => onUpgrade(next.id as "verifie" | "pro")}>
+          {next ? (
+            <Button
+              variant="volt"
+              className="h-11"
+              onClick={() => onUpgrade(next.id === "verifie" ? "verifie" : "pro")}
+            >
               <Sparkles className="mr-1.5 h-4 w-4" />
-              Passer à {next.name.split(" ")[0]} — {formatFCFA(next.price)}
+              {next.id === "verifie" ? "Faire vérifier" : "Passer à PRO"} — {formatFCFA(next.price)}
+              <span className="ml-1 text-[11px] font-normal opacity-80">{next.period}</span>
             </Button>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-success/15 px-2.5 py-1 text-[11px] font-semibold text-success">
+              <Check className="h-3 w-3" /> Offre maximale
+            </span>
           )}
         </div>
 
         {next && (
           <p className="mt-3 rounded-xl bg-muted/50 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-            Avec <strong className="text-foreground">{next.name}</strong> : {next.features[0].toLowerCase()},{" "}
-            mise en avant à {formatFCFA(next.boostPerDay)}/jour et{" "}
-            <strong className="text-foreground">{formatFCFA(VERIFICATION_BONUS_FCFA)} de boost offerts</strong> dès
-            l'activation.{" "}
+            {next.id === "verifie" ? (
+              <>
+                Avec <strong className="text-foreground">Fournisseur vérifié</strong> : le badge sur toutes vos annonces,
+                10 photos, produits illimités, mise en avant à 500 F/jour et{" "}
+                <strong className="text-foreground">{formatFCFA(VERIFICATION_BONUS_FCFA)} de boost offerts</strong>.
+                Ensuite, PRO se rajoute pour {formatFCFA(2500)}/mois.
+              </>
+            ) : (
+              <>
+                <strong className="text-foreground">StockMe PRO</strong> : mise en avant à 400 F/jour,{" "}
+                <strong className="text-foreground">72 h de boost offertes chaque mois</strong> et statistiques avancées.
+                Votre badge reste acquis tant que l'abonnement court.{" "}
+              </>
+            )}
             <Link to="/tarifs" className="underline underline-offset-2">
               Voir toutes les offres
             </Link>

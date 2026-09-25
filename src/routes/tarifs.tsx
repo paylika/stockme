@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/stockme-client";
 import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
@@ -8,7 +9,7 @@ import { UpgradeDialog } from "@/components/UpgradeDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { usePaymentsStatus } from "@/lib/features";
 import { buildSeoHead, SITE_URL } from "@/lib/seo";
-import { PLANS, SATISFACTION_GUARANTEE, VERIFICATION_BONUS_FCFA } from "@/lib/pricing";
+import { ALL_PLANS, SATISFACTION_GUARANTEE, VERIFICATION_BONUS_FCFA } from "@/lib/pricing";
 import { formatFCFA } from "@/lib/format";
 import { Check, Minus, Rocket, ShieldCheck, Sparkles, TrendingUp, X } from "lucide-react";
 
@@ -32,6 +33,30 @@ function PricingPage() {
   const payments = usePaymentsStatus();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [suggested, setSuggested] = useState<"verifie" | "pro">("pro");
+  const [isVerified, setIsVerified] = useState(false);
+
+  // On sait si le visiteur connecté est déjà vérifié : dans ce cas, on ne lui
+  // proposera jamais d'acheter un badge qu'il possède déjà.
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      const { data: s } = await supabase.auth.getSession();
+      const uid = s.session?.user?.id;
+      if (!uid) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("verified,verified_until")
+        .eq("id", uid)
+        .maybeSingle();
+      const p = data as { verified: boolean; verified_until: string | null } | null;
+      if (!cancel) {
+        setIsVerified(!!p?.verified && (!p.verified_until || new Date(p.verified_until) > new Date()));
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [user?.id]);
 
   const openUpgrade = (plan: "verifie" | "pro") => {
     if (!user) return;
@@ -62,12 +87,14 @@ function PricingPage() {
 
       {/* ---------- Les 3 offres ---------- */}
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-        <div className="grid gap-4 lg:grid-cols-3">
-          {PLANS.map((plan) => (
+        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+          {ALL_PLANS.map((plan) => {
+            const highlighted = plan.id === "pro" || plan.id === "verifie";
+            return (
             <div
               key={plan.id}
               className={`relative flex flex-col rounded-3xl border p-5 sm:p-6 ${
-                plan.highlight ? "border-volt bg-card shadow-lg shadow-volt/10" : "border-border bg-card"
+                highlighted ? "border-volt bg-card shadow-lg shadow-volt/10" : "border-border bg-card"
               }`}
             >
               {plan.badge && (
@@ -130,12 +157,12 @@ function PricingPage() {
                   </Link>
                 ) : (
                   <Button
-                    variant={plan.highlight ? "volt" : "default"}
+                    variant={highlighted ? "volt" : "default"}
                     className="h-12 w-full text-sm font-bold"
-                    onClick={() => openUpgrade(plan.id as "verifie" | "pro")}
+                    onClick={() => openUpgrade(plan.id === "verifie" ? "verifie" : "pro")}
                     disabled={!user || payments.methods.length === 0}
                   >
-                    {plan.id === "pro" ? "Activer PRO" : "Obtenir le badge"}
+                    {plan.id === "verifie" ? "Obtenir le badge" : "Activer PRO"}
                   </Button>
                 )}
                 {!user && (
@@ -148,7 +175,17 @@ function PricingPage() {
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
+        </div>
+
+        {/* ---------- Logique de montée ---------- */}
+        <div className="mt-5 rounded-2xl border border-border bg-muted/40 px-4 py-3.5 text-xs leading-relaxed text-muted-foreground">
+          <strong className="text-foreground">Comment ça se combine :</strong> le badge est toujours acquis. Avec{" "}
+          <strong className="text-foreground">Fournisseur vérifié</strong>, vous le sécurisez 12 mois. Avec{" "}
+          <strong className="text-foreground">PRO</strong>, il est inclus tant que l'abonnement court — et le{" "}
+          <strong className="text-foreground">pack badge 1 an + PRO</strong> (7 500 F le premier mois) vous garantit de
+          garder votre badge toute l'année, même si vous arrêtez PRO ensuite.
         </div>
 
         {/* ---------- Garantie ---------- */}
@@ -263,7 +300,7 @@ function PricingPage() {
         open={upgradeOpen}
         onOpenChange={setUpgradeOpen}
         methods={payments.methods}
-        suggested={suggested}
+        isVerified={isVerified}
       />
 
       <MobileFooter />

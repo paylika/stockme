@@ -11,46 +11,55 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatFCFA } from "@/lib/format";
-import { PLANS, VERIFICATION_BONUS_FCFA, type PlanId } from "@/lib/pricing";
+import { PAID_PLANS, PACK_TOTAL, VERIFICATION_BONUS_FCFA, type Plan, type PlanId } from "@/lib/pricing";
 import { METHOD_LABELS, goToCheckout, type PayMethod } from "@/lib/pay-client";
-import { BadgeCheck, Check, CreditCard, Loader2, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
+import { BadgeCheck, Check, CreditCard, Loader2, ShieldCheck, Smartphone, Sparkles, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   methods: string[];
-  /** Offre suggérée à l'ouverture (par défaut PRO). */
-  suggested?: PlanId;
+  /** Le vendeur est-il DÉJÀ fournisseur vérifié (achat ou admin) ? */
+  isVerified: boolean;
   defaultPhone?: string | null;
-  onDone?: () => void;
 };
 
 /**
- * Passage à une offre payante : le vendeur choisit son offre et son moyen de
- * paiement, puis part chez Stripe. Pour PRO, le prélèvement est MENSUEL et
- * AUTOMATIQUE (carte enregistrée) : plus aucune relance de notre côté.
+ * Montée en offre — logique définitive :
+ *   • déjà vérifié → on ne propose QUE PRO (jamais d'acheter le badge deux fois) ;
+ *   • non vérifié → ÉTAPE 1 le badge annuel, ÉTAPE 2 PRO, avec le pack
+ *     « badge + PRO » à 7 500 F le premier mois (badge sécurisé 12 mois).
  */
-export function UpgradeDialog({ open, onOpenChange, methods, suggested = "pro", defaultPhone, onDone }: Props) {
-  const [selected, setSelected] = useState<PlanId>(suggested);
+export function UpgradeDialog({ open, onOpenChange, methods, isVerified, defaultPhone }: Props) {
+  const [selected, setSelected] = useState<PlanId>("pro");
   const [method, setMethod] = useState<PayMethod>("card");
   const [phone, setPhone] = useState(defaultPhone ?? "");
   const [busy, setBusy] = useState(false);
+  const [pack, setPack] = useState(false);
+
+  // Offres réellement proposables selon l'état du vendeur
+  const options = (isVerified ? PAID_PLANS.filter((p) => p.id !== "verifie") : PAID_PLANS).filter(
+    (p) => p.id !== "pro_annuel" || isVerified,
+  );
 
   useEffect(() => {
     if (!open) return;
-    setSelected(suggested);
+    setSelected(isVerified ? "pro" : "pro");
+    setPack(false);
     setMethod(((methods[0] as PayMethod | undefined) ?? "card") as PayMethod);
     setBusy(false);
-  }, [open, suggested, methods]);
+  }, [open, isVerified, methods]);
 
   useEffect(() => {
     if (defaultPhone) setPhone(defaultPhone);
   }, [defaultPhone]);
 
-  const plan = PLANS.find((p) => p.id === selected) ?? PLANS[2];
+  const plan: Plan = (pack ? PAID_PLANS.find((p) => p.id === "pro")! : options.find((p) => p.id === selected) ?? options[0])!;
+
+  const amountToday = pack ? PACK_TOTAL : plan.price;
   const needsPhone = method === "wave" || method === "orange_money";
-  const payByCard = method === "card" && !!plan.recurring;
+  const monthlyAfter = pack || plan.recurring === "month";
 
   const pay = async () => {
     if (needsPhone && phone.replace(/\D/g, "").length < 8) {
@@ -58,14 +67,26 @@ export function UpgradeDialog({ open, onOpenChange, methods, suggested = "pro", 
     }
     setBusy(true);
     try {
+      if (pack) {
+        // ÉTAPE 1 : sécuriser le badge pour 12 mois (5 000 F, paiement unique).
+        // L'étape 2 (PRO) est proposée automatiquement juste après le paiement.
+        await goToCheckout({
+          purpose: "subscription",
+          amount: 5000,
+          method,
+          customerNumber: needsPhone ? phone : null,
+          metadata: { days: 365, plan: "verifie", next_step: "pro", source: "pack" },
+        });
+        return;
+      }
+
       await goToCheckout({
         purpose: "subscription",
         amount: plan.price,
         method,
         customerNumber: needsPhone ? phone : null,
-        metadata: { days: plan.days, plan: plan.id, source: "upgrade" },
+        metadata: { days: plan.days, plan: plan.dbPlan, source: isVerified ? "upsell_pro" : "signup" },
       });
-      onDone?.();
     } catch (err) {
       setBusy(false);
       toast.error(err instanceof Error ? err.message : "Paiement impossible");
@@ -77,28 +98,44 @@ export function UpgradeDialog({ open, onOpenChange, methods, suggested = "pro", 
       <DialogContent className="max-h-[92svh] w-[calc(100%-1.5rem)] max-w-lg overflow-y-auto rounded-2xl p-5">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-left">
-            <Sparkles className="h-5 w-5 text-volt" /> Passer à une offre supérieure
+            <Sparkles className="h-5 w-5 text-volt" />
+            {isVerified ? "Ajouter StockMe PRO" : "Faire vérifier ma boutique"}
           </DialogTitle>
           <DialogDescription className="text-left">
-            Badge vérifié, produits illimités, 10 photos et tarif réduit sur les mises en avant.
+            {isVerified
+              ? "Vous êtes déjà fournisseur vérifié — il ne vous manque que les avantages PRO."
+              : "Le badge rassure les acheteurs et débloque 10 photos, les produits illimités et un tarif réduit sur les mises en avant."}
           </DialogDescription>
         </DialogHeader>
 
-        {/* Choix de l'offre */}
+        {/* Rappel pour un compte déjà vérifié */}
+        {isVerified && (
+          <p className="flex items-center gap-2 rounded-xl border border-primary/25 bg-primary/5 px-3 py-2 text-xs">
+            <BadgeCheck className="h-4 w-4 shrink-0 text-primary" />
+            <span>
+              Votre badge est <strong>déjà actif</strong> : il reste acquis, aucun achat de badge n'est nécessaire.
+            </span>
+          </p>
+        )}
+
+        {/* Choix des offres */}
         <div className="space-y-2">
-          {PLANS.filter((p) => p.id !== "gratuit").map((p) => {
-            const active = selected === p.id;
+          {options.map((p) => {
+            const active = !pack && selected === p.id;
             return (
               <button
                 key={p.id}
                 type="button"
-                onClick={() => setSelected(p.id)}
+                onClick={() => {
+                  setPack(false);
+                  setSelected(p.id);
+                }}
                 className={`w-full rounded-2xl border p-3.5 text-left transition ${
                   active ? "border-volt bg-volt/10" : "border-border bg-background hover:bg-accent"
                 }`}
               >
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
                     <span
                       className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${
                         active ? "border-volt bg-volt text-volt-foreground" : "border-input"
@@ -106,14 +143,14 @@ export function UpgradeDialog({ open, onOpenChange, methods, suggested = "pro", 
                     >
                       {active && <Check className="h-3 w-3" />}
                     </span>
-                    <span className="text-sm font-bold">{p.name}</span>
+                    <span className="truncate text-sm font-bold">{p.name}</span>
                     {p.badge && (
-                      <span className="rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">
+                      <span className="shrink-0 rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">
                         {p.badge}
                       </span>
                     )}
                   </div>
-                  <div className="text-right">
+                  <div className="shrink-0 text-right">
                     <p className="text-sm font-bold">
                       {formatFCFA(p.price)}
                       <span className="text-[11px] font-normal text-muted-foreground"> {p.period}</span>
@@ -140,6 +177,42 @@ export function UpgradeDialog({ open, onOpenChange, methods, suggested = "pro", 
             );
           })}
         </div>
+
+        {/* Pack badge annuel + PRO (uniquement si pas encore vérifié) */}
+        {!isVerified && (
+          <button
+            type="button"
+            onClick={() => setPack(true)}
+            className={`w-full rounded-2xl border p-3.5 text-left transition ${
+              pack ? "border-volt bg-volt/10" : "border-dashed border-volt/50 bg-volt/5 hover:bg-volt/10"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <span
+                  className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${
+                    pack ? "border-volt bg-volt text-volt-foreground" : "border-input"
+                  }`}
+                >
+                  {pack && <Check className="h-3 w-3" />}
+                </span>
+                <span className="text-sm font-bold">
+                  <Zap className="mr-1 inline h-3.5 w-3.5 text-volt" />
+                  Pack : badge 1 an + PRO
+                </span>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-sm font-bold">{formatFCFA(PACK_TOTAL)}</p>
+                <p className="text-[11px] text-muted-foreground">puis 2 500 F/mois</p>
+              </div>
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+              <strong className="text-foreground">Payez {formatFCFA(5000)} une fois</strong> pour sécuriser votre badge
+              pendant 12 mois, puis activez PRO dans la foulée. Même si vous arrêtez PRO plus tard,{" "}
+              <strong className="text-foreground">votre badge reste acquis toute l'année</strong>.
+            </p>
+          </button>
+        )}
 
         {/* Moyen de paiement */}
         <div className="space-y-2">
@@ -185,23 +258,32 @@ export function UpgradeDialog({ open, onOpenChange, methods, suggested = "pro", 
           </div>
         )}
 
-        {/* Récapitulatif + arguments */}
+        {/* Récapitulatif */}
         <div className="space-y-2 rounded-xl bg-muted/50 px-3 py-2.5 text-xs">
           <p className="flex items-center justify-between">
             <span className="text-muted-foreground">À payer aujourd'hui</span>
-            <strong className="text-sm">{formatFCFA(plan.price)}</strong>
+            <strong className="text-sm">{formatFCFA(amountToday)}</strong>
           </p>
-          {payByCard && (
+          {pack ? (
+            <p className="text-muted-foreground">
+              Étape 1 : badge sécurisé 12 mois. L'activation de <strong className="text-foreground">PRO (2 500 F/mois,
+              prélevés automatiquement)</strong> vous sera proposée juste après le paiement.
+            </p>
+          ) : monthlyAfter ? (
             <p className="text-muted-foreground">
               Puis <strong className="text-foreground">{formatFCFA(plan.price)}</strong> par mois, prélevés
-              automatiquement. Résiliable à tout moment.
+              automatiquement. Résiliable à tout moment — le badge reste actif tant que l'abonnement court.
+            </p>
+          ) : (
+            <p className="text-muted-foreground">
+              Paiement unique : votre badge est acquis pour {plan.days} jours, même si vous ne renouvelez pas.
             </p>
           )}
           <p className="inline-flex items-start gap-1.5 text-muted-foreground">
             <BadgeCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
             <span>
               <strong className="text-foreground">{formatFCFA(VERIFICATION_BONUS_FCFA)} de mise en avant offerts</strong>{" "}
-              immédiatement (72 h), utilisables dès l'activation.
+              immédiatement (72 h).
             </span>
           </p>
           <p className="inline-flex items-start gap-1.5 text-muted-foreground">
@@ -212,11 +294,15 @@ export function UpgradeDialog({ open, onOpenChange, methods, suggested = "pro", 
 
         <Button variant="volt" className="h-12 w-full text-sm font-bold" disabled={busy || methods.length === 0} onClick={pay}>
           {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
-          {busy ? "Ouverture du paiement…" : `Activer ${plan.name} — ${formatFCFA(plan.price)}`}
+          {busy
+            ? "Ouverture du paiement…"
+            : pack
+            ? `Sécuriser mon badge — ${formatFCFA(5000)}`
+            : `Activer ${plan.name} — ${formatFCFA(plan.price)}`}
         </Button>
 
         <p className="text-center text-[11px] text-muted-foreground">
-          Paiement sécurisé. Besoin d'aide ?{" "}
+          Paiement sécurisé.{" "}
           <Link to="/tarifs" className="underline underline-offset-2">
             Voir le détail des offres
           </Link>
