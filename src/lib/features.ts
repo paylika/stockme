@@ -4,20 +4,23 @@ import { useEffect, useState } from "react";
  * Interrupteur central des fonctionnalités PAYANTES (portefeuille, boost,
  * abonnement par carte).
  *
- * Pourquoi ce fichier : le paiement en ligne n'est pas encore branché
- * (clés Stripe / UnitechPay à ajouter). Tant qu'il ne l'est pas, AUCUNE
- * interface de paiement ne doit apparaître — pas de bouton mort, pas de
- * fonctionnalité à moitié cassée.
+ * OUVERT le 25/09/2026 après vérification complète :
+ *   • Stripe actif et testé avec un vrai paiement (solde crédité) ;
+ *   • secret de webhook présent et signé ;
+ *   • clé de service opérationnelle ;
+ *   • tâche quotidienne protégée ;
+ *   • toutes les fonctions SQL en place ;
+ *   • aucune page en erreur.
  *
- * Double sécurité :
- *   1. `PAYMENTS_UI_ENABLED` : interrupteur manuel. Passe-le à `true`
- *      le jour où les paiements sont validés de bout en bout.
+ * Double sécurité conservée :
+ *   1. `PAYMENTS_UI_ENABLED` : interrupteur manuel (le remettre à false
+ *      masque immédiatement toute l'interface payante).
  *   2. Le serveur : `/api/pay/checkout` ne renvoie un moyen de paiement
- *      que si le fournisseur correspondant a réellement ses clés.
- * Il faut donc LES DEUX pour afficher l'interface payante.
+ *      que si le fournisseur a réellement ses clés. Si les variables
+ *      Cloudflare disparaissent, l'interface se masque toute seule.
  */
 
-export const PAYMENTS_UI_ENABLED = false;
+export const PAYMENTS_UI_ENABLED = true;
 
 export type PaymentsStatus = {
   /** true uniquement si l'interrupteur est ouvert ET qu'un paiement est configuré. */
