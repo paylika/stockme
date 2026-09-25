@@ -10,6 +10,7 @@ import { VerifiedBadge, VerifiedBadgeGold } from "@/components/VerifiedBadge";
 import { VerifiedPaymentDialog } from "@/components/VerifiedPaymentDialog";
 import { BoostButton, SellerMoneyProvider, useSellerMoney } from "@/components/SellerMoneyProvider";
 import { WalletCard } from "@/components/WalletCard";
+import { EditableField } from "@/components/EditableField";
 import { useAuth } from "@/hooks/useAuth";
 import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
@@ -18,6 +19,7 @@ import {
   COUNTRY_FLAGS,
   SERVICE_WHATSAPP_DISPLAY,
   VERIFIED_BADGE_PRICE_FCFA,
+  WEST_AFRICA_CITIES,
   countryOfCity,
 } from "@/lib/constants";
 import { toast } from "sonner";
@@ -248,11 +250,46 @@ function ProfilePage() {
               />
             </div>
 
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="font-display text-2xl font-bold tracking-tight truncate">{displayName}</h1>
+            <div className="min-w-0 flex-1">
+              {/* Nom de la boutique (modifiable) + badge */}
+              <div className="flex flex-wrap items-center gap-2">
+                <EditableField
+                  field="shop_name"
+                  value={profile?.shop_name}
+                  placeholder="Ajouter le nom de ma boutique"
+                  ariaLabel="nom de la boutique"
+                  maxLength={60}
+                  onSaved={load}
+                  className="font-display text-2xl font-bold tracking-tight"
+                />
+                {isVerified ? (
+                  isLifetime ? (
+                    <VerifiedBadgeGold />
+                  ) : (
+                    <VerifiedBadge />
+                  )
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                    <ShieldQuestion className="h-3 w-3" /> Non vérifiée
+                  </span>
+                )}
+              </div>
+
+              {/* Nom du responsable (modifiable) */}
+              <div className="mt-1 text-sm text-muted-foreground">
+                <EditableField
+                  field="full_name"
+                  value={profile?.full_name}
+                  placeholder="Ajouter mon nom"
+                  ariaLabel="nom du responsable"
+                  maxLength={60}
+                  onSaved={load}
+                />
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Link to="/profile/edit">
-                  <Button variant="outline" size="sm">Modifier le profil</Button>
+                  <Button variant="outline" size="sm">Formulaire complet</Button>
                 </Link>
                 {user?.id && (
                   <Link to="/vendeur/$id" params={{ id: user.id }}>
@@ -282,44 +319,66 @@ function ProfilePage() {
             </div>
           </div>
 
-          {/* Bio */}
-          <div className="mt-6 space-y-1.5 text-sm">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold">{profile?.full_name || "Vendeur"}</span>
-              {isVerified ? (
-                isLifetime ? (
-                  <VerifiedBadgeGold />
-                ) : (
-                  <VerifiedBadge />
-                )
-              ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                  <ShieldQuestion className="h-3 w-3" /> Boutique non vérifiée
-                </span>
-              )}
-            </div>
-            {profile?.bio && <p className="whitespace-pre-line text-muted-foreground leading-relaxed">{profile.bio}</p>}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-muted-foreground">
-              {city && (
-                <span className="inline-flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5" /> {COUNTRY_FLAGS[countryOfCity(city)] ?? ""} {city}
-                </span>
-              )}
-              {profile?.whatsapp && (
-                <span className="inline-flex items-center gap-1.5">
-                  <MessageCircle className="h-3.5 w-3.5" /> {profile.whatsapp}
-                </span>
-              )}
-              {profile?.phone && (
-                <span className="inline-flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5" /> {profile.phone}
-                </span>
-              )}
-              <span className="inline-flex items-center gap-1.5">
-                <Mail className="h-3.5 w-3.5" /> {user?.email}
-              </span>
+          {/* ===== À propos (bio) — modifiable ===== */}
+          <div className="mt-6 text-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">À propos</p>
+            <div className="mt-2 flex items-start gap-2">
+              <EditableField
+                field="bio"
+                value={profile?.bio}
+                placeholder="Décrivez votre activité : ce que vous vendez, vos délais de livraison, vos conditions de gros…"
+                ariaLabel="description de la boutique"
+                multiline
+                maxLength={600}
+                onSaved={load}
+                className="flex-1 leading-relaxed text-muted-foreground"
+                inputClassName="text-sm"
+              />
             </div>
           </div>
+
+          {/* ===== Coordonnées — toutes modifiables sauf l'e-mail ===== */}
+          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
+            <EditableField
+              field="city"
+              value={profile?.city}
+              placeholder="Ajouter ma ville"
+              ariaLabel="ville"
+              icon={MapPin}
+              listId="profile-cities"
+              render={(v) => `${COUNTRY_FLAGS[countryOfCity(v)] ?? ""} ${v}`}
+              onSaved={load}
+            />
+            <EditableField
+              field="whatsapp"
+              value={profile?.whatsapp}
+              placeholder="Ajouter mon WhatsApp"
+              ariaLabel="numéro WhatsApp"
+              type="tel"
+              icon={MessageCircle}
+              onSaved={load}
+            />
+            <EditableField
+              field="phone"
+              value={profile?.phone}
+              placeholder="Ajouter mon téléphone"
+              ariaLabel="numéro de téléphone"
+              type="tel"
+              icon={Phone}
+              onSaved={load}
+            />
+            <span className="inline-flex items-center gap-1.5">
+              <Mail className="h-3.5 w-3.5" />
+              {user?.email}
+              <span className="text-[10px] uppercase tracking-wider">compte</span>
+            </span>
+          </div>
+
+          <datalist id="profile-cities">
+            {WEST_AFRICA_CITIES.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
 
           {/* ===== Badge « Fournisseur vérifié » ===== */}
           {isVerified ? (
