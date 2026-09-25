@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { isAdminEmail } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
 import { goToCheckout } from "@/lib/pay-client";
-import { planById } from "@/lib/pricing";
+import { planById, PRO_AVAILABLE } from "@/lib/pricing";
 import { CheckCircle2, Clock, XCircle, Sparkles } from "lucide-react";
 
 /**
@@ -100,11 +100,11 @@ function PaymentReturn() {
   const cancelled = callbackStatus === "cancel";
 
   // Pack « badge 1 an + PRO » : le badge est encaissé d'abord, puis on propose
-  // la 2e étape (PRO mensuel) sans que le vendeur ait à retrouver la fenêtre
-  // d'abonnement. Le montant vient de pricing.ts, jamais écrit en dur ici.
+  // la 2e étape (PRO mensuel). Tant que PRO est masqué, cette étape disparaît :
+  // le vendeur repart simplement avec son badge actif.
   const proPlan = planById("pro");
   const proMonthly = proPlan?.price ?? 2500;
-  const packStep2 = paid && intent?.metadata?.next_step === "pro";
+  const packStep2 = PRO_AVAILABLE && paid && intent?.metadata?.next_step === "pro";
 
   const activatePro = async () => {
     setStepError(null);

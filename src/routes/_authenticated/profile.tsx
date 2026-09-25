@@ -13,7 +13,7 @@ import { ProfileEditDialog } from "@/components/ProfileEditDialog";
 import { ShopBanner } from "@/components/ShopBanner";
 import { UpgradeDialog } from "@/components/UpgradeDialog";
 import { usePaymentsStatus } from "@/lib/features";
-import { PAID_PLANS, VERIFICATION_BONUS_FCFA, planById, planOf, type PlanId } from "@/lib/pricing";
+import { PAID_PLANS, PRO_AVAILABLE, VERIFICATION_BONUS_FCFA, planById, planOf, type PlanId } from "@/lib/pricing";
 import { useAuth } from "@/hooks/useAuth";
 import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
@@ -804,7 +804,7 @@ function SponsorshipPanel({
 }) {
   const money = useSellerMoney();
 
-  // Progression logique : Gratuit → Fournisseur vérifié → PRO
+  // Progression logique : Gratuit → Fournisseur vérifié (→ PRO quand il revient)
   const currentLabel =
     plan === "gratuit" ? "Gratuit" : plan === "verifie" ? "Fournisseur vérifié" : "StockMe PRO";
   const currentNote =
@@ -814,7 +814,9 @@ function SponsorshipPanel({
       ? "Badge actif · produits illimités · 10 photos · mise en avant à 500 F/jour"
       : "Badge actif · mise en avant à 400 F/jour · statistiques avancées";
 
-  const next = plan === "gratuit" ? PAID_PLANS[0] : plan === "verifie" ? PAID_PLANS[1] : null;
+  // Tant que PRO est masqué, la seule montée possible est le badge.
+  const next = plan === "gratuit" ? PAID_PLANS[0] : PRO_AVAILABLE && plan === "verifie" ? PAID_PLANS[1] : null;
+  const atMax = !next && (plan === "verifie" || plan === "pro" || plan === "pro_annuel");
 
   return (
     <div className="mt-5 space-y-4">
@@ -836,11 +838,11 @@ function SponsorshipPanel({
               {next.id === "verifie" ? "Faire vérifier" : "Passer à PRO"} — {formatFCFA(next.price)}
               <span className="ml-1 text-[11px] font-normal opacity-80">{next.period}</span>
             </Button>
-          ) : (
+          ) : atMax ? (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-success/15 px-2.5 py-1 text-[11px] font-semibold text-success">
-              <Check className="h-3 w-3" /> Offre maximale
+              <Check className="h-3 w-3" /> Boutique vérifiée
             </span>
-          )}
+          ) : null}
         </div>
 
         {next && (
@@ -850,7 +852,7 @@ function SponsorshipPanel({
                 Avec <strong className="text-foreground">Fournisseur vérifié</strong> : le badge sur toutes vos annonces,
                 10 photos, produits illimités, mise en avant à 500 F/jour et{" "}
                 <strong className="text-foreground">{formatFCFA(VERIFICATION_BONUS_FCFA)} de boost offerts</strong>.
-                Ensuite, PRO se rajoute pour {formatFCFA(2500)}/mois.
+                {PRO_AVAILABLE && <> Ensuite, PRO se rajoute pour {formatFCFA(2500)}/mois.</>}
               </>
             ) : (
               <>

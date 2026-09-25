@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatFCFA } from "@/lib/format";
-import { PAID_PLANS, PACK_TOTAL, VERIFICATION_BONUS_FCFA, type Plan, type PlanId } from "@/lib/pricing";
+import { PAID_PLANS, PACK_TOTAL, PRO_AVAILABLE, VERIFICATION_BONUS_FCFA, type Plan, type PlanId } from "@/lib/pricing";
 import { METHOD_LABELS, goToCheckout, type PayMethod } from "@/lib/pay-client";
 import stripeLogo from "@/assets/stripe-logo.svg";
 import { BadgeCheck, Check, CreditCard, Loader2, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
@@ -48,7 +48,10 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
   // Parcours affiché : on suit le bouton cliqué, mais l'utilisateur peut
   // basculer d'un lien discret vers l'autre parcours.
   const [view, setView] = useState<"verifie" | "pro">("pro");
-  const badgeMode = view === "verifie" && !isVerified;
+  // Tant que PRO est masqué, le seul parcours possible est le badge.
+  const badgeMode = !PRO_AVAILABLE || (view === "verifie" && !isVerified);
+  /** Rien à vendre : déjà vérifié, et PRO masqué (on explique au lieu de vendre). */
+  const nothingToBuy = isVerified && !PRO_AVAILABLE;
 
   // Offres réellement proposables dans ce parcours.
   const options = badgeMode
@@ -119,15 +122,17 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
       <DialogContent className="max-h-[92svh] w-[calc(100%-1.5rem)] max-w-lg overflow-y-auto rounded-2xl p-5">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-left">
-            {badgeMode ? (
+            {badgeMode || nothingToBuy ? (
               <BadgeCheck className="h-5 w-5 text-primary" />
             ) : (
               <Sparkles className="h-5 w-5 text-volt" />
             )}
-            {badgeMode ? "Faire vérifier ma boutique" : "Passer à StockMe PRO"}
+            {nothingToBuy ? "Votre boutique est vérifiée" : badgeMode ? "Faire vérifier ma boutique" : "Passer à StockMe PRO"}
           </DialogTitle>
           <DialogDescription className="text-left">
-            {badgeMode
+            {nothingToBuy
+              ? "Vous avez déjà le badge Fournisseur vérifié : profitez-en pour mettre vos produits en avant."
+              : badgeMode
               ? "Le badge Fournisseur vérifié : la confiance qui fait écrire les acheteurs."
               : isVerified
               ? "Vous êtes déjà fournisseur vérifié — il ne vous manque que les avantages PRO."
@@ -145,6 +150,21 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
           </p>
         )}
 
+        {/* Rien à acheter ici : PRO est masqué et le badge est déjà acquis. On
+            n'affiche donc aucune offre, seulement le chemin utile. */}
+        {nothingToBuy ? (
+          <div className="space-y-2">
+            <Link to="/profile" search={{ tab: "promo" }} className="block">
+              <Button variant="volt" className="h-11 w-full text-sm font-bold">
+                Mettre un produit en avant
+              </Button>
+            </Link>
+            <p className="text-center text-[11px] text-muted-foreground">
+              La mise en avant se paie au jour, depuis votre solde.
+            </p>
+          </div>
+        ) : (
+          <>
         {/* Choix des offres */}
         <div className="space-y-2">
           {options.map((p) => {
@@ -256,8 +276,9 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
           </label>
         )}
 
-        {/* Lien discret vers l'autre parcours (jamais les deux offres mélangées) */}
-        {badgeMode ? (
+        {/* Lien discret vers l'autre parcours (jamais les deux offres mélangées).
+            Masqué tant que PRO est en veille : on ne propose pas ce qu'on ne vend pas. */}
+        {PRO_AVAILABLE && badgeMode ? (
           <button
             type="button"
             onClick={() => {
@@ -269,21 +290,19 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
           >
             Je veux aussi StockMe PRO → voir les offres PRO
           </button>
-        ) : (
-          !isVerified && (
-            <button
-              type="button"
-              onClick={() => {
-                setView("verifie");
-                setSelected("verifie");
-                setPack(false);
-              }}
-              className="w-full text-center text-[11px] font-semibold text-muted-foreground underline underline-offset-2"
-            >
-              Je veux seulement le badge Fournisseur vérifié ({formatFCFA(badgePlan.price)}/an)
-            </button>
-          )
-        )}
+        ) : PRO_AVAILABLE && !isVerified ? (
+          <button
+            type="button"
+            onClick={() => {
+              setView("verifie");
+              setSelected("verifie");
+              setPack(false);
+            }}
+            className="w-full text-center text-[11px] font-semibold text-muted-foreground underline underline-offset-2"
+          >
+            Je veux seulement le badge Fournisseur vérifié ({formatFCFA(badgePlan.price)}/an)
+          </button>
+        ) : null}
 
         {/* Moyen de paiement */}
         <div className="space-y-2">
@@ -404,6 +423,8 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
             Voir le détail des offres
           </Link>
         </p>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

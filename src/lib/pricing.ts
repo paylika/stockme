@@ -163,6 +163,16 @@ export const VERIFICATION_BONUS_FCFA = 1500;
 /** Pack « badge annuel + PRO » : total payé le premier mois. */
 export const PACK_TOTAL = 2000 + 2500; // 4 500 F
 
+/**
+ * PRO (abonnement mensuel et annuel) est MASQUÉ pour le moment.
+ *
+ * On garde volontairement simple : le badge Fournisseur vérifié à l'année
+ * (2 000 F) et la mise en avant payée au jour. Tout ce qui touche à PRO
+ * disparaît de l'interface — le code et les tarifs restent en place, il suffit
+ * de repasser ce drapeau à `true` pour tout rallumer d'un coup.
+ */
+export const PRO_AVAILABLE = false;
+
 /** Garantie affichée (levier de conversion). */
 export const SATISFACTION_GUARANTEE =
   "Satisfait ou remboursé : si vous ne recevez aucun contact en 30 jours, nous vous remboursons intégralement.";

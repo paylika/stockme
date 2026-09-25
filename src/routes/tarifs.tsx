@@ -9,19 +9,19 @@ import { UpgradeDialog } from "@/components/UpgradeDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { usePaymentsStatus } from "@/lib/features";
 import { buildSeoHead, SITE_URL } from "@/lib/seo";
-import { ALL_PLANS, PACK_TOTAL, SATISFACTION_GUARANTEE, VERIFICATION_BONUS_FCFA, planById } from "@/lib/pricing";
+import { ALL_PLANS, PACK_TOTAL, PRO_AVAILABLE, SATISFACTION_GUARANTEE, VERIFICATION_BONUS_FCFA, planById } from "@/lib/pricing";
 import { formatFCFA } from "@/lib/format";
 import { BadgeCheck, Check, Minus, Rocket, ShieldCheck, Sparkles, TrendingUp, X } from "lucide-react";
 
 export const Route = createFileRoute("/tarifs")({
   head: () => {
     const { meta, links } = buildSeoHead({
-      title: "Tarifs StockMe — Badge fournisseur vérifié 2 000 F/an et StockMe PRO",
+      title: "Tarifs StockMe — Badge fournisseur vérifié 2 000 F/an",
       description:
-        "Publiez gratuitement sur StockMe. Le badge Fournisseur vérifié coûte 2 000 FCFA/an, StockMe PRO 2 500 FCFA/mois (25 000 FCFA l'année). Mise en avant dès 400 FCFA/jour.",
+        "Publiez gratuitement sur StockMe. Le badge Fournisseur vérifié coûte 2 000 FCFA/an. Ensuite, vous payez seulement la mise en avant de vos produits, à partir de 500 FCFA/jour.",
       path: "/tarifs",
       keywords:
-        "tarif marketplace Afrique, prix badge vendeur, fournisseur vérifié, publicité stock en gros, boost annonce, StockMe PRO, vendre en gros Sénégal",
+        "tarif marketplace Afrique, prix badge vendeur, fournisseur vérifié, publicité stock en gros, boost annonce, vendre en gros Sénégal",
     });
     return { meta, links };
   },
@@ -64,9 +64,12 @@ function PricingPage() {
     setUpgradeOpen(true);
   };
 
-  // ÉTAPE 1 = le badge (bloc à part). ÉTAPE 2 = les 3 formules dont PRO.
+  // ÉTAPE 1 = le badge (bloc à part). ÉTAPE 2 = les formules restantes.
+  // Tant que PRO est masqué, on ne garde que « Gratuit » face au badge.
   const badge = planById("verifie")!;
-  const formulas = ALL_PLANS.filter((p) => p.id !== "verifie");
+  const formulas = ALL_PLANS.filter(
+    (p) => p.id !== "verifie" && (PRO_AVAILABLE || (p.id !== "pro" && p.id !== "pro_annuel")),
+  );
   const paymentsReady = payments.methods.length > 0;
 
   return (
@@ -164,31 +167,48 @@ function PricingPage() {
             </div>
           </div>
 
-          <div className="border-t border-volt/25 bg-volt/5 px-5 py-3 text-xs text-muted-foreground sm:px-7">
-            <strong className="text-foreground">Envie d'aller plus loin tout de suite ?</strong> Le pack badge 1 an +
-            PRO coûte {formatFCFA(PACK_TOTAL)} le premier mois, puis {formatFCFA(2500)}/mois. Votre badge reste acquis
-            même si vous arrêtez PRO ensuite.
-          </div>
+          {PRO_AVAILABLE ? (
+            <div className="border-t border-volt/25 bg-volt/5 px-5 py-3 text-xs text-muted-foreground sm:px-7">
+              <strong className="text-foreground">Envie d'aller plus loin tout de suite ?</strong> Le pack badge 1 an +
+              PRO coûte {formatFCFA(PACK_TOTAL)} le premier mois, puis {formatFCFA(2500)}/mois. Votre badge reste acquis
+              même si vous arrêtez PRO ensuite.
+            </div>
+          ) : (
+            <div className="border-t border-volt/25 bg-volt/5 px-5 py-3 text-xs text-muted-foreground sm:px-7">
+              <strong className="text-foreground">Et après ?</strong> Vous ne payez plus rien d'obligatoire : la mise en
+              avant de vos produits se règle au jour, depuis votre solde, seulement quand vous en voulez.
+            </div>
+          )}
         </div>
       </section>
 
-      {/* ================= ÉTAPE 2 — LES 3 FORMULES ================= */}
+      {/* ================= ÉTAPE 2 — LES FORMULES ================= */}
       <section className="mx-auto max-w-6xl px-4 pt-10 sm:px-6 sm:pt-14">
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
           Étape 2 · La visibilité
         </p>
         <div className="mt-3 flex flex-wrap items-end justify-between gap-2">
-          <h2 className="text-xl font-bold tracking-tight sm:text-3xl">3 formules, une seule à choisir</h2>
-          <p className="text-xs text-muted-foreground">PRO inclut déjà le badge.</p>
+          <h2 className="text-xl font-bold tracking-tight sm:text-3xl">
+            {PRO_AVAILABLE ? "3 formules, une seule à choisir" : "Publier gratuitement, ou passer vérifié"}
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            {PRO_AVAILABLE ? "PRO inclut déjà le badge." : "Puis vous payez la mise en avant au jour, seulement quand vous en voulez."}
+          </p>
         </div>
 
-        {/* Mobile : défilement horizontal avec aimantation. Desktop : 3 colonnes. */}
-        <p className="mt-3 text-[11px] text-muted-foreground sm:hidden">Glissez pour comparer les 3 formules →</p>
+        {/* Mobile : défilement horizontal avec aimantation. Desktop : colonnes. */}
+        <p className="mt-3 text-[11px] text-muted-foreground sm:hidden">
+          Glissez pour comparer les {formulas.length} formules →
+        </p>
 
         {/* pt-4 sur mobile : la zone de défilement rogne tout ce qui dépasse vers
-            le haut. Sans cette marge, les badges « Tarif de lancement » et
-            « 2 mois offerts » posés sur le bord des cartes étaient coupés. */}
-        <div className="-mx-4 mt-1 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pt-4 pb-3 no-scrollbar sm:mx-0 sm:mt-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pt-0 sm:pb-0">
+            le haut. Sans cette marge, les badges posés sur le bord des cartes
+            étaient coupés. */}
+        <div
+          className={`-mx-4 mt-1 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pt-4 pb-3 no-scrollbar sm:mx-0 sm:mt-3 sm:grid sm:gap-4 sm:overflow-visible sm:px-0 sm:pt-0 sm:pb-0 ${
+            formulas.length >= 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"
+          }`}
+        >
           {formulas.map((plan) => {
             const highlight = plan.id === "pro";
             const isFree = plan.id === "gratuit";
@@ -284,10 +304,20 @@ function PricingPage() {
 
         {/* ---------- Comment ça se combine (version courte) ---------- */}
         <div className="mt-5 rounded-2xl border border-border bg-muted/40 px-4 py-3.5 text-xs leading-relaxed text-muted-foreground">
-          <strong className="text-foreground">En clair :</strong> le badge s'achète une fois ({formatFCFA(badge.price)}
-          /an). Si vous prenez PRO, le badge est inclus tant que l'abonnement court — et le{" "}
-          <strong className="text-foreground">pack {formatFCFA(PACK_TOTAL)}</strong> (badge + PRO le 1er mois) vous
-          garantit de le garder toute l'année, même si vous arrêtez PRO.
+          <strong className="text-foreground">En clair :</strong> publier est gratuit. Le badge s'achète une fois (
+          {formatFCFA(badge.price)} /an) et se garde 12 mois.{" "}
+          {PRO_AVAILABLE ? (
+            <>
+              Si vous prenez PRO, le badge est inclus tant que l'abonnement court — et le{" "}
+              <strong className="text-foreground">pack {formatFCFA(PACK_TOTAL)}</strong> (badge + PRO le 1er mois) vous
+              garantit de le garder toute l'année, même si vous arrêtez PRO.
+            </>
+          ) : (
+            <>
+              Ensuite, vous ne payez que ce que vous utilisez : la mise en avant de vos produits, au jour, à partir de
+              votre solde.
+            </>
+          )}
         </div>
 
         {/* ---------- Garantie ---------- */}
@@ -309,7 +339,7 @@ function PricingPage() {
               <tr>
                 <th className="px-4 py-3 text-left">Avantage</th>
                 <th className="px-4 py-3 text-center">Gratuit</th>
-                <th className="px-4 py-3 text-center">Vérifié / PRO</th>
+                <th className="px-4 py-3 text-center">{PRO_AVAILABLE ? "Vérifié / PRO" : "Fournisseur vérifié"}</th>
               </tr>
             </thead>
             <tbody className="text-[13px]">
@@ -318,7 +348,7 @@ function PricingPage() {
                 ["Photos par produit", "2", "10"],
                 ["Badge « Fournisseur vérifié »", "—", "Sur toutes vos annonces"],
                 ["Priorité dans la recherche", "—", "Oui"],
-                ["Mise en avant (par jour)", "700 F", "500 F · 400 F en PRO"],
+                ["Mise en avant (par jour)", "700 F", PRO_AVAILABLE ? "500 F · 400 F en PRO" : "500 F"],
                 ["Mise en avant offerte", "—", `${formatFCFA(VERIFICATION_BONUS_FCFA)} (72 h)`],
                 ["Statistiques (vues, clics, contacts)", "De base", "Avancées"],
               ].map(([label, free, pro]) => (
@@ -368,16 +398,18 @@ function PricingPage() {
           <div className="mt-5 flex flex-wrap items-center gap-3">
             {user ? (
               <>
-                <Button variant="volt" className="h-12 px-6 text-sm font-bold" onClick={() => openUpgrade("pro")}>
-                  <Sparkles className="mr-1.5 h-4 w-4" /> Activer StockMe PRO
-                </Button>
+                {PRO_AVAILABLE && (
+                  <Button variant="volt" className="h-12 px-6 text-sm font-bold" onClick={() => openUpgrade("pro")}>
+                    <Sparkles className="mr-1.5 h-4 w-4" /> Activer StockMe PRO
+                  </Button>
+                )}
                 <Button
-                  variant="outline"
-                  className="h-12 px-6 text-sm font-semibold"
+                  variant={PRO_AVAILABLE ? "outline" : "volt"}
+                  className="h-12 px-6 text-sm font-bold"
                   onClick={() => openUpgrade("verifie")}
                   disabled={isVerified}
                 >
-                  {isVerified ? "Badge déjà actif" : `Le badge à ${formatFCFA(badge.price)}/an`}
+                  {isVerified ? "Badge déjà actif" : `Obtenir le badge — ${formatFCFA(badge.price)}/an`}
                 </Button>
               </>
             ) : (
@@ -388,7 +420,7 @@ function PricingPage() {
               </Link>
             )}
             <a
-              href={`https://wa.me/221786635331?text=${encodeURIComponent("Bonjour StockMe, j'ai une question sur les offres (badge vérifié / PRO).")}`}
+              href={`https://wa.me/221786635331?text=${encodeURIComponent("Bonjour StockMe, j'ai une question sur le badge fournisseur vérifié.")}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-muted-foreground underline underline-offset-2"
