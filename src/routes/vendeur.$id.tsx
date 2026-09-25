@@ -193,7 +193,7 @@ function SellerPage() {
                       <h1 className="truncate font-display text-xl font-bold tracking-tight sm:text-2xl">
                         {displayName}
                       </h1>
-                      {seller?.is_verified && (seller.verified_until ? <VerifiedBadge compact /> : <VerifiedBadgeGold />)}
+                      {seller?.is_verified && (seller.verified_until ? <VerifiedBadge /> : <VerifiedBadgeGold />)}
                     </div>
                     <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                       {seller?.city && (

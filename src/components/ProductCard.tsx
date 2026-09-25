@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { BadgeCheck, Eye, Heart, MessageCircle, Megaphone } from "lucide-react";
+import { Eye, Heart, MessageCircle, Megaphone } from "lucide-react";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { formatFCFA } from "@/lib/format";
 import { IconPin as MapPin, IconBox as Package } from "@/components/icons";
 
@@ -108,14 +109,7 @@ export function ProductCard({ product, delayMs = 0, sponsored = false, sellerVer
       <div className="flex flex-1 flex-col p-3 sm:p-4">
         <h3 className="line-clamp-1 font-semibold leading-tight text-sm sm:text-base">{product.name}</h3>
         <div className="mt-0.5 flex items-center gap-1.5">
-          {sellerVerified && (
-            <span
-              className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground"
-              title="Fournisseur vérifié par StockMe"
-            >
-              <BadgeCheck className="h-3 w-3" /> Vérifié
-            </span>
-          )}
+          {sellerVerified && <VerifiedBadge compact />}
           {product.category && (
             <p className="line-clamp-1 text-[11px] text-muted-foreground">{product.category}</p>
           )}
