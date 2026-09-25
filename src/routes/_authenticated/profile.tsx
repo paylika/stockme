@@ -728,13 +728,14 @@ function ProfilePage() {
         onSaved={load}
       />
 
-      {/* Passage à une offre supérieure (PRO si déjà vérifié, badge sinon) */}
+      {/* Fenêtre d'achat : elle n'affiche QUE le parcours demandé (badge ou PRO) */}
       <UpgradeDialog
         open={upgradeOpen}
         onOpenChange={setUpgradeOpen}
         methods={payments.methods}
         isVerified={isVerified}
         defaultPhone={profile?.whatsapp}
+        focus={upgradePlan}
       />
     </div>
   );

@@ -408,7 +408,7 @@ function PricingPage() {
         onOpenChange={setUpgradeOpen}
         methods={payments.methods}
         isVerified={isVerified}
-        defaultPlan={suggested}
+        focus={suggested}
       />
 
       <MobileFooter />

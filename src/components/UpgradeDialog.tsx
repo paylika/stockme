@@ -23,44 +23,55 @@ type Props = {
   /** Le vendeur est-il DÉJÀ fournisseur vérifié (achat ou admin) ? */
   isVerified: boolean;
   defaultPhone?: string | null;
-  /** Offre présélectionnée à l'ouverture (selon le bouton cliqué). */
-  defaultPlan?: PlanId;
+  /**
+   * Parcours demandé par l'utilisateur (bouton cliqué) :
+   *   • "verifie" → le pop-up ne montre QUE l'offre du badge, avec ses avantages ;
+   *   • "pro"     → le pop-up ne montre QUE les offres PRO (mensuel + annuel).
+   * On ne mélange jamais les deux : celui qui a cliqué sait déjà ce qu'il veut.
+   */
+  focus?: "verifie" | "pro";
 };
 
 /**
  * Montée en offre — logique définitive :
  *   • déjà vérifié → on ne propose QUE PRO (jamais d'acheter le badge deux fois) ;
- *   • non vérifié → ÉTAPE 1 le badge annuel, ÉTAPE 2 PRO, avec le pack
- *     « badge + PRO » à 7 500 F le premier mois (badge sécurisé 12 mois).
+ *   • focus "verifie" → l'offre du badge seule (ÉTAPE 1) ;
+ *   • focus "pro" → les offres PRO seules (ÉTAPE 2).
  */
-export function UpgradeDialog({ open, onOpenChange, methods, isVerified, defaultPhone, defaultPlan }: Props) {
+export function UpgradeDialog({ open, onOpenChange, methods, isVerified, defaultPhone, focus }: Props) {
   const [selected, setSelected] = useState<PlanId>("pro");
   const [method, setMethod] = useState<PayMethod>("card");
   const [phone, setPhone] = useState(defaultPhone ?? "");
   const [busy, setBusy] = useState(false);
   const [pack, setPack] = useState(false);
+  // Parcours affiché : on suit le bouton cliqué, mais l'utilisateur peut
+  // basculer d'un lien discret vers l'autre parcours.
+  const [view, setView] = useState<"verifie" | "pro">("pro");
+  const badgeMode = view === "verifie" && !isVerified;
 
-  // Offres réellement proposables selon l'état du vendeur
-  const options = (isVerified ? PAID_PLANS.filter((p) => p.id !== "verifie") : PAID_PLANS).filter(
-    (p) => p.id !== "pro_annuel" || isVerified,
-  );
+  // Offres réellement proposables dans ce parcours.
+  const options = badgeMode
+    ? PAID_PLANS.filter((p) => p.id === "verifie")
+    : PAID_PLANS.filter((p) => p.id === "pro" || p.id === "pro_annuel");
 
   useEffect(() => {
     if (!open) return;
-    // On ouvre sur l'offre correspondant au bouton cliqué (jamais le badge
-    // pour un vendeur déjà vérifié).
-    const wanted = defaultPlan && (defaultPlan !== "verifie" || !isVerified) ? defaultPlan : "pro";
-    setSelected(wanted);
+    const start: "verifie" | "pro" = focus === "verifie" && !isVerified ? "verifie" : "pro";
+    setView(start);
+    setSelected(start === "verifie" ? "verifie" : "pro");
     setPack(false);
     setMethod(((methods[0] as PayMethod | undefined) ?? "card") as PayMethod);
     setBusy(false);
-  }, [open, isVerified, methods, defaultPlan]);
+  }, [open, isVerified, methods, focus]);
 
   useEffect(() => {
     if (defaultPhone) setPhone(defaultPhone);
   }, [defaultPhone]);
 
   const plan: Plan = (pack ? PAID_PLANS.find((p) => p.id === "pro")! : options.find((p) => p.id === selected) ?? options[0])!;
+  // Prix lus dans la grille tarifaire (jamais écrits en dur ici).
+  const badgePlan = PAID_PLANS.find((p) => p.id === "verifie")!;
+  const proPlan = PAID_PLANS.find((p) => p.id === "pro")!;
 
   const amountToday = pack ? PACK_TOTAL : plan.price;
   const needsPhone = method === "wave" || method === "orange_money";
@@ -73,14 +84,14 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
     setBusy(true);
     try {
       if (pack) {
-        // ÉTAPE 1 : sécuriser le badge pour 12 mois (5 000 F, paiement unique).
+        // ÉTAPE 1 : sécuriser le badge pour 12 mois (paiement unique).
         // L'étape 2 (PRO) est proposée automatiquement juste après le paiement.
         await goToCheckout({
           purpose: "subscription",
-          amount: 5000,
+          amount: badgePlan.price,
           method,
           customerNumber: needsPhone ? phone : null,
-          metadata: { days: 365, plan: "verifie", next_step: "pro", source: "pack" },
+          metadata: { days: badgePlan.days, plan: "verifie", next_step: "pro", source: "pack" },
         });
         return;
       }
@@ -90,7 +101,11 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
         amount: plan.price,
         method,
         customerNumber: needsPhone ? phone : null,
-        metadata: { days: plan.days, plan: plan.dbPlan, source: isVerified ? "upsell_pro" : "signup" },
+        metadata: {
+          days: plan.days,
+          plan: plan.dbPlan,
+          source: badgeMode ? "badge" : isVerified ? "upsell_pro" : "pro",
+        },
       });
     } catch (err) {
       setBusy(false);
@@ -103,13 +118,19 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
       <DialogContent className="max-h-[92svh] w-[calc(100%-1.5rem)] max-w-lg overflow-y-auto rounded-2xl p-5">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-left">
-            <Sparkles className="h-5 w-5 text-volt" />
-            {isVerified ? "Ajouter StockMe PRO" : "Faire vérifier ma boutique"}
+            {badgeMode ? (
+              <BadgeCheck className="h-5 w-5 text-primary" />
+            ) : (
+              <Sparkles className="h-5 w-5 text-volt" />
+            )}
+            {badgeMode ? "Faire vérifier ma boutique" : "Passer à StockMe PRO"}
           </DialogTitle>
           <DialogDescription className="text-left">
-            {isVerified
+            {badgeMode
+              ? "Le badge Fournisseur vérifié : la confiance qui fait écrire les acheteurs."
+              : isVerified
               ? "Vous êtes déjà fournisseur vérifié — il ne vous manque que les avantages PRO."
-              : "Le badge rassure les acheteurs et débloque 10 photos, les produits illimités et un tarif réduit sur les mises en avant."}
+              : "PRO contient tout le badge Fournisseur vérifié, tant que votre abonnement court."}
           </DialogDescription>
         </DialogHeader>
 
@@ -170,7 +191,7 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
 
                 {active && (
                   <ul className="mt-2.5 space-y-1 border-t border-volt/20 pt-2.5">
-                    {p.features.slice(0, 5).map((f) => (
+                    {(badgeMode ? p.features : p.features.slice(0, 5)).map((f) => (
                       <li key={f} className="flex items-start gap-1.5 text-[11px] leading-snug">
                         <Check className="mt-0.5 h-3 w-3 shrink-0 text-success" />
                         <span>{f}</span>
@@ -183,40 +204,65 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
           })}
         </div>
 
-        {/* Pack badge annuel + PRO (uniquement si pas encore vérifié) */}
-        {!isVerified && (
+        {/* Pack « badge sécurisé 12 mois » : proposé discrètement, uniquement
+            dans le parcours PRO, et seulement si le badge n'est pas encore acquis. */}
+        {!badgeMode && !isVerified && (
           <button
             type="button"
-            onClick={() => setPack(true)}
-            className={`w-full rounded-2xl border p-3.5 text-left transition ${
+            onClick={() => setPack((v) => !v)}
+            className={`w-full rounded-xl border px-3 py-2.5 text-left text-[11px] leading-relaxed transition ${
               pack ? "border-volt bg-volt/10" : "border-dashed border-volt/50 bg-volt/5 hover:bg-volt/10"
             }`}
           >
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2">
-                <span
-                  className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${
-                    pack ? "border-volt bg-volt text-volt-foreground" : "border-input"
-                  }`}
-                >
-                  {pack && <Check className="h-3 w-3" />}
-                </span>
-                <span className="text-sm font-bold">
-                  <Zap className="mr-1 inline h-3.5 w-3.5 text-volt" />
-                  Pack : badge 1 an + PRO
-                </span>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="text-sm font-bold">{formatFCFA(PACK_TOTAL)}</p>
-                <p className="text-[11px] text-muted-foreground">puis 2 500 F/mois</p>
-              </div>
-            </div>
-            <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-              <strong className="text-foreground">Payez {formatFCFA(5000)} une fois</strong> pour sécuriser votre badge
-              pendant 12 mois, puis activez PRO dans la foulée. Même si vous arrêtez PRO plus tard,{" "}
-              <strong className="text-foreground">votre badge reste acquis toute l'année</strong>.
-            </p>
+            <span className="flex items-center gap-1.5 text-xs font-bold">
+              <Zap className="h-3.5 w-3.5 shrink-0 text-volt" />
+              {pack
+                ? "Retirer le badge 12 mois"
+                : `Sécuriser mon badge 12 mois (+${formatFCFA(badgePlan.price)})`}
+            </span>
+            <span className="mt-0.5 block text-muted-foreground">
+              {pack ? (
+                <>
+                  Ajouté : vous payez <strong className="text-foreground">{formatFCFA(PACK_TOTAL)}</strong> aujourd'hui,
+                  puis {formatFCFA(proPlan.price)}/mois. Votre badge reste acquis 12 mois, même si vous arrêtez PRO ensuite.
+                </>
+              ) : (
+                <>
+                  Sans cette option, votre badge s'arrête avec l'abonnement. En ajoutant {formatFCFA(badgePlan.price)} une
+                  fois, il reste acquis toute l'année.
+                </>
+              )}
+            </span>
           </button>
+        )}
+
+        {/* Lien discret vers l'autre parcours (jamais les deux offres mélangées) */}
+        {badgeMode ? (
+          <button
+            type="button"
+            onClick={() => {
+              setView("pro");
+              setSelected("pro");
+              setPack(false);
+            }}
+            className="w-full text-center text-[11px] font-semibold text-volt underline underline-offset-2"
+          >
+            Je veux aussi StockMe PRO → voir les offres PRO
+          </button>
+        ) : (
+          !isVerified && (
+            <button
+              type="button"
+              onClick={() => {
+                setView("verifie");
+                setSelected("verifie");
+                setPack(false);
+              }}
+              className="w-full text-center text-[11px] font-semibold text-muted-foreground underline underline-offset-2"
+            >
+              Je veux seulement le badge Fournisseur vérifié ({formatFCFA(badgePlan.price)}/an)
+            </button>
+          )
         )}
 
         {/* Moyen de paiement */}
@@ -279,6 +325,11 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
               Puis <strong className="text-foreground">{formatFCFA(plan.price)}</strong> par mois, prélevés
               automatiquement. Résiliable à tout moment — le badge reste actif tant que l'abonnement court.
             </p>
+          ) : plan.id === "pro_annuel" ? (
+            <p className="text-muted-foreground">
+              Paiement unique : <strong className="text-foreground">12 mois de PRO</strong>, badge Fournisseur vérifié
+              inclus pendant 12 mois (2 mois offerts).
+            </p>
           ) : (
             <p className="text-muted-foreground">
               Paiement unique : votre badge est acquis pour {plan.days} jours, même si vous ne renouvelez pas.
@@ -302,7 +353,9 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
           {busy
             ? "Ouverture du paiement…"
             : pack
-            ? `Sécuriser mon badge — ${formatFCFA(5000)}`
+            ? `Sécuriser mon badge — ${formatFCFA(badgePlan.price)}`
+            : badgeMode
+            ? `Obtenir le badge — ${formatFCFA(plan.price)}`
             : `Activer ${plan.name} — ${formatFCFA(plan.price)}`}
         </Button>
 
