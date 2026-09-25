@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { AdminButton } from "@/components/AdminButton";
+import { ImageSearchButton } from "@/components/ImageSearchButton";
 import logoUrl from "@/assets/stockme-logo.png";
 import {
   IconPin as MapPin,
@@ -67,6 +68,8 @@ export function SiteHeader({
                 placeholder="Rechercher un produit…"
                 className="min-w-0 flex-1 bg-transparent px-2 text-base placeholder:text-muted-foreground focus:outline-none"
               />
+              {/* Recherche par image : on photographie le produit, StockMe le retrouve */}
+              <ImageSearchButton className="mr-1" />
               <button
                 type="submit"
                 aria-label="Rechercher"
@@ -113,8 +116,12 @@ export function SiteHeader({
                 type="search"
                 inputMode="search"
                 placeholder="Rechercher un produit, une marque…"
-                className="w-full h-11 rounded-xl border border-border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
+                className="w-full h-11 rounded-xl border border-border bg-background pl-9 pr-11 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
               />
+              {/* Recherche par image, posée dans le champ comme sur Alibaba */}
+              <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
+                <ImageSearchButton />
+              </div>
             </div>
             <div className="relative">
               <select

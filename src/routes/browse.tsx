@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { CATEGORIES, WEST_AFRICA_LOCATIONS } from "@/lib/constants";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { ProductCard, type ListingProduct } from "@/components/ProductCard";
+import { ImageSearchButton } from "@/components/ImageSearchButton";
 import { useVerifiedSellers } from "@/hooks/useVerifiedSellers";
 import { trackAdClick, trackAdImpression } from "@/lib/ad-tracking";
 import { ALL_COUNTRIES, useVisitorCountry } from "@/lib/geo";
@@ -107,7 +108,11 @@ function Browse() {
           <form onSubmit={(e) => { e.preventDefault(); update({ q: q || undefined }); }} className="mt-6 flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher un produit..." className="pl-9 h-11" />
+              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher un produit..." className="pl-9 pr-11 h-11" />
+              {/* Recherche par image : posée dans le champ, comme sur Alibaba */}
+              <div className="absolute right-1 top-1/2 -translate-y-1/2">
+                <ImageSearchButton />
+              </div>
             </div>
             <div className="flex gap-3">
               <Select value={search.city ?? "_all"} onValueChange={(v) => update({ city: v === "_all" ? undefined : v })}>

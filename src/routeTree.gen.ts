@@ -16,6 +16,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as DropshippingRouteImport } from './routes/dropshipping'
 import { Route as LegalRouteImport } from './routes/legal'
+import { Route as RechercheImageRouteImport } from './routes/recherche-image'
 import { Route as TarifsRouteImport } from './routes/tarifs'
 import { Route as AdminAdminRouteImport } from './routes/_admin/admin'
 import { Route as AdminAdsRouteImport } from './routes/_admin/ads'
@@ -36,6 +37,7 @@ import { Route as VendeurIdRouteImport } from './routes/vendeur.$id'
 import { Route as AuthenticatedDashboardNewRouteImport } from './routes/_authenticated/dashboard.new'
 import { Route as AuthenticatedProfileEditRouteImport } from './routes/_authenticated/profile.edit'
 import { Route as ApiAiEnrichRouteImport } from './routes/api.ai.enrich'
+import { Route as ApiAiImageSearchRouteImport } from './routes/api.ai.image-search'
 import { Route as ApiAiStatusRouteImport } from './routes/api.ai.status'
 import { Route as ApiJobsBoostDailyRouteImport } from './routes/api.jobs.boost-daily'
 import { Route as ApiPayCheckoutRouteImport } from './routes/api.pay.checkout'
@@ -75,6 +77,11 @@ const DropshippingRoute = DropshippingRouteImport.update({
 const LegalRoute = LegalRouteImport.update({
   id: '/legal',
   path: '/legal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RechercheImageRoute = RechercheImageRouteImport.update({
+  id: '/recherche-image',
+  path: '/recherche-image',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TarifsRoute = TarifsRouteImport.update({
@@ -179,6 +186,11 @@ const ApiAiEnrichRoute = ApiAiEnrichRouteImport.update({
   path: '/api/ai/enrich',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAiImageSearchRoute = ApiAiImageSearchRouteImport.update({
+  id: '/api/ai/image-search',
+  path: '/api/ai/image-search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAiStatusRoute = ApiAiStatusRouteImport.update({
   id: '/api/ai/status',
   path: '/api/ai/status',
@@ -222,6 +234,7 @@ export interface FileRoutesByFullPath {
   '/browse': typeof BrowseRoute
   '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
+  '/recherche-image': typeof RechercheImageRoute
   '/tarifs': typeof TarifsRoute
   '/admin': typeof AdminAdminRoute
   '/ads': typeof AdminAdsRoute
@@ -242,6 +255,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/new': typeof AuthenticatedDashboardNewRoute
   '/profile/edit': typeof AuthenticatedProfileEditRoute
   '/api/ai/enrich': typeof ApiAiEnrichRoute
+  '/api/ai/image-search': typeof ApiAiImageSearchRoute
   '/api/ai/status': typeof ApiAiStatusRoute
   '/api/jobs/boost-daily': typeof ApiJobsBoostDailyRoute
   '/api/pay/checkout': typeof ApiPayCheckoutRoute
@@ -256,6 +270,7 @@ export interface FileRoutesByTo {
   '/browse': typeof BrowseRoute
   '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
+  '/recherche-image': typeof RechercheImageRoute
   '/tarifs': typeof TarifsRoute
   '/admin': typeof AdminAdminRoute
   '/ads': typeof AdminAdsRoute
@@ -276,6 +291,7 @@ export interface FileRoutesByTo {
   '/dashboard/new': typeof AuthenticatedDashboardNewRoute
   '/profile/edit': typeof AuthenticatedProfileEditRoute
   '/api/ai/enrich': typeof ApiAiEnrichRoute
+  '/api/ai/image-search': typeof ApiAiImageSearchRoute
   '/api/ai/status': typeof ApiAiStatusRoute
   '/api/jobs/boost-daily': typeof ApiJobsBoostDailyRoute
   '/api/pay/checkout': typeof ApiPayCheckoutRoute
@@ -293,6 +309,7 @@ export interface FileRoutesById {
   '/browse': typeof BrowseRoute
   '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
+  '/recherche-image': typeof RechercheImageRoute
   '/tarifs': typeof TarifsRoute
   '/_admin/admin': typeof AdminAdminRoute
   '/_admin/ads': typeof AdminAdsRoute
@@ -313,6 +330,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/new': typeof AuthenticatedDashboardNewRoute
   '/_authenticated/profile/edit': typeof AuthenticatedProfileEditRoute
   '/api/ai/enrich': typeof ApiAiEnrichRoute
+  '/api/ai/image-search': typeof ApiAiImageSearchRoute
   '/api/ai/status': typeof ApiAiStatusRoute
   '/api/jobs/boost-daily': typeof ApiJobsBoostDailyRoute
   '/api/pay/checkout': typeof ApiPayCheckoutRoute
@@ -329,6 +347,7 @@ export interface FileRouteTypes {
     | '/browse'
     | '/dropshipping'
     | '/legal'
+    | '/recherche-image'
     | '/tarifs'
     | '/admin'
     | '/ads'
@@ -349,6 +368,7 @@ export interface FileRouteTypes {
     | '/dashboard/new'
     | '/profile/edit'
     | '/api/ai/enrich'
+    | '/api/ai/image-search'
     | '/api/ai/status'
     | '/api/jobs/boost-daily'
     | '/api/pay/checkout'
@@ -363,6 +383,7 @@ export interface FileRouteTypes {
     | '/browse'
     | '/dropshipping'
     | '/legal'
+    | '/recherche-image'
     | '/tarifs'
     | '/admin'
     | '/ads'
@@ -383,6 +404,7 @@ export interface FileRouteTypes {
     | '/dashboard/new'
     | '/profile/edit'
     | '/api/ai/enrich'
+    | '/api/ai/image-search'
     | '/api/ai/status'
     | '/api/jobs/boost-daily'
     | '/api/pay/checkout'
@@ -399,6 +421,7 @@ export interface FileRouteTypes {
     | '/browse'
     | '/dropshipping'
     | '/legal'
+    | '/recherche-image'
     | '/tarifs'
     | '/_admin/admin'
     | '/_admin/ads'
@@ -419,6 +442,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/new'
     | '/_authenticated/profile/edit'
     | '/api/ai/enrich'
+    | '/api/ai/image-search'
     | '/api/ai/status'
     | '/api/jobs/boost-daily'
     | '/api/pay/checkout'
@@ -436,12 +460,14 @@ export interface RootRouteChildren {
   BrowseRoute: typeof BrowseRoute
   DropshippingRoute: typeof DropshippingRoute
   LegalRoute: typeof LegalRouteWithChildren
+  RechercheImageRoute: typeof RechercheImageRoute
   TarifsRoute: typeof TarifsRoute
   ApiGeoRoute: typeof ApiGeoRoute
   PaiementRetourRoute: typeof PaiementRetourRoute
   ProductIdRoute: typeof ProductIdRoute
   VendeurIdRoute: typeof VendeurIdRoute
   ApiAiEnrichRoute: typeof ApiAiEnrichRoute
+  ApiAiImageSearchRoute: typeof ApiAiImageSearchRoute
   ApiAiStatusRoute: typeof ApiAiStatusRoute
   ApiJobsBoostDailyRoute: typeof ApiJobsBoostDailyRoute
   ApiPayCheckoutRoute: typeof ApiPayCheckoutRoute
@@ -499,6 +525,13 @@ declare module '@tanstack/react-router' {
       path: '/legal'
       fullPath: '/legal'
       preLoaderRoute: typeof LegalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recherche-image': {
+      id: '/recherche-image'
+      path: '/recherche-image'
+      fullPath: '/recherche-image'
+      preLoaderRoute: typeof RechercheImageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tarifs': {
@@ -641,6 +674,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAiEnrichRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ai/image-search': {
+      id: '/api/ai/image-search'
+      path: '/api/ai/image-search'
+      fullPath: '/api/ai/image-search'
+      preLoaderRoute: typeof ApiAiImageSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/ai/status': {
       id: '/api/ai/status'
       path: '/api/ai/status'
@@ -778,12 +818,14 @@ const rootRouteChildren: RootRouteChildren = {
   BrowseRoute: BrowseRoute,
   DropshippingRoute: DropshippingRoute,
   LegalRoute: LegalRouteWithChildren,
+  RechercheImageRoute: RechercheImageRoute,
   TarifsRoute: TarifsRoute,
   ApiGeoRoute: ApiGeoRoute,
   PaiementRetourRoute: PaiementRetourRoute,
   ProductIdRoute: ProductIdRoute,
   VendeurIdRoute: VendeurIdRoute,
   ApiAiEnrichRoute: ApiAiEnrichRoute,
+  ApiAiImageSearchRoute: ApiAiImageSearchRoute,
   ApiAiStatusRoute: ApiAiStatusRoute,
   ApiJobsBoostDailyRoute: ApiJobsBoostDailyRoute,
   ApiPayCheckoutRoute: ApiPayCheckoutRoute,
