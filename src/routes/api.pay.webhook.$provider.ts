@@ -79,13 +79,32 @@ export const Route = createFileRoute("/api/pay/webhook/$provider")({
         }
 
         // ---- Paiement unique (recharge, boost, 1re échéance d'abonnement) ----
-        const { data, error } = await supabase.rpc("payment_mark_paid", {
+        //
+        // La fonction `payment_mark_paid` a reçu un paramètre supplémentaire
+        // (`p_subscription_ref`) dans une migration. Si cette migration n'a pas
+        // encore été appliquée, l'appel échoue et LE PAIEMENT N'EST JAMAIS
+        // CRÉDITÉ — le vendeur paie, et ne voit rien. On retente donc l'ancienne
+        // signature : mieux vaut encaisser sans la référence d'abonnement que
+        // laisser un vendeur sans son badge.
+        let paid = await supabase.rpc("payment_mark_paid", {
           p_provider: provider.name,
           p_provider_ref: check.providerRef,
           p_amount: check.amount ?? null,
           p_payload: (check.payload ?? null) as never,
           p_subscription_ref: check.subscriptionRef ?? null,
         });
+
+        if (paid.error && /could not find|does not exist|schema cache/i.test(paid.error.message)) {
+          console.warn("[pay/webhook] signature 4 arguments utilisée :", paid.error.message);
+          paid = await supabase.rpc("payment_mark_paid", {
+            p_provider: provider.name,
+            p_provider_ref: check.providerRef,
+            p_amount: check.amount ?? null,
+            p_payload: (check.payload ?? null) as never,
+          });
+        }
+
+        const { data, error } = paid;
 
         if (error) {
           console.error("[pay/webhook] payment_mark_paid:", error.message);
