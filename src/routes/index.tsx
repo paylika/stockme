@@ -12,6 +12,7 @@ import { BadgeCheck, MapPin, Trophy } from "lucide-react";
 import { buildSeoHead } from "@/lib/seo";
 import { CATEGORIES, WEST_AFRICA_LOCATIONS } from "@/lib/constants";
 import { trackAdClick, trackAdImpression } from "@/lib/ad-tracking";
+import { useVerifiedSellers } from "@/hooks/useVerifiedSellers";
 import {
   IconBox as Package,
   IconClose as X,
@@ -87,6 +88,42 @@ function Index() {
       .rpc("get_sponsored_products", { p_limit: 3 })
       .then(({ data }) => setSponsored((data as SponsoredProduct[] | null) ?? []));
   }, []);
+
+  /**
+   * Le badge « Fournisseur vérifié » sur les cartes sponsorisées.
+   *
+   * `get_sponsored_products` ne renvoie ni `owner_id` ni `seller_verified` :
+   * une mise en avant payée s'affichait donc SANS le badge, même pour un
+   * vendeur vérifié. On va chercher le propriétaire des produits mis en avant
+   * pour retrouver son statut. (Le correctif propre est aussi côté base.)
+   */
+  const verifiedSellers = useVerifiedSellers();
+  const [sponsoredOwners, setSponsoredOwners] = useState<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    if (sponsored.length === 0) return;
+    let cancel = false;
+    supabase
+      .from("products")
+      .select("id,owner_id")
+      .in("id", sponsored.map((s) => s.id))
+      .then(({ data }) => {
+        if (cancel) return;
+        setSponsoredOwners(
+          new Map(((data as { id: string; owner_id: string }[] | null) ?? []).map((r) => [r.id, r.owner_id])),
+        );
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [sponsored]);
+
+  /** Un vendeur est-il vérifié ? (donnée directe, sinon via le propriétaire). */
+  const isSellerVerified = (product: Product) => {
+    if (product.seller_verified) return true;
+    const owner = product.owner_id ?? sponsoredOwners.get(product.id);
+    return !!owner && verifiedSellers.has(owner);
+  };
 
   useEffect(() => {
     // "Potentiel Winner" : pool des produits les plus sollicités (contacts + vues).
@@ -427,7 +464,7 @@ function Index() {
             <div className="flex gap-3 sm:gap-4 px-4 sm:px-0 snap-x snap-mandatory">
               {winnerList.map((p, i) => (
                 <div key={p.id} className="w-[70%] sm:w-64 shrink-0 snap-start">
-                  <ProductCard product={p} sellerVerified={!!p.seller_verified} sponsored={!!p.is_boosted} delayMs={i * 40} />
+                  <ProductCard product={p} sellerVerified={isSellerVerified(p)} sponsored={!!p.is_boosted} delayMs={i * 40} />
                 </div>
               ))}
             </div>
@@ -512,7 +549,7 @@ function Index() {
                 </p>
                 <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
                   {elsewhere.map((p, i) => (
-                    <ProductCard key={p.id} product={p} sellerVerified={!!p.seller_verified} sponsored={!!p.is_boosted} delayMs={i * 40} />
+                    <ProductCard key={p.id} product={p} sellerVerified={isSellerVerified(p)} sponsored={!!p.is_boosted} delayMs={i * 40} />
                   ))}
                 </div>
               </section>
@@ -526,7 +563,7 @@ function Index() {
                   key={row.adId ? `ad-${row.adId}` : row.product.id}
                   product={row.product}
                   sponsored={!!row.adId || !!row.product.is_boosted}
-                  sellerVerified={!!row.product.seller_verified}
+                  sellerVerified={isSellerVerified(row.product)}
                   onOpen={row.adId ? () => trackAdClick(row.adId) : undefined}
                   delayMs={(i % PAGE_SIZE) * 40}
                 />
