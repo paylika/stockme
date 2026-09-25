@@ -29,7 +29,7 @@ BEGIN
       a.id AS ad_id,
       p.id, p.name, p.category, p.price_fcfa, p.promo_price_fcfa,
       p.quantity, p.moq, p.city, p.zone, p.images,
-      p.sold_out, p.dropshipping, p.owner_id,
+      p.sold_out, p.dropshipping, p.owner_id, p.price_tiers,
       -- Le badge : vérifié ET encore valable (jamais rétroactif).
       coalesce(pf.verified AND (pf.verified_until IS NULL OR pf.verified_until > now()), false) AS seller_verified
     FROM public.ads a
@@ -54,5 +54,6 @@ GRANT EXECUTE ON FUNCTION public.get_sponsored_products(int) TO anon, authentica
 -- CONTRÔLE : doit renvoyer les deux colonnes à true
 -- ============================================================
 -- select pg_get_functiondef(p.oid) like '%seller_verified%' as badge_dans_annonces,
---        pg_get_functiondef(p.oid) like '%p.owner_id%' as proprietaire_inclus
+--        pg_get_functiondef(p.oid) like '%p.owner_id%' as proprietaire_inclus,
+--        pg_get_functiondef(p.oid) like '%price_tiers%' as paliers_inclus
 --   from pg_proc p where p.proname = 'get_sponsored_products';
