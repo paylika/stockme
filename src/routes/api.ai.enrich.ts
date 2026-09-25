@@ -105,11 +105,21 @@ export const Route = createFileRoute("/api/ai/enrich")({
             const { data: userData } = await scoped.auth.getUser();
             if (!userData.user) return Response.json({ error: "Session expirée." }, { status: 401 });
             userId = userData.user.id;
-            const { data } = await scoped
+
+            // Un administrateur peut enrichir tout le catalogue (tâche de fond) ;
+            // un vendeur ne peut enrichir que ses propres fiches.
+            const { data: isAdmin } = await scoped.rpc("has_role", {
+              _user_id: userId,
+              _role: "admin",
+            });
+
+            let query = scoped
               .from("products")
               .select("id,name,category,description")
-              .in("id", ids)
-              .eq("owner_id", userId);
+              .in("id", ids);
+            if (!isAdmin) query = query.eq("owner_id", userId);
+
+            const { data } = await query;
             rows = (data as typeof rows | null) ?? [];
           }
           if (rows.length === 0) return Response.json({ error: "Produits introuvables." }, { status: 404 });

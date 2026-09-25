@@ -53,6 +53,12 @@ export type Database = {
           dropshipping: boolean
           id: string
           images: string[]
+          /** Mots-clés générés par l'IA pour la recherche intelligente. */
+          ai_keywords: string[] | null
+          /** Attributs générés par l'IA (objet, genre, couleurs, matières, usage). */
+          ai_attrs: unknown | null
+          /** Date du dernier enrichissement IA (null = jamais enrichi). */
+          ai_enriched_at: string | null
           moq: number
           name: string
           owner_id: string
