@@ -11,10 +11,18 @@
 --   • à score égal, le vendeur vérifié passe devant
 --
 -- Idempotent : peut être collé plusieurs fois sans effet de bord.
+-- Contrôle après exécution (doit renvoyer true) :
+--   select pg_get_functiondef(p.oid) ilike '%is_boosted%' as classement_boost_actif
+--   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+--   where n.nspname = 'public' and p.proname = 'get_ranked_products';
 -- ============================================================
 
-DROP FUNCTION IF EXISTS public.get_ranked_products(text, int, int, text, text[], text, text, boolean);
+-- Ancienne surcharge à 7 arguments (avant le filtre « vendeurs vérifiés ») :
+-- on la supprime si elle traîne encore, sinon l'appel serait ambigu.
+DROP FUNCTION IF EXISTS public.get_ranked_products(text, int, int, text, text[], text, text);
 
+-- CREATE OR REPLACE (pas de DROP + CREATE) : aucune erreur de dépendance
+-- possible, le script peut être relancé autant de fois que nécessaire.
 CREATE OR REPLACE FUNCTION public.get_ranked_products(
   p_sort text DEFAULT 'pertinence',
   p_limit int DEFAULT 24,
