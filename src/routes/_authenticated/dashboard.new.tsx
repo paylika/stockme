@@ -45,9 +45,22 @@ function NewProduct() {
   const submit = async (values: ProductFormValues) => {
     const userId = await requireUserId("Reconnectez-vous pour publier le produit.");
 
-    // Les photos n'empêchent JAMAIS la publication : en cas d'échec d'envoi,
-    // le produit est créé et la photo peut être renvoyée juste après.
     const { urls, failures } = await uploadImagesResilient(values.newFiles, userId, setUploadingStatus);
+
+    // Une fiche SANS PHOTO ne s'affiche jamais correctement pour l'acheteur
+    // (carte vide dans le catalogue). On ne publie donc pas tant qu'au moins
+    // une photo n'est pas arrivée : le formulaire reste rempli et le vendeur
+    // peut relancer l'envoi d'un seul clic sur « Publier ».
+    if (urls.length === 0) {
+      setUploadingStatus("");
+      const why = failures[0]?.reason ? ` (${failures[0].reason})` : "";
+      toast.error(
+        `Aucune photo n'a pu être envoyée${why}. Vérifiez votre connexion, puis appuyez de nouveau sur Publier — votre produit n'a pas été publié.`,
+        { duration: 10000 },
+      );
+      return;
+    }
+
     setUploadingStatus("Publication du produit...");
 
     const payload = {

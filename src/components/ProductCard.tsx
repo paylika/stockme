@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { BadgeCheck, Eye, Heart, MessageCircle, Megaphone } from "lucide-react";
 import { formatFCFA } from "@/lib/format";
 import { IconPin as MapPin, IconBox as Package } from "@/components/icons";
@@ -39,6 +40,10 @@ type Props = {
 
 export function ProductCard({ product, delayMs = 0, sponsored = false, sellerVerified = false, onOpen }: Props) {
   const img = product.images[0];
+  // Si l'image ne se charge pas (fichier supprimé, réseau coupé), on affiche un
+  // visuel propre au lieu de l'icône « image cassée » du navigateur.
+  const [imageFailed, setImageFailed] = useState(false);
+  const showImage = !!img && !imageFailed;
   const hasPromo = product.promo_price_fcfa && product.promo_price_fcfa < product.price_fcfa;
   const discount = hasPromo
     ? Math.round(((product.price_fcfa - (product.promo_price_fcfa as number)) / product.price_fcfa) * 100)
@@ -57,11 +62,13 @@ export function ProductCard({ product, delayMs = 0, sponsored = false, sellerVer
       style={{ animationDelay: `${delayMs}ms` }}
     >
       <div className="relative aspect-square w-full overflow-hidden bg-muted">
-        {img ? (
+        {showImage ? (
           <img
             src={img}
             alt={product.name}
             loading="lazy"
+            decoding="async"
+            onError={() => setImageFailed(true)}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
