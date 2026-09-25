@@ -35,6 +35,8 @@ import { Route as ProductIdRouteImport } from './routes/product.$id'
 import { Route as VendeurIdRouteImport } from './routes/vendeur.$id'
 import { Route as AuthenticatedDashboardNewRouteImport } from './routes/_authenticated/dashboard.new'
 import { Route as AuthenticatedProfileEditRouteImport } from './routes/_authenticated/profile.edit'
+import { Route as ApiAiEnrichRouteImport } from './routes/api.ai.enrich'
+import { Route as ApiAiStatusRouteImport } from './routes/api.ai.status'
 import { Route as ApiJobsBoostDailyRouteImport } from './routes/api.jobs.boost-daily'
 import { Route as ApiPayCheckoutRouteImport } from './routes/api.pay.checkout'
 import { Route as ApiPayReconcileRouteImport } from './routes/api.pay.reconcile'
@@ -172,6 +174,16 @@ const AuthenticatedProfileEditRoute =
     path: '/edit',
     getParentRoute: () => AuthenticatedProfileRoute,
   } as any)
+const ApiAiEnrichRoute = ApiAiEnrichRouteImport.update({
+  id: '/api/ai/enrich',
+  path: '/api/ai/enrich',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAiStatusRoute = ApiAiStatusRouteImport.update({
+  id: '/api/ai/status',
+  path: '/api/ai/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiJobsBoostDailyRoute = ApiJobsBoostDailyRouteImport.update({
   id: '/api/jobs/boost-daily',
   path: '/api/jobs/boost-daily',
@@ -229,6 +241,8 @@ export interface FileRoutesByFullPath {
   '/vendeur/$id': typeof VendeurIdRoute
   '/dashboard/new': typeof AuthenticatedDashboardNewRoute
   '/profile/edit': typeof AuthenticatedProfileEditRoute
+  '/api/ai/enrich': typeof ApiAiEnrichRoute
+  '/api/ai/status': typeof ApiAiStatusRoute
   '/api/jobs/boost-daily': typeof ApiJobsBoostDailyRoute
   '/api/pay/checkout': typeof ApiPayCheckoutRoute
   '/api/pay/reconcile': typeof ApiPayReconcileRoute
@@ -261,6 +275,8 @@ export interface FileRoutesByTo {
   '/vendeur/$id': typeof VendeurIdRoute
   '/dashboard/new': typeof AuthenticatedDashboardNewRoute
   '/profile/edit': typeof AuthenticatedProfileEditRoute
+  '/api/ai/enrich': typeof ApiAiEnrichRoute
+  '/api/ai/status': typeof ApiAiStatusRoute
   '/api/jobs/boost-daily': typeof ApiJobsBoostDailyRoute
   '/api/pay/checkout': typeof ApiPayCheckoutRoute
   '/api/pay/reconcile': typeof ApiPayReconcileRoute
@@ -296,6 +312,8 @@ export interface FileRoutesById {
   '/vendeur/$id': typeof VendeurIdRoute
   '/_authenticated/dashboard/new': typeof AuthenticatedDashboardNewRoute
   '/_authenticated/profile/edit': typeof AuthenticatedProfileEditRoute
+  '/api/ai/enrich': typeof ApiAiEnrichRoute
+  '/api/ai/status': typeof ApiAiStatusRoute
   '/api/jobs/boost-daily': typeof ApiJobsBoostDailyRoute
   '/api/pay/checkout': typeof ApiPayCheckoutRoute
   '/api/pay/reconcile': typeof ApiPayReconcileRoute
@@ -330,6 +348,8 @@ export interface FileRouteTypes {
     | '/vendeur/$id'
     | '/dashboard/new'
     | '/profile/edit'
+    | '/api/ai/enrich'
+    | '/api/ai/status'
     | '/api/jobs/boost-daily'
     | '/api/pay/checkout'
     | '/api/pay/reconcile'
@@ -362,6 +382,8 @@ export interface FileRouteTypes {
     | '/vendeur/$id'
     | '/dashboard/new'
     | '/profile/edit'
+    | '/api/ai/enrich'
+    | '/api/ai/status'
     | '/api/jobs/boost-daily'
     | '/api/pay/checkout'
     | '/api/pay/reconcile'
@@ -396,6 +418,8 @@ export interface FileRouteTypes {
     | '/vendeur/$id'
     | '/_authenticated/dashboard/new'
     | '/_authenticated/profile/edit'
+    | '/api/ai/enrich'
+    | '/api/ai/status'
     | '/api/jobs/boost-daily'
     | '/api/pay/checkout'
     | '/api/pay/reconcile'
@@ -417,6 +441,8 @@ export interface RootRouteChildren {
   PaiementRetourRoute: typeof PaiementRetourRoute
   ProductIdRoute: typeof ProductIdRoute
   VendeurIdRoute: typeof VendeurIdRoute
+  ApiAiEnrichRoute: typeof ApiAiEnrichRoute
+  ApiAiStatusRoute: typeof ApiAiStatusRoute
   ApiJobsBoostDailyRoute: typeof ApiJobsBoostDailyRoute
   ApiPayCheckoutRoute: typeof ApiPayCheckoutRoute
   ApiPayReconcileRoute: typeof ApiPayReconcileRoute
@@ -608,6 +634,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileEditRouteImport
       parentRoute: typeof AuthenticatedProfileRoute
     }
+    '/api/ai/enrich': {
+      id: '/api/ai/enrich'
+      path: '/api/ai/enrich'
+      fullPath: '/api/ai/enrich'
+      preLoaderRoute: typeof ApiAiEnrichRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ai/status': {
+      id: '/api/ai/status'
+      path: '/api/ai/status'
+      fullPath: '/api/ai/status'
+      preLoaderRoute: typeof ApiAiStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/jobs/boost-daily': {
       id: '/api/jobs/boost-daily'
       path: '/api/jobs/boost-daily'
@@ -743,6 +783,8 @@ const rootRouteChildren: RootRouteChildren = {
   PaiementRetourRoute: PaiementRetourRoute,
   ProductIdRoute: ProductIdRoute,
   VendeurIdRoute: VendeurIdRoute,
+  ApiAiEnrichRoute: ApiAiEnrichRoute,
+  ApiAiStatusRoute: ApiAiStatusRoute,
   ApiJobsBoostDailyRoute: ApiJobsBoostDailyRoute,
   ApiPayCheckoutRoute: ApiPayCheckoutRoute,
   ApiPayReconcileRoute: ApiPayReconcileRoute,
