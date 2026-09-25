@@ -216,6 +216,53 @@ function ProductPage() {
     })();
   }, [user, id]);
 
+  /**
+   * Action d'achat intégrée à la barre de navigation mobile : la navigation
+   * reste visible et le contact est toujours à portée de pouce.
+   *
+   * ⚠️ Ce hook DOIT rester avant les retours anticipés du rendu (chargement,
+   * produit introuvable, produit dépublié). Placé après, il changerait le
+   * nombre de hooks entre deux rendus et ferait planter la page (React #310).
+   */
+  useEffect(() => {
+    if (!product || product.sold_out || authLoading) {
+      clearMobileAction();
+      return;
+    }
+
+    const effectivePrice =
+      product.promo_price_fcfa && product.promo_price_fcfa < product.price_fcfa
+        ? product.promo_price_fcfa
+        : product.price_fcfa;
+
+    if (!user) {
+      setMobileAction({
+        label: formatFCFA(effectivePrice),
+        href: `/auth?mode=signup&redirect=/product/${id}`,
+        icon: "login",
+        ariaLabel: "Se connecter pour voir le contact du vendeur",
+      });
+      return () => clearMobileAction();
+    }
+
+    const number = product.whatsapp || profile?.whatsapp || "";
+    if (number) {
+      const message = product.dropshipping
+        ? `Bonjour, je souhaite commander "${product.name}" (dropshipping) sur StockMe.`
+        : `Bonjour, je suis intéressé par votre stock de "${product.name}" sur StockMe.`;
+      setMobileAction({
+        label: formatFCFA(effectivePrice),
+        href: whatsappLink(number, message),
+        icon: "whatsapp",
+        ariaLabel: product.dropshipping ? "Commander sur WhatsApp" : "Contacter le vendeur sur WhatsApp",
+      });
+    } else {
+      clearMobileAction();
+    }
+
+    return () => clearMobileAction();
+  }, [product, profile, user, authLoading, id]);
+
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   const goTo = (i: number) => {

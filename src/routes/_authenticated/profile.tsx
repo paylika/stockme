@@ -11,6 +11,7 @@ import { VerifiedPaymentDialog } from "@/components/VerifiedPaymentDialog";
 import { BoostButton, SellerMoneyProvider, useSellerMoney } from "@/components/SellerMoneyProvider";
 import { WalletCard } from "@/components/WalletCard";
 import { ProfileEditDialog } from "@/components/ProfileEditDialog";
+import { ShopBanner } from "@/components/ShopBanner";
 import { UpgradeDialog } from "@/components/UpgradeDialog";
 import { usePaymentsStatus } from "@/lib/features";
 import { PAID_PLANS, VERIFICATION_BONUS_FCFA, planOf, type PlanId } from "@/lib/pricing";
@@ -55,6 +56,8 @@ type Profile = {
   phone: string | null;
   role: string;
   plan?: string | null;
+  banner_url?: string | null;
+  banner_position?: number | null;
   verified: boolean;
   verified_until: string | null;
 };
