@@ -348,7 +348,7 @@ function ProfilePage() {
       <section className="border-b border-border">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6">
           <div className="grid max-w-md grid-cols-4 gap-4 text-center sm:text-left">
-            <Stat value={online} label="Produits" />
+            <Stat value={online} label={online > 1 ? "Produits" : "Produit"} />
             <Stat value={stats?.total_views ?? 0} label="Vues" />
             <Stat value={stats?.total_contacts ?? 0} label="Contacts" />
             <Stat value={stats?.total_favorites ?? 0} label="Favoris" />
@@ -365,13 +365,17 @@ function ProfilePage() {
                 <MessageCircle className="h-3.5 w-3.5" /> {profile.whatsapp}
               </span>
             )}
-            {profile?.phone && (
-              <span className="inline-flex items-center gap-1.5">
-                <Phone className="h-3.5 w-3.5" /> {profile.phone}
-              </span>
-            )}
-            <span className="inline-flex items-center gap-1.5">
-              <Mail className="h-3.5 w-3.5" /> {user?.email}
+            {/* Le téléphone n'est affiché que s'il est différent du WhatsApp :
+                afficher deux fois le même numéro n'apporte rien. */}
+            {profile?.phone &&
+              (profile.phone.replace(/\D/g, "") !== (profile.whatsapp ?? "").replace(/\D/g, "")) && (
+                <span className="inline-flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5" /> {profile.phone}
+                </span>
+              )}
+            <span className="inline-flex min-w-0 items-center gap-1.5">
+              <Mail className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{user?.email}</span>
             </span>
           </div>
 
