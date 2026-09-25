@@ -81,6 +81,16 @@ export const Route = createFileRoute("/_authenticated/profile")({
   component: ProfilePage,
 });
 
+type TabId = "produits" | "stats" | "promo";
+
+/** Libellés courts : les 3 onglets tiennent sur la largeur d'un téléphone. */
+const TAB_IDS: TabId[] = ["produits", "stats", "promo"];
+const TAB_LABELS: Record<TabId, string> = {
+  produits: "Produits",
+  stats: "Stats",
+  promo: "Sponsorisé",
+};
+
 function ProfilePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -88,7 +98,7 @@ function ProfilePage() {
   const [products, setProducts] = useState<Product[] | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"produits" | "stats" | "promo">("produits");
+  const [tab, setTab] = useState<TabId>("produits");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
@@ -380,65 +390,51 @@ function ProfilePage() {
             ))}
           </datalist>
 
-          {/* ===== Badge « Fournisseur vérifié » ===== */}
+          {/* ===== Badge « Fournisseur vérifié » — version compacte ===== */}
           {isVerified ? (
-            <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4">
-              <BadgeCheck className="h-6 w-6 shrink-0 text-primary" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">Boutique vérifiée par StockMe</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {isLifetime
-                    ? "Badge permanent."
-                    : `Valable jusqu'au ${new Date(profile!.verified_until as string).toLocaleDateString("fr-FR")}.`}{" "}
-                  Il s'affiche sur toutes vos fiches produit et sur votre boutique.
-                </p>
-              </div>
-              {user?.id && (
-                <Link to="/vendeur/$id" params={{ id: user.id }}>
-                  <Button variant="outline" size="sm">Voir ma boutique</Button>
-                </Link>
-              )}
+            <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border border-primary/25 bg-primary/5 px-3 py-2.5 text-xs">
+              <BadgeCheck className="h-4 w-4 shrink-0 text-primary" />
+              <span className="min-w-0 flex-1">
+                <strong className="text-foreground">Boutique vérifiée</strong>
+                {" · "}
+                {isLifetime
+                  ? "badge permanent"
+                  : `valable jusqu'au ${new Date(profile!.verified_until as string).toLocaleDateString("fr-FR")}`}
+                {" · "}
+                <span className="text-muted-foreground">affiché sur vos fiches et votre boutique</span>
+              </span>
             </div>
           ) : (
-            <div className="mt-5 rounded-2xl border border-volt/40 bg-volt/10 p-4">
-              <div className="flex flex-wrap items-start gap-3">
-                <BadgeCheck className="mt-0.5 h-6 w-6 shrink-0 text-primary" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold">
-                    Faites vérifier votre boutique — {VERIFIED_BADGE_PRICE_FCFA.toLocaleString("fr-FR")} FCFA
-                  </p>
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                    Le badge <strong className="text-foreground">Fournisseur vérifié</strong> rassure les acheteurs : il
-                    s'affiche sur vos fiches produit et sur votre boutique. Nous contrôlons votre numéro WhatsApp et
-                    votre activité.
-                  </p>
-                  <ol className="mt-2 space-y-1 text-xs text-muted-foreground">
-                    <li>
-                      1. Payez {VERIFIED_BADGE_PRICE_FCFA.toLocaleString("fr-FR")} FCFA par{" "}
-                      <strong className="text-foreground">Wave</strong> ou{" "}
-                      <strong className="text-foreground">Orange Money</strong> au{" "}
-                      <strong className="text-foreground">{SERVICE_WHATSAPP_DISPLAY}</strong>
-                    </li>
-                    <li>2. Envoyez la capture du paiement sur WhatsApp</li>
-                    <li>3. Nous activons votre badge après vérification</li>
-                  </ol>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPayOpen(true)}
-                      className="inline-flex h-11 items-center gap-2 rounded-full bg-volt px-4 text-sm font-bold text-volt-foreground shadow-sm transition hover:brightness-110"
-                    >
-                      <MessageCircle className="h-4 w-4" /> Payer {VERIFIED_BADGE_PRICE_FCFA.toLocaleString("fr-FR")} FCFA
-                    </button>
-                    <Link to="/profile/edit">
-                      <Button variant="ghost" size="sm" className="h-11">
-                        Compléter mon profil d'abord
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
+            <details className="mt-4 rounded-xl border border-volt/40 bg-volt/10 px-3 py-2.5">
+              <summary className="flex cursor-pointer list-none items-center gap-2 text-xs">
+                <BadgeCheck className="h-4 w-4 shrink-0 text-primary" />
+                <span className="min-w-0 flex-1 font-semibold">
+                  Faites vérifier votre boutique — {VERIFIED_BADGE_PRICE_FCFA.toLocaleString("fr-FR")} FCFA
+                </span>
+                <span className="shrink-0 rounded-full bg-volt px-2.5 py-1 text-[11px] font-bold text-volt-foreground">
+                  Vérifier
+                </span>
+              </summary>
+
+              <div className="mt-3 space-y-2 border-t border-volt/30 pt-3">
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  Le badge <strong className="text-foreground">Fournisseur vérifié</strong> rassure les acheteurs et
+                  s'affiche sur toutes vos cartes produit. Nous contrôlons votre numéro WhatsApp et votre activité.
+                </p>
+                <ol className="space-y-0.5 text-[11px] text-muted-foreground">
+                  <li>1. Payez {VERIFIED_BADGE_PRICE_FCFA.toLocaleString("fr-FR")} FCFA (Wave / Orange Money) au {SERVICE_WHATSAPP_DISPLAY}</li>
+                  <li>2. Envoyez la capture sur WhatsApp</li>
+                  <li>3. Badge activé après vérification</li>
+                </ol>
+                <button
+                  type="button"
+                  onClick={() => setPayOpen(true)}
+                  className="inline-flex h-10 items-center gap-2 rounded-full bg-volt px-4 text-xs font-bold text-volt-foreground transition hover:brightness-110"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" /> Payer {VERIFIED_BADGE_PRICE_FCFA.toLocaleString("fr-FR")} FCFA
+                </button>
               </div>
-            </div>
+            </details>
           )}
         </div>
       </section>
@@ -453,23 +449,41 @@ function ProfilePage() {
           </Link>
         </div>
 
-        {/* Onglets */}
-        <div className="mt-4 flex gap-2 overflow-x-auto no-scrollbar border-b border-border pb-2">
-          {([
-            { id: "produits", label: `Produits (${products?.length ?? 0})` },
-            { id: "stats", label: "Statistiques" },
-            { id: "promo", label: "Sponsorisation" },
-          ] as const).map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                tab === t.id ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+        {/* Onglets : indicateur coulissant, largeur égale, aucun débordement sur mobile */}
+        <div className="mt-4 rounded-2xl border border-border bg-muted/60 p-1">
+          <div className="relative grid grid-cols-3">
+            <span
+              aria-hidden
+              className="absolute inset-y-0 left-0 w-1/3 rounded-xl bg-background shadow-sm transition-transform duration-300 ease-out"
+              style={{ transform: `translateX(${TAB_IDS.indexOf(tab) * 100}%)` }}
+            />
+            {TAB_IDS.map((id) => {
+              const active = tab === id;
+              const count = id === "produits" ? products?.length ?? 0 : null;
+              return (
+                <button
+                  key={id}
+                  onClick={() => setTab(id)}
+                  aria-selected={active}
+                  role="tab"
+                  className={`relative z-10 flex items-center justify-center gap-1 rounded-xl px-2 py-2.5 text-[11px] font-semibold transition-colors sm:text-sm ${
+                    active ? "text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  {TAB_LABELS[id]}
+                  {count !== null && (
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+                        active ? "bg-volt/20 text-foreground" : "bg-muted-foreground/15"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* ---------- Produits ---------- */}

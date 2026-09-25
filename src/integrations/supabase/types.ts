@@ -438,6 +438,8 @@ export type Database = {
             created_at: string
             impressions: number
             clicks: number
+            product_views: number
+            product_contacts: number
           }[]
         }
       }

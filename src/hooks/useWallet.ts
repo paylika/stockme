@@ -18,8 +18,13 @@ export type BoostRow = {
   days_served: number;
   total_spent_fcfa: number;
   created_at: string;
+  last_run_at: string | null;
   impressions: number;
   clicks: number;
+  /** Vues de la fiche produit depuis le début de la mise en avant. */
+  product_views: number;
+  /** Contacts (WhatsApp / téléphone) générés depuis le début de la mise en avant. */
+  product_contacts: number;
 };
 
 export type WalletData = {
