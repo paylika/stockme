@@ -26,7 +26,20 @@ export const Route = createFileRoute("/api/pay/webhook/$provider")({
         const check = await provider.verifyWebhook(rawBody, request.headers);
 
         if (!check.ok) {
-          // Signature invalide : on refuse (mais on ne dit pas pourquoi).
+          // Fournisseur pas encore configuré (clé ou secret de webhook absent) :
+          // erreur serveur explicite — aucun secret n'est révélé, et cela permet
+          // de diagnostiquer l'installation depuis l'extérieur.
+          if (check.reason === "provider_not_configured") {
+            return Response.json(
+              {
+                error: "provider_not_configured",
+                provider: provider.name,
+                hint: "Clé API ou secret de webhook manquant dans les variables du Worker.",
+              },
+              { status: 500 },
+            );
+          }
+          // Signature invalide : on refuse sans donner de détail.
           return Response.json({ error: "signature_invalide" }, { status: 401 });
         }
 
