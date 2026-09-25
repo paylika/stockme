@@ -100,10 +100,10 @@ function PricingPage() {
           <div className="grid gap-5 p-5 sm:grid-cols-[1.15fr_1fr] sm:gap-8 sm:p-7">
             {/* Prix + argument */}
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                 <BadgeCheck className="h-6 w-6 shrink-0 text-primary" />
                 <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Fournisseur vérifié</h2>
-                <span className="rounded-full bg-volt px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-volt-foreground">
+                <span className="shrink-0 whitespace-nowrap rounded-full bg-volt px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-volt-foreground">
                   Le badge
                 </span>
               </div>
@@ -185,7 +185,10 @@ function PricingPage() {
         {/* Mobile : défilement horizontal avec aimantation. Desktop : 3 colonnes. */}
         <p className="mt-3 text-[11px] text-muted-foreground sm:hidden">Glissez pour comparer les 3 formules →</p>
 
-        <div className="-mx-4 mt-3 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 no-scrollbar sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0">
+        {/* pt-4 sur mobile : la zone de défilement rogne tout ce qui dépasse vers
+            le haut. Sans cette marge, les badges « Tarif de lancement » et
+            « 2 mois offerts » posés sur le bord des cartes étaient coupés. */}
+        <div className="-mx-4 mt-1 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pt-4 pb-3 no-scrollbar sm:mx-0 sm:mt-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pt-0 sm:pb-0">
           {formulas.map((plan) => {
             const highlight = plan.id === "pro";
             const isFree = plan.id === "gratuit";
@@ -198,7 +201,7 @@ function PricingPage() {
               >
                 {plan.badge && (
                   <span
-                    className={`absolute -top-3 left-5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                    className={`absolute -top-3 left-5 whitespace-nowrap rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${
                       highlight ? "bg-volt text-volt-foreground" : "bg-foreground text-background"
                     }`}
                   >
