@@ -290,7 +290,7 @@ function SellerPage() {
         <p className="mt-8 text-center text-xs text-muted-foreground">
           Boutique hébergée sur StockMe —{" "}
           <a href={SITE_URL} className="underline underline-offset-2 hover:text-foreground">
-            www.stockme.store
+            {SITE_URL.replace(/^https?:\/\//, "")}
           </a>
         </p>
       </section>

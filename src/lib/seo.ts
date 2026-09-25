@@ -1,5 +1,8 @@
-// ⚠️ IMPORTANT : remplace par le vrai domaine de production (ex: https://stockme.sn)
-export const SITE_URL = "https://www.stockme.store";
+// Domaine canonique de production.
+// ⚠️ « www.stockme.store » ne résout pas en DNS : on utilise l'apex, sinon
+// les balises canoniques, og:url et le sitemap pointent vers un hôte inexistant
+// (Google ne peut alors pas indexer les pages).
+export const SITE_URL = "https://stockme.store";
 
 export const siteName = "StockMe";
 export const siteEmail = "app.orderly@gmail.com";
