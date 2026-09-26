@@ -136,14 +136,43 @@
 
 @layer base {
   * { border-color: var(--color-border); }
-  html { font-family: var(--font-sans); }
+  html {
+    font-family: var(--font-sans);
+    /* Anti-zoom mobile :
+       • text-size-adjust empêche Android Chrome (font boosting) et iOS
+         d'agrandir le texte tout seul quand la page contient un bloc large ;
+       • -webkit-tap-highlight-color enlève le flash bleu au tap. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    /* Aucun défilement horizontal : un seul élément trop large suffisait à
+       décaler toute la page (et la barre du haut paraissait « cassée »).
+       `clip` ne crée PAS de conteneur de défilement, contrairement à
+       `hidden` : les barres `sticky` (header) continuent de fonctionner. */
+    overflow-x: clip;
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-feature-settings: "ss01", "cv11";
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+    max-width: 100%;
+    overflow-x: clip;
   }
+  /* iOS zoome automatiquement dès qu'un champ fait moins de 16px de texte :
+     l'utilisateur se retrouve avec une page agrandie et décalée. On force donc
+     16px sur mobile (le texte redevient normal à partir des écrans larges). */
+  @media (max-width: 767px) {
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+  /* Les images ne débordent jamais de leur conteneur (cause classique de
+     défilement horizontal sur mobile). */
+  img, video, canvas, svg { max-width: 100%; }
   h1, h2, h3, h4, .font-display {
     font-family: var(--font-display);
     letter-spacing: -0.02em;

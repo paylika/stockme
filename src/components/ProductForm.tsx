@@ -359,24 +359,31 @@ export function ProductForm({
             {images.length}/{maxPhotos}
           </span>
         </div>
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+        {/* Une SEULE ligne qui défile : avec 10 photos, une grille passait sur
+            2 ou 3 lignes et repoussait tout le formulaire vers le bas. */}
+        <div className="no-scrollbar -mx-1 flex snap-x gap-2.5 overflow-x-auto px-1 pb-1">
           {images.map((img, i) => (
             <div
               key={i}
-              className="relative aspect-square rounded-lg overflow-hidden border border-border"
+              className="relative aspect-square w-24 shrink-0 snap-start overflow-hidden rounded-lg border border-border sm:w-28"
             >
               <img src={img.preview} alt="" className="h-full w-full object-cover" />
+              {/* Numéro : la 1re photo est la vignette affichée dans le catalogue. */}
+              <span className="absolute bottom-1 left-1 rounded-full bg-background/85 px-1.5 text-[10px] font-bold">
+                {i + 1}
+              </span>
               <button
                 type="button"
+                aria-label={`Retirer la photo ${i + 1}`}
                 onClick={() => removeImage(i)}
-                className="absolute top-1 right-1 grid h-6 w-6 place-items-center rounded-full bg-background/90 text-foreground"
+                className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-background/90 text-foreground"
               >
                 <X className="h-3 w-3" />
               </button>
             </div>
           ))}
           {images.length < maxPhotos && (
-            <label className="aspect-square rounded-lg border-2 border-dashed border-border grid place-items-center text-muted-foreground hover:border-foreground/30 hover:text-foreground transition cursor-pointer">
+            <label className="grid aspect-square w-24 shrink-0 snap-start cursor-pointer place-items-center rounded-lg border-2 border-dashed border-border text-muted-foreground transition hover:border-foreground/30 hover:text-foreground sm:w-28">
               <ImagePlus className="h-6 w-6" />
               <input
                 type="file"
@@ -389,7 +396,14 @@ export function ProductForm({
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          Ajoutez 1 à {maxPhotos} photos nettes du produit. Elles sont <strong className="text-foreground">compressées automatiquement</strong> avant l'envoi : la publication fonctionne même avec une connexion lente.
+          {images.length > 1 && (
+            <>
+              <strong className="text-foreground">Glissez la ligne</strong> pour voir toutes vos photos.{" "}
+            </>
+          )}
+          Ajoutez 1 à {maxPhotos} photos nettes du produit. La 1<sup>re</sup> sert de vignette dans le catalogue. Elles
+          sont <strong className="text-foreground">compressées automatiquement</strong> avant l'envoi : la publication
+          fonctionne même avec une connexion lente.
         </p>
       </div>
 

@@ -9,7 +9,7 @@ import { UpgradeDialog } from "@/components/UpgradeDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { usePaymentsStatus } from "@/lib/features";
 import { buildSeoHead, SITE_URL } from "@/lib/seo";
-import { ALL_PLANS, PACK_TOTAL, PRO_AVAILABLE, SATISFACTION_GUARANTEE, VERIFICATION_BONUS_FCFA, FREE_PRODUCTS, EXTRA_PUBLICATION_PRICE, MAX_PHOTOS_PER_PRODUCT, planById } from "@/lib/pricing";
+import { ALL_PLANS, PACK_TOTAL, PRO_AVAILABLE, SATISFACTION_GUARANTEE, VERIFICATION_BONUS_FCFA, FREE_PRODUCTS, EXTRA_PUBLICATION_PRICE, MAX_PHOTOS_PER_PRODUCT, BOOST_DAY_PRICE, planById } from "@/lib/pricing";
 import { formatFCFA } from "@/lib/format";
 import { BadgeCheck, Check, Minus, Rocket, ShieldCheck, Sparkles, TrendingUp, X } from "lucide-react";
 
@@ -355,9 +355,9 @@ function PricingPage() {
             de répéter les mêmes lignes dans un tableau. */}
         <div className="mt-3 rounded-2xl border border-border bg-muted/40 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
           <strong className="text-foreground">Identique pour tout le monde :</strong> {FREE_PRODUCTS} produits publiés
-          offerts, {MAX_PHOTOS_PER_PRODUCT} photos par produit, et la mise en avant à 500 F par jour. Au-delà de{" "}
-          {FREE_PRODUCTS} produits, chaque publication coûte {formatFCFA(EXTRA_PUBLICATION_PRICE)}, prélevés sur votre
-          solde.
+          offerts, {MAX_PHOTOS_PER_PRODUCT} photos par produit, et la mise en avant à{" "}
+          {formatFCFA(BOOST_DAY_PRICE)} par jour. Au-delà de {FREE_PRODUCTS} produits, chaque publication coûte{" "}
+          {formatFCFA(EXTRA_PUBLICATION_PRICE)}, prélevés sur votre solde.
         </div>
 
         <div className="mt-4 overflow-x-auto rounded-2xl border border-border bg-card">

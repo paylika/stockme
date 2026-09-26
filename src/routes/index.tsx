@@ -370,7 +370,10 @@ function Index() {
 
 
       {/* ============ CATEGORY RAIL ============ */}
-      <section className="border-b border-border bg-background sticky top-0 z-30 backdrop-blur">
+      {/* `top-14` sur mobile : la barre du haut (hauteur 56px) est elle aussi
+          collante. Deux barres à `top-0` se recouvraient pendant le défilement
+          — c'est ce qui donnait l'impression que l'en-tête « cassait ». */}
+      <section className="sticky top-14 z-30 border-b border-border bg-background md:top-0">
         <div className="mx-auto max-w-7xl">
           <div className="overflow-x-auto no-scrollbar">
             <div className="flex items-center gap-2 px-4 sm:px-6 py-3">

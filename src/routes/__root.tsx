@@ -75,7 +75,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     return {
       meta: [
         { charSet: "utf-8" },
-        { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+        {
+          name: "viewport",
+          /* maximum-scale=1 : empêche le zoom AUTOMATIQUE (champ de saisie,
+             contenu large) et le zoom conservé d'une page à l'autre. Le
+             pincement à deux doigts reste possible (iOS l'ignore volontairement
+             pour l'accessibilité), mais plus aucune page ne s'ouvre agrandie. */
+          content: "width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover",
+        },
         ...meta,
       ],
       links: [

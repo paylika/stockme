@@ -448,10 +448,12 @@ function ProductPage() {
             </div>
 
             {product.images.length > 1 && (
-              <div className="grid grid-cols-5 gap-2">
+              /* Une seule ligne qui glisse : 10 photos ne prennent plus 2 lignes. */
+              <div className="no-scrollbar -mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-0.5">
                 {product.images.map((src, i) => (
                   <button key={i} onClick={() => goTo(i)}
-                    className={`aspect-square rounded-md overflow-hidden border-2 transition ${activeImg === i ? "border-volt" : "border-border hover:border-foreground/30"}`}>
+                    aria-label={`Voir la photo ${i + 1}`}
+                    className={`aspect-square w-16 shrink-0 snap-start overflow-hidden rounded-md border-2 transition sm:w-20 ${activeImg === i ? "border-volt" : "border-border hover:border-foreground/30"}`}>
                     <img src={src} alt="" className="h-full w-full object-cover" />
                   </button>
                 ))}

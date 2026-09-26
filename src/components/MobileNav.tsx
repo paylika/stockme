@@ -43,7 +43,9 @@ export function MobileNav() {
   return (
     <>
       <div className="h-20 md:hidden" aria-hidden />
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-background/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
+      {/* Fond opaque : `backdrop-filter` sur une barre fixe scintille sur iOS
+          pendant le défilement (la barre « casse »). */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] md:hidden">
         <div className="grid grid-cols-5 max-w-md mx-auto">
           {items.map((it, idx) => {
             const Icon = it.icon;
