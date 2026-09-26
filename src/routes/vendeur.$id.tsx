@@ -14,6 +14,8 @@ import { buildSeoHead, breadcrumbLd, SITE_URL } from "@/lib/seo";
 import { COUNTRY_FLAGS, countryOfCity } from "@/lib/constants";
 import { sellerInquiryMessage, whatsappLink } from "@/lib/format";
 import { IMG, thumb } from "@/lib/img";
+import { securePaymentProposal } from "@/lib/xaalispay";
+import { SecurePaymentBlock } from "@/components/SecurePayment";
 import { toast } from "sonner";
 import { Copy, Eye, Heart, MapPin, MessageCircle, Package, Phone, Share2, Store } from "lucide-react";
 
@@ -313,6 +315,25 @@ function SellerPage() {
                     </p>
                   </div>
                 )}
+
+                {/* Payer cette boutique : l'argent bloqué jusqu'à la réception.
+                    Sans ce garde-fou, commander à un inconnu reste un pari. */}
+                <div className="mt-3">
+                  <SecurePaymentBlock
+                    variant="buyer"
+                    proposalHref={
+                      sellerContact
+                        ? whatsappLink(
+                            sellerContact,
+                            securePaymentProposal({
+                              productName: "votre catalogue",
+                              productUrl: typeof window !== "undefined" ? window.location.href : undefined,
+                            }),
+                          )
+                        : null
+                    }
+                  />
+                </div>
               </>
             )}
           </div>

@@ -12,6 +12,8 @@ import { JsonLd } from "@/components/JsonLd";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { BackLink } from "@/components/BackLink";
 import { ProductReviews } from "@/components/ProductReviews";
+import { SecurePaymentBlock } from "@/components/SecurePayment";
+import { securePaymentProposal } from "@/lib/xaalispay";
 import { normalizeTiers, tierRangeLabel, lowestTierPrice } from "@/lib/price-tiers";
 import { clearMobileAction, setMobileAction } from "@/lib/mobile-action";
 import { buildSeoHead, productLd, breadcrumbLd } from "@/lib/seo";
@@ -713,6 +715,27 @@ function ProductPage() {
                   )}
                 </div>
               )}
+
+              {/* LE MOMENT OÙ L'ARGENT SE DÉCIDE : on ne laisse pas l'acheteur
+                  envoyer 250 000 F à un inconnu sans lui proposer une
+                  protection. C'est ici que XaalisPay devient utile — et c'est
+                  l'acheteur qui DEMANDE, ce qui pousse le vendeur à s'équiper. */}
+              {user && waNumber ? (
+                <SecurePaymentBlock
+                  variant="buyer"
+                  productName={product.name}
+                  priceFcfa={hasPromo ? product.promo_price_fcfa : product.price_fcfa}
+                  proposalHref={whatsappLink(
+                    waNumber,
+                    securePaymentProposal({
+                      productName: product.name,
+                      priceFcfa: hasPromo ? product.promo_price_fcfa : product.price_fcfa,
+                      quantity: product.moq,
+                      productUrl: typeof window !== "undefined" ? window.location.href : undefined,
+                    }),
+                  )}
+                />
+              ) : null}
             </div>
 
             {product.description && (

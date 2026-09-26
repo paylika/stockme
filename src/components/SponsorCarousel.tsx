@@ -25,11 +25,14 @@ type Slide = {
 
 /** Annonces "maison" toujours affichées (partenaire + offre de visibilité). */
 const XAALISPAY_SLIDE: Slide = {
-  badge: "Sponsorisé · XaalisPay",
-  title: "Encaissez avant de livrer avec XaalisPay",
-  description: "Le client paie d'abord (séquestre Wave & Orange Money), vous livrez, vous êtes payé.",
-  ctaLabel: "Découvrir",
-  href: "https://www.xaalispay.com/",
+  badge: "Partenenaire · XaalisPay",
+  title: "Payez les yeux fermés, ouvrez-les à la réception",
+  // Le message parle aux DEUX côtés de la transaction, et il est actionnable :
+  // un vendeur qui n'accepte pas le paiement protégé perd des clients hésitants.
+  description:
+    "L'argent reste bloqué chez XaalisPay jusqu'à la livraison : plus d'arnaque pour l'acheteur, plus de commande fantôme pour le vendeur. Wave, Orange Money, Free Money.",
+  ctaLabel: "Comment ça marche",
+  href: "/paiement-securise",
   logoSrc: "/partners/xaalispay-mark.png",
   logoAlt: "XaalisPay",
 };
@@ -46,7 +49,7 @@ const visibilitySlide = (selfService: boolean, loggedIn: boolean): Slide =>
   selfService
     ? {
         badge: "Sponsorisé",
-        title: "Boostez vos produits — 500 FCFA / jour",
+        title: "Boostez vos produits — 1 000 FCFA / jour",
         description:
           "Mettez vos produits en tête de l'accueil et suivez les résultats (vues, clics, contacts). Rechargez votre solde, puis boostez en 2 clics.",
         ctaLabel: loggedIn ? "Booster mes produits" : "Créer mon compte",
@@ -55,7 +58,7 @@ const visibilitySlide = (selfService: boolean, loggedIn: boolean): Slide =>
       }
     : {
         badge: "Annonce StockMe",
-        title: "Votre annonce ici pour seulement 500 FCFA / jour",
+        title: "Votre annonce ici pour seulement 1 000 FCFA / jour",
         description: "Gagnez en visibilité dès aujourd'hui : votre annonce mise en avant sur l'accueil. Contactez-nous !",
         ctaLabel: "Contacter",
         href: "https://wa.me/221786635331?text=Bonjour%20StockMe%2C%20je%20souhaite%20mettre%20mon%20annonce%20en%20avant%20sur%20l%27accueil.",

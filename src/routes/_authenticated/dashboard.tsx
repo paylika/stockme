@@ -10,6 +10,7 @@ import { formatFCFA } from "@/lib/format";
 import { AlertTriangle, BadgeCheck, Camera, Edit2, MapPin, Package, Pencil, Plus, Save, Trash2, UserRound, Wallet, X } from "lucide-react";
 import { StatusSwitch } from "@/components/StatusSwitch";
 import { BoostButton, SellerMoneyProvider, useSellerMoney } from "@/components/SellerMoneyProvider";
+import { SecurePaymentStrip } from "@/components/SecurePayment";
 import { FREE_PRODUCTS, EXTRA_PUBLICATION_PRICE } from "@/lib/pricing";
 import { toast } from "sonner";
 
@@ -160,6 +161,12 @@ function Dashboard() {
             </Link>
           </div>
         )}
+
+        {/* Se faire payer sans risque : c'est la hantise n°1 du vendeur
+            (commande fantôme, livraison jamais payée). XaalisPay répond à ça. */}
+        <div className="mt-4">
+          <SecurePaymentStrip variant="seller" />
+        </div>
 
         {/* Quota de publications atteint : on ne laisse jamais le vendeur bloqué
             avec un simple message — le bouton de recharge est juste en dessous. */}
