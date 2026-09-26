@@ -134,10 +134,14 @@ export default {
         if (type.includes("text/html") && !response.headers.has("set-cookie")) {
           const headers = new Headers(response.headers);
           headers.set("cache-control", `public, max-age=0, s-maxage=${EDGE_TTL}`);
+          // `x-stockme-cache: miss` permet de distinguer, en cas de doute, une
+          // page fraîchement rendue d'une page servie par le cache de bord
+          // (dans ce dernier cas il n'y a d'ailleurs aucun en-tête : le Worker
+          // n'est même pas exécuté).
+          headers.set("x-stockme-cache", "miss");
 
           // ⚠️ On ÉCRIT AVANT DE RÉPONDRE (et non dans `waitUntil`) : c'est ce
-          // qui garantit que la page est bien rangée, et si l'écriture échoue
-          // on le voit tout de suite dans l'en-tête `x-stockme-cache`.
+          // qui garantit que la page est bien rangée pour les visiteurs suivants.
           const forCache = response.clone();
           try {
             await cache.put(
@@ -152,10 +156,8 @@ export default {
                 },
               }),
             );
-            headers.set("x-stockme-cache", "stored");
-          } catch (e) {
+          } catch {
             headers.set("x-stockme-cache", "store-failed");
-            headers.set("x-stockme-cache-error", String((e as Error)?.message ?? e).slice(0, 180));
           }
 
           return new Response(response.body, { status: response.status, headers });
