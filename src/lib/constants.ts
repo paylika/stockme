@@ -143,7 +143,7 @@ export const SENEGAL_CITIES = WEST_AFRICA_CITIES;
 
 // Zones / quartiers par ville (Sénégal — autres pays à venir)
 export const CITY_ZONES: Record<string, string[]> = {
-  Dakar: ["Plateau", "Médina", "Fann", "Point E", "Mermoz", "Ouakam", "Yoff", "Almadies", "Ngor", "HLM", "Grand Dakar", "Sicap", "Liberté", "Parcelles Assainies", "Hann", "Colobane"],
+  Dakar: ["Plateau", "Médina", "Fann", "Point E", "Mermoz", "Ouakam", "Yoff", "Almadies", "Ngor", "HLM", "Grand Dakar", "Sicap", "Liberté", "Parcelles Assainies", "Hann", "Colobane", "Cambérène", "Grand Yoff", "Dieuppeul", "Derklé", "Biscuiterie"],
   "Keur Massar": ["Keur Massar Nord", "Keur Massar Sud", "Jaxaay", "Malika", "Boune", "Tivaouane Peulh"],
   Pikine: ["Pikine Est", "Pikine Ouest", "Pikine Nord", "Thiaroye", "Yeumbeul", "Diamaguène", "Mbao", "Tivaouane Diacksao"],
   Guédiawaye: ["Golf Sud", "Sahm Notaire", "Médina Gounass", "Wakhinane Nimzatt", "Ndiarème Limamoulaye"],

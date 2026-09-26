@@ -371,7 +371,7 @@ function RequestDetailPage() {
                     </Link>
                   </>
                 ) : sent || r.already_responded ? (
-                  <p className="mt-2 flex items-start gap-2 rounded-xl border border-success/40 bg-success/5 px-3 py-2.5 text-xs leading-relaxed text-success">
+                <p className="mt-3 flex items-start gap-2 rounded-xl border border-success/40 bg-success/5 px-3 py-2.5 text-xs leading-relaxed text-success">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
                     <span>
                       <strong>Réponse envoyée.</strong> L'acheteur a reçu le nom de votre boutique, vos produits et
@@ -415,8 +415,13 @@ function RequestDetailPage() {
                       </div>
                       <Button variant="volt" className="h-12 w-full text-sm font-bold" disabled={busy} onClick={respond}>
                         {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Send className="mr-1.5 h-4 w-4" />}
-                        {busy ? "Envoi…" : "Je l'ai — envoyer mes coordonnées"}
+                        {busy ? "Envoi…" : "J'ai ce produit — envoyer"}
                       </Button>
+                      <p className="text-[11px] leading-relaxed text-muted-foreground">
+                        L'acheteur reçoit : <strong className="text-foreground">le nom de votre boutique</strong>, vos
+                        produits en ligne, <strong className="text-foreground">votre numéro WhatsApp</strong>
+                        {price ? " et votre prix" : ""}. C'est lui qui vous écrit — vous n'avez rien à démarcher.
+                      </p>
                       <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
                         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-volt" />
                         Réservé aux vendeurs ayant au moins un produit en ligne. Une seule réponse par demande.

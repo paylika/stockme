@@ -407,9 +407,11 @@ function NewRequestPage() {
           </div>
 
           <div className="rounded-xl bg-muted/50 px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
-            Votre demande reste en ligne <strong className="text-foreground">30 jours</strong>. Vous pouvez la clôturer
-            dès que vous avez trouvé. Les numéros de téléphone écrits dans le texte sont masqués automatiquement :
-            <strong className="text-foreground"> les fournisseurs répondent ici, et vous choisissez qui contacter.</strong>
+            <strong className="text-foreground">Ce qui se passe après :</strong> les fournisseurs de la bonne catégorie
+            voient votre demande dans leur menu. Chaque réponse arrive sur la page de votre demande, avec le prix et le
+            WhatsApp du fournisseur — <strong className="text-foreground">vous choisissez qui contacter</strong>. Votre
+            demande reste en ligne <strong className="text-foreground">30 jours</strong> et vous pouvez la clôturer dès
+            que vous avez trouvé.
           </div>
 
           <div className="flex flex-wrap gap-2">
