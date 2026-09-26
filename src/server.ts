@@ -111,7 +111,6 @@ function isCacheablePage(request: Request): boolean {
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
-    const waitUntil = (ctx as { waitUntil?: (p: Promise<unknown>) => void } | undefined)?.waitUntil;
     const cache = edgeCache();
     const cacheable = !!cache && isCacheablePage(request);
 
@@ -135,21 +134,30 @@ export default {
         if (type.includes("text/html") && !response.headers.has("set-cookie")) {
           const headers = new Headers(response.headers);
           headers.set("cache-control", `public, max-age=0, s-maxage=${EDGE_TTL}`);
-          headers.set("x-stockme-cache", "miss");
-          const body = response.clone().body;
-          if (body && waitUntil) {
-            waitUntil(
-              cache
-                .put(
-                  request,
-                  new Response(body, {
-                    status: 200,
-                    headers: { "content-type": type, "cache-control": `public, max-age=0, s-maxage=${EDGE_TTL}` },
-                  }),
-                )
-                .catch(() => undefined),
+
+          // ⚠️ On ÉCRIT AVANT DE RÉPONDRE (et non dans `waitUntil`) : c'est ce
+          // qui garantit que la page est bien rangée, et si l'écriture échoue
+          // on le voit tout de suite dans l'en-tête `x-stockme-cache`.
+          const forCache = response.clone();
+          try {
+            await cache.put(
+              request,
+              new Response(forCache.body, {
+                status: 200,
+                headers: {
+                  "content-type": type,
+                  // `max-age` en plus de `s-maxage` : certains caches partagés
+                  // refusent une réponse marquée `max-age=0`.
+                  "cache-control": `public, max-age=${EDGE_TTL}, s-maxage=${EDGE_TTL}`,
+                },
+              }),
             );
+            headers.set("x-stockme-cache", "stored");
+          } catch (e) {
+            headers.set("x-stockme-cache", "store-failed");
+            headers.set("x-stockme-cache-error", String((e as Error)?.message ?? e).slice(0, 180));
           }
+
           return new Response(response.body, { status: response.status, headers });
         }
       }
