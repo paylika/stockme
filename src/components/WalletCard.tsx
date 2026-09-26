@@ -237,7 +237,8 @@ export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChang
                 busy={busyId === b.id}
                 balance={balance}
                 onToggle={onToggle}
-                onExtend={() => onRecharge(Math.max(0, boostPriceFor(EXTEND_DAYS) - balance))}
+                /* « Prolonger » = ajouter 7 jours au tarif unique (7 000 F). */
+                onExtend={() => onRecharge(boostPriceFor(EXTEND_DAYS))}
               />
             ))}
           </div>
@@ -444,7 +445,7 @@ function BoostLine({
             )}
           </Button>
           <Button variant="volt" size="sm" className="h-9" onClick={onExtend}>
-            <Plus className="mr-1 h-3.5 w-3.5" /> Prolonger
+            <Plus className="mr-1 h-3.5 w-3.5" /> Prolonger {EXTEND_DAYS} jours
           </Button>
         </div>
       </div>
