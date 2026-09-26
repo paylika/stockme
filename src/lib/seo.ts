@@ -51,8 +51,14 @@ export function buildSeoHead(opts: SeoOptions = {}) {
   meta.push({ property: "og:type", content: opts.type || "website" });
   meta.push({ property: "og:url", content: canonical });
   meta.push({ property: "og:image", content: image });
-  meta.push({ property: "og:image:width", content: "1200" });
-  meta.push({ property: "og:image:height", content: "630" });
+  meta.push({ property: "og:image:alt", content: title });
+  // Dimensions annoncées UNIQUEMENT pour l'image par défaut (1200×630). Pour une
+  // photo de produit, on laisse WhatsApp lire les vraies dimensions : annoncer
+  // une taille fausse déforme l'aperçu du lien dans la conversation.
+  if (!opts.image) {
+    meta.push({ property: "og:image:width", content: "1200" });
+    meta.push({ property: "og:image:height", content: "630" });
+  }
 
   // Twitter
   meta.push({ name: "twitter:card", content: "summary_large_image" });

@@ -12,7 +12,7 @@ import { VerifiedBadge, VerifiedBadgeGold } from "@/components/VerifiedBadge";
 import { ShopBanner } from "@/components/ShopBanner";
 import { buildSeoHead, breadcrumbLd, SITE_URL } from "@/lib/seo";
 import { COUNTRY_FLAGS, countryOfCity } from "@/lib/constants";
-import { whatsappLink } from "@/lib/format";
+import { sellerInquiryMessage, whatsappLink } from "@/lib/format";
 import { toast } from "sonner";
 import { Copy, Eye, Heart, MapPin, MessageCircle, Package, Phone, Share2, Store } from "lucide-react";
 
@@ -135,7 +135,14 @@ function SellerPage() {
   const waLink = sellerContact
     ? whatsappLink(
         sellerContact,
-        `Bonjour ${seller?.shop_name || seller?.full_name || ""}, je vous contacte via StockMe au sujet de vos produits.`,
+        // Le message porte le lien de la boutique : WhatsApp affiche l'aperçu
+        // (logo/bannière, nom, ville) grâce aux balises Open Graph de la page.
+        sellerInquiryMessage({
+          id,
+          shopName: seller?.shop_name,
+          fullName: seller?.full_name,
+          city: seller?.city,
+        }),
       )
     : "#";
 

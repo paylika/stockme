@@ -5,7 +5,7 @@ import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
 import { Button } from "@/components/ui/button";
-import { formatFCFA, whatsappLink } from "@/lib/format";
+import { formatFCFA, productInquiryMessage, whatsappLink } from "@/lib/format";
 import { useAuth } from "@/hooks/useAuth";
 import { IntensityGauge, computeIntensity } from "@/components/IntensityGauge";
 import { JsonLd } from "@/components/JsonLd";
@@ -252,9 +252,14 @@ function ProductPage() {
 
     const number = product.whatsapp || profile?.whatsapp || "";
     if (number) {
-      const message = product.dropshipping
-        ? `Bonjour, je souhaite commander "${product.name}" (dropshipping) sur StockMe.`
-        : `Bonjour, je suis intéressé par votre stock de "${product.name}" sur StockMe.`;
+      // Le message contient le lien de la fiche : WhatsApp affiche l'aperçu
+      // (photo + nom + prix) dans la conversation du vendeur.
+      const message = productInquiryMessage({
+        id: product.id,
+        name: product.name,
+        dropshipping: product.dropshipping,
+        priceFcfa: effectivePrice,
+      });
       setMobileAction({
         label: formatFCFA(effectivePrice),
         href: whatsappLink(number, message),
@@ -367,12 +372,18 @@ function ProductPage() {
   }
 
   const waNumber = product.whatsapp || profile?.whatsapp || "";
-  const waMsg = product.dropshipping
-    ? `Bonjour, je souhaite commander "${product.name}" (dropshipping) sur StockMe.`
-    : `Bonjour, je suis intéressé par votre stock de "${product.name}" sur StockMe.`;
+  const hasPromo = product.promo_price_fcfa && product.promo_price_fcfa < product.price_fcfa;
+  // Le message part avec le LIEN de la fiche : WhatsApp en affiche un aperçu
+  // (photo du produit, nom, prix) — l'acheteur et le vendeur voient de quel
+  // produit il s'agit, sans ambiguïté.
+  const waMsg = productInquiryMessage({
+    id: product.id,
+    name: product.name,
+    dropshipping: product.dropshipping,
+    priceFcfa: hasPromo ? product.promo_price_fcfa : product.price_fcfa,
+  });
   const wa = waNumber ? whatsappLink(waNumber, waMsg) : null;
   const img = product.images[activeImg];
-  const hasPromo = product.promo_price_fcfa && product.promo_price_fcfa < product.price_fcfa;
   /** Paliers de prix dégressifs : plus l'acheteur prend, moins l'unité coûte. */
   const tiers = normalizeTiers(product.price_tiers);
 

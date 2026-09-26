@@ -62,7 +62,9 @@ export function ProductReviews({ productId, sellerId }: { productId: string; sel
   const { user } = useAuth();
   const [data, setData] = useState<Summary | null>(null);
   const [formOpen, setFormOpen] = useState(false);
-  const [rating, setRating] = useState(5);
+  // 0 = AUCUNE étoile sélectionnée. On ne pré-remplit jamais 5/5 : l'acheteur
+  // doit choisir lui-même sa note (sinon tout le monde « note » 5 sans y penser).
+  const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
@@ -109,6 +111,10 @@ export function ProductReviews({ productId, sellerId }: { productId: string; sel
 
   const submit = async () => {
     if (!user) return;
+    if (rating < 1) {
+      toast.error("Choisissez d'abord une note de 1 à 5 étoiles.");
+      return;
+    }
     setBusy(true);
     try {
       const uploaded: string[] = [];
@@ -234,12 +240,21 @@ export function ProductReviews({ productId, sellerId }: { productId: string; sel
                   className="p-0.5"
                 >
                   <Star
-                    className={`h-7 w-7 transition ${n <= rating ? "fill-volt text-volt" : "text-muted-foreground/40"}`}
+                    className={`h-7 w-7 transition ${
+                      rating > 0 && n <= rating ? "fill-volt text-volt" : "text-muted-foreground/40"
+                    }`}
                   />
                 </button>
               ))}
-              <span className="ml-2 text-xs font-semibold">{rating}/5</span>
+              <span className="ml-2 text-xs font-semibold">
+                {rating > 0 ? `${rating}/5` : "Touchez les étoiles"}
+              </span>
             </div>
+            {rating === 0 && (
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Aucune étoile n'est sélectionnée par défaut : choisissez la note que vous méritez de donner.
+              </p>
+            )}
           </div>
 
           <Textarea
@@ -298,7 +313,7 @@ export function ProductReviews({ productId, sellerId }: { productId: string; sel
             <Button variant="ghost" className="h-10" onClick={() => setFormOpen(false)} disabled={busy}>
               Annuler
             </Button>
-            <Button variant="volt" className="h-10" onClick={submit} disabled={busy}>
+            <Button variant="volt" className="h-10" onClick={submit} disabled={busy || rating < 1}>
               {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <ThumbsUp className="mr-1.5 h-4 w-4" />}
               {myReview ? "Mettre à jour" : "Publier mon avis"}
             </Button>
