@@ -13,6 +13,7 @@ import { buildSeoHead } from "@/lib/seo";
 import { CATEGORIES, WEST_AFRICA_LOCATIONS } from "@/lib/constants";
 import { trackAdClick, trackAdImpression } from "@/lib/ad-tracking";
 import { useVerifiedSellers } from "@/hooks/useVerifiedSellers";
+import { fetchHomeFeed } from "@/lib/ssr-feed";
 import {
   IconBox as Package,
   IconClose as X,
@@ -23,6 +24,19 @@ import {
 type Filters = { country?: string; city?: string; category?: string; q?: string; verified?: boolean };
 
 export const Route = createFileRoute("/")({
+  /**
+   * La première page de produits est calculée SUR LE SERVEUR : le HTML part
+   * avec les vrais produits et leurs photos, au lieu de 24 cases grises.
+   * (En cas d'échec de la base, on ne casse jamais la page : le navigateur
+   * reprend la main et charge la liste lui-même.)
+   */
+  loader: async () => {
+    try {
+      return await fetchHomeFeed();
+    } catch {
+      return { products: [] as unknown[], country: null as string | null };
+    }
+  },
   validateSearch: (s: Record<string, unknown>): Filters => ({
     country: typeof s.country === "string" ? s.country : undefined,
     city: typeof s.city === "string" ? s.city : undefined,
@@ -75,12 +89,15 @@ function Index() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/" });
   const visitor = useVisitorCountry();
-  const [items, setItems] = useState<Product[] | null>(null);
+  /** Produits déjà rendus par le serveur : affichés immédiatement, sans squelette. */
+  const initial = Route.useLoaderData();
+  const initialProducts = (initial?.products as Product[] | undefined) ?? [];
+  const [items, setItems] = useState<Product[] | null>(initialProducts.length > 0 ? initialProducts : null);
   const [q, setQ] = useState(search.q ?? "");
   // Par défaut : les nouveautés. « Pertinence » remonterait les mêmes produits
   // que la section « Potentiel produit Winner » (effet de répétition).
   const [sort, setSort] = useState("nouveau");
-  const [hasMore, setHasMore] = useState(false);
+  const [hasMore, setHasMore] = useState(initialProducts.length >= PAGE_SIZE);
   const [loadingMore, setLoadingMore] = useState(false);
   const [winners, setWinners] = useState<Product[] | null>(null);
   const [winnerRot, setWinnerRot] = useState(() => Math.floor(Math.random() * 8));
@@ -272,7 +289,10 @@ function Index() {
 
   useEffect(() => {
     let cancel = false;
-    setItems(null);
+    // ⚠️ On NE remet plus la liste à zéro pendant un rafraîchissement : sinon
+    // les 24 cases grises revenaient à chaque changement de filtre (et à
+    // l'arrivée du pays détecté). On garde les produits affichés et on remplace
+    // la liste dès que la nouvelle arrive.
     setHasMore(false);
     (async () => {
       const { list, more } = await fetchMany(readCount());

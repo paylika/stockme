@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { CATEGORIES } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
 import { listBuyingRequests, type BuyingRequest } from "@/lib/buying-requests";
+import { IMG, thumb } from "@/lib/img";
 import { useAuth } from "@/hooks/useAuth";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { toast } from "sonner";
@@ -306,7 +307,13 @@ function RequestCard({ request, loggedIn }: { request: BuyingRequest; loggedIn: 
     <div className="flex flex-col rounded-2xl border border-border bg-card p-4">
       <div className="flex items-start gap-3">
         {request.image_url ? (
-          <img src={request.image_url} alt="" className="h-16 w-16 shrink-0 rounded-xl object-cover" />
+          <img
+            src={thumb(request.image_url, IMG.request)}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="h-16 w-16 shrink-0 rounded-xl object-cover"
+          />
         ) : (
           <span className="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
             <Search className="h-5 w-5" />

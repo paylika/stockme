@@ -93,6 +93,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
            avant d'afficher la première image. */
         { rel: "preconnect", href: STOCKME_SUPABASE_URL },
         { rel: "dns-prefetch", href: STOCKME_SUPABASE_URL },
+        /* Service d'images : il redimensionne les photos produits (300 Ko → 35 Ko).
+           Sans pré-connexion, la première vignette attend un aller-retour de plus. */
+        { rel: "preconnect", href: "https://wsrv.nl" },
+        { rel: "dns-prefetch", href: "https://wsrv.nl" },
         { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Instrument+Serif&family=Inter:wght@400;500;600;700&display=swap" },
         { rel: "stylesheet", href: appCss },
         ...links,
@@ -142,7 +146,13 @@ function RootComponent() {
     const key = `stockme:visited:${pathname}`;
     if (sessionStorage.getItem(key)) return;
     sessionStorage.setItem(key, "1");
-    supabase.rpc("log_site_visit", { p_path: pathname }).then(() => {});
+    /* Comptage des visites : rien d'urgent. On attend que le navigateur soit
+       libre (invisible pour l'utilisateur) au lieu d'ajouter une requête
+       pendant le chargement de la page. */
+    const send = () => void supabase.rpc("log_site_visit", { p_path: pathname });
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+    if (typeof w.requestIdleCallback === "function") w.requestIdleCallback(send, { timeout: 4000 });
+    else window.setTimeout(send, 2500);
   }, [pathname]);
 
   return (

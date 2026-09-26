@@ -18,6 +18,7 @@ import {
   type RequestSuggestion,
 } from "@/lib/buying-requests";
 import { useAuth } from "@/hooks/useAuth";
+import { IMG, thumb } from "@/lib/img";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { toast } from "sonner";
 import {
@@ -156,7 +157,12 @@ function RequestDetailPage() {
             <div className="mt-4 rounded-2xl border border-border bg-card p-4 sm:p-5">
               <div className="flex items-start gap-4">
                 {r.image_url ? (
-                  <img src={r.image_url} alt="" className="h-24 w-24 shrink-0 rounded-xl object-cover sm:h-28 sm:w-28" />
+                  <img
+                    src={thumb(r.image_url, IMG.request)}
+                    alt=""
+                    decoding="async"
+                    className="h-24 w-24 shrink-0 rounded-xl object-cover sm:h-28 sm:w-28"
+                  />
                 ) : (
                   <span className="grid h-24 w-24 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground sm:h-28 sm:w-28">
                     <Sparkles className="h-6 w-6" />
@@ -241,7 +247,13 @@ function RequestDetailPage() {
                     <li key={s.id} className="w-32 shrink-0">
                       <Link to="/product/$id" params={{ id: s.id }} className="block">
                         {s.images?.[0] ? (
-                          <img src={s.images[0]} alt="" className="h-24 w-32 rounded-xl object-cover" />
+                          <img
+                            src={thumb(s.images[0], IMG.request)}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                            className="h-24 w-32 rounded-xl object-cover"
+                          />
                         ) : (
                           <span className="grid h-24 w-32 place-items-center rounded-xl bg-muted">
                             <Package className="h-5 w-5 text-muted-foreground" />

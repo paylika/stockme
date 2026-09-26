@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { thumb } from "@/lib/img";
 import logoUrl from "@/assets/stockme-logo.jpg";
 
 type Props = {
@@ -59,8 +60,10 @@ export function ShopBanner({ src, position = 50, className = "h-32 sm:h-44", ove
       {showImage ? (
         <>
           <img
-            src={src as string}
+            src={thumb(src as string, 1200)}
             alt=""
+            loading="lazy"
+            decoding="async"
             onError={() => setFailed(true)}
             className="absolute inset-0 h-full w-full object-cover"
             style={{ objectPosition: `center ${position}%` }}

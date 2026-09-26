@@ -12,6 +12,7 @@ import {
   boostPriceFor,
 } from "@/lib/pricing";
 import { clearBoostIntent, readBoostIntent, saveBoostIntent } from "@/lib/boost-intent";
+import { thumb } from "@/lib/img";
 import { CheckCircle2, ImageOff, Pause, Rocket, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
@@ -154,7 +155,7 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
       {live.length === 1 ? (
         <p className="mt-2 flex items-center gap-2 text-sm font-semibold">
           {live[0].images?.[0] ? (
-            <img src={live[0].images[0]} alt="" className="h-10 w-10 rounded-lg object-cover" />
+            <img src={thumb(live[0].images[0], 150)} alt="" decoding="async" className="h-10 w-10 rounded-lg object-cover" />
           ) : (
             <span className="grid h-10 w-10 place-items-center rounded-lg bg-muted text-muted-foreground">
               <ImageOff className="h-4 w-4" />
@@ -178,7 +179,7 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
               >
                 <span className="block aspect-square w-full overflow-hidden bg-muted">
                   {p.images?.[0] ? (
-                    <img src={p.images[0]} alt="" className="h-full w-full object-cover" />
+                    <img src={thumb(p.images[0], 150)} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                   ) : (
                     <span className="grid h-full place-items-center text-muted-foreground">
                       <ImageOff className="h-4 w-4" />

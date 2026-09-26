@@ -10,7 +10,12 @@ export const MAX_PHOTO_SIZE = 15 * 1024 * 1024;
 export const MAX_UPLOAD_SIZE = 2.5 * 1024 * 1024;
 
 const MAX_DIMENSION = 1280;
-const TARGET_BYTES = 500 * 1024;
+/**
+ * Poids visé après compression. On est passé de 500 Ko à 340 Ko : les photos
+ * pèsent un tiers de moins pour une différence invisible à l'écran (et elles
+ * sont de toute façon servies en WebP redimensionné dans l'application).
+ */
+const TARGET_BYTES = 340 * 1024;
 const QUALITIES = [0.82, 0.7, 0.58];
 const ATTEMPTS = 4;
 

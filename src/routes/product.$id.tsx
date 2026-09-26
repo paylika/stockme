@@ -16,6 +16,7 @@ import { normalizeTiers, tierRangeLabel, lowestTierPrice } from "@/lib/price-tie
 import { clearMobileAction, setMobileAction } from "@/lib/mobile-action";
 import { buildSeoHead, productLd, breadcrumbLd } from "@/lib/seo";
 import { countryOfCity, isAdminEmail } from "@/lib/constants";
+import { IMG, thumb, thumbResponsive } from "@/lib/img";
 import { CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Eye, Heart, Lock, MapPin, MessageCircle, Package, Phone, Share2, ShieldCheck, Store, Zap } from "lucide-react";
 import { toast } from "sonner";
 
@@ -417,11 +418,24 @@ function ProductPage() {
                 className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth rounded-2xl border border-border bg-muted [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
               >
                 {product.images.length ? (
-                  product.images.map((src, i) => (
-                    <div key={i} className="w-full shrink-0 snap-center aspect-square">
-                      <img src={src} alt={`${product.name} — photo ${i + 1}`} className="h-full w-full object-cover" />
-                    </div>
-                  ))
+                  product.images.map((src, i) => {
+                    /** Photos allégées (WebP) : seule la première est prioritaire. */
+                    const hero = thumbResponsive(src, IMG.hero.widths as unknown as number[], IMG.hero.sizes);
+                    return (
+                      <div key={i} className="w-full shrink-0 snap-center aspect-square">
+                        <img
+                          src={hero.src}
+                          srcSet={hero.srcSet}
+                          sizes={hero.sizes}
+                          alt={`${product.name} — photo ${i + 1}`}
+                          loading={i === 0 ? "eager" : "lazy"}
+                          fetchPriority={i === 0 ? "high" : "auto"}
+                          decoding="async"
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    );
+                  })
                 ) : (
                   <div className="grid w-full aspect-square place-items-center text-muted-foreground"><Package className="h-16 w-16" /></div>
                 )}
@@ -454,7 +468,8 @@ function ProductPage() {
                   <button key={i} onClick={() => goTo(i)}
                     aria-label={`Voir la photo ${i + 1}`}
                     className={`aspect-square w-16 shrink-0 snap-start overflow-hidden rounded-md border-2 transition sm:w-20 ${activeImg === i ? "border-volt" : "border-border hover:border-foreground/30"}`}>
-                    <img src={src} alt="" className="h-full w-full object-cover" />
+                    {/* Vignette : version 150 px (quelques Ko au lieu de 300 Ko) */}
+                    <img src={thumb(src, IMG.thumb)} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                   </button>
                 ))}
               </div>
@@ -574,7 +589,12 @@ function ProductPage() {
                     className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-full bg-volt text-base font-bold text-volt-foreground"
                   >
                     {profile?.avatar_url ? (
-                      <img src={profile.avatar_url} alt={profile.shop_name || profile.full_name || "Vendeur"} className="h-full w-full object-cover" />
+                      <img
+                        src={thumb(profile.avatar_url, IMG.avatar)}
+                        alt={profile.shop_name || profile.full_name || "Vendeur"}
+                        decoding="async"
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
                       <span>
                         {(profile?.shop_name || profile?.full_name || "V")
@@ -732,7 +752,13 @@ function ProductPage() {
                   <Link key={s.id} to="/product/$id" params={{ id: s.id }} className="group flex flex-col rounded-xl border border-border bg-card overflow-hidden hover:border-foreground/30 transition">
                     <div className="relative aspect-[4/3] bg-muted overflow-hidden">
                       {s.images[0] ? (
-                        <img src={s.images[0]} alt={s.name} className="h-full w-full object-cover transition-transform group-hover:scale-105" loading="lazy" />
+                        <img
+                        src={thumb(s.images[0], 400)}
+                        alt={s.name}
+                        className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                        loading="lazy"
+                        decoding="async"
+                      />
                       ) : (
                         <div className="grid h-full place-items-center text-muted-foreground"><Package className="h-8 w-8" /></div>
                       )}

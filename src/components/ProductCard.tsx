@@ -6,6 +6,7 @@ import { normalizeTiers, lowestTierPrice } from "@/lib/price-tiers";
 import { Stars } from "@/components/ProductReviews";
 import { formatFCFA } from "@/lib/format";
 import { IconPin as MapPin, IconBox as Package } from "@/components/icons";
+import { IMG, thumbResponsive } from "@/lib/img";
 
 export type ListingProduct = {
   id: string;
@@ -61,10 +62,15 @@ export function ProductCard({
   priority = false,
 }: Props) {
   const img = product.images[0];
-  // Si l'image ne se charge pas (fichier supprimé, réseau coupé), on affiche un
-  // visuel propre au lieu de l'icône « image cassée » du navigateur.
-  const [imageFailed, setImageFailed] = useState(false);
-  const showImage = !!img && !imageFailed;
+  /**
+   * 0 = version allégée (35 Ko), 1 = photo d'origine (repli), 2 = visuel neutre.
+   * Si le service d'images ne répond pas, on retombe automatiquement sur
+   * l'originale : l'acheteur ne voit jamais d'image cassée.
+   */
+  const [stage, setStage] = useState<0 | 1 | 2>(0);
+  const showImage = !!img && stage < 2;
+  const sizes = thumbResponsive(img, IMG.card.widths as unknown as number[], IMG.card.sizes);
+  const src = stage === 0 ? sizes.src : (img ?? "");
   const hasPromo = product.promo_price_fcfa && product.promo_price_fcfa < product.price_fcfa;
   const discount = hasPromo
     ? Math.round(((product.price_fcfa - (product.promo_price_fcfa as number)) / product.price_fcfa) * 100)
@@ -89,12 +95,14 @@ export function ProductCard({
       <div className="relative aspect-square w-full overflow-hidden bg-muted">
         {showImage ? (
           <img
-            src={img}
+            src={src}
+            srcSet={stage === 0 ? sizes.srcSet : undefined}
+            sizes={stage === 0 ? sizes.sizes : undefined}
             alt={product.name}
             loading={priority ? "eager" : "lazy"}
             fetchPriority={priority ? "high" : "auto"}
             decoding="async"
-            onError={() => setImageFailed(true)}
+            onError={() => setStage((s) => (s === 0 ? 1 : 2))}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (

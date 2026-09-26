@@ -13,6 +13,7 @@ import { ShopBanner } from "@/components/ShopBanner";
 import { buildSeoHead, breadcrumbLd, SITE_URL } from "@/lib/seo";
 import { COUNTRY_FLAGS, countryOfCity } from "@/lib/constants";
 import { sellerInquiryMessage, whatsappLink } from "@/lib/format";
+import { IMG, thumb } from "@/lib/img";
 import { toast } from "sonner";
 import { Copy, Eye, Heart, MapPin, MessageCircle, Package, Phone, Share2, Store } from "lucide-react";
 
@@ -189,7 +190,12 @@ function SellerPage() {
                 <div className="-mt-9 flex items-end gap-3 sm:-mt-12 sm:gap-4">
                   <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-2xl border-4 border-background bg-volt text-xl font-bold text-volt-foreground sm:h-24 sm:w-24">
                     {seller?.avatar_url ? (
-                      <img src={seller.avatar_url} alt={displayName} className="h-full w-full object-cover" />
+                      <img
+                  src={thumb(seller.avatar_url, IMG.avatar)}
+                  alt={displayName}
+                  decoding="async"
+                  className="h-full w-full object-cover"
+                />
                     ) : (
                       <span>{initials}</span>
                     )}

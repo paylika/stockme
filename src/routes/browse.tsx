@@ -11,6 +11,7 @@ import { Search, SlidersHorizontal, X } from "lucide-react";
 import { ProductCard, type ListingProduct } from "@/components/ProductCard";
 import { ImageSearchButton } from "@/components/ImageSearchButton";
 import { useVerifiedSellers } from "@/hooks/useVerifiedSellers";
+import { fetchBrowseFeed } from "@/lib/ssr-feed";
 import { trackAdClick, trackAdImpression } from "@/lib/ad-tracking";
 import { ALL_COUNTRIES, useVisitorCountry } from "@/lib/geo";
 import { buildSeoHead } from "@/lib/seo";
@@ -25,6 +26,14 @@ export const Route = createFileRoute("/browse")({
     min: typeof s.min === "number" ? s.min : undefined,
     max: typeof s.max === "number" ? s.max : undefined,
   }),
+  /** Le catalogue arrive déjà rempli depuis le serveur (plus de cases grises). */
+  loader: async () => {
+    try {
+      return await fetchBrowseFeed();
+    } catch {
+      return { products: [] as unknown[] };
+    }
+  },
   head: () => {
     const { meta, links } = buildSeoHead({
       title: "Rechercher du stock en gros en Afrique de l'Ouest — StockMe",
@@ -44,7 +53,10 @@ type Product = ListingProduct;
 function Browse() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/browse" });
-  const [items, setItems] = useState<Product[] | null>(null);
+  /** Produits déjà rendus par le serveur : le catalogue s'affiche tout de suite. */
+  const initial = Route.useLoaderData();
+  const initialProducts = (initial?.products as Product[] | undefined) ?? [];
+  const [items, setItems] = useState<Product[] | null>(initialProducts.length > 0 ? initialProducts : null);
   const [boostedIds, setBoostedIds] = useState<Set<string>>(new Set());
   /** produit → annonce : permet de compter les clics sur une mise en avant. */
   const [adByProduct, setAdByProduct] = useState<Map<string, string>>(new Map());
@@ -56,7 +68,8 @@ function Browse() {
 
   useEffect(() => {
     let cancel = false;
-    setItems(null);
+    // On ne vide plus la liste pendant le rafraîchissement : les produits
+    // affichés restent à l'écran jusqu'à l'arrivée des nouveaux.
     const run = async () => {
       let query = supabase.from("products").select("*").eq("published", true).eq("dropshipping", false).order("created_at", { ascending: false }).limit(60);
       if (search.city) query = query.eq("city", search.city);

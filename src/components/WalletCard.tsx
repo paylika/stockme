@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/stockme-client";
 import type { BoostRow, WalletData } from "@/hooks/useWallet";
 import { toggleBoostStatus } from "@/components/SellerMoneyProvider";
 import { BOOST_DAY_PRICE, BOOST_PACKS, boostDaysFor, boostPriceFor } from "@/lib/pricing";
+import { thumb } from "@/lib/img";
 import {
   ArrowDownLeft,
   ChevronDown,
@@ -345,7 +346,13 @@ function BoostLine({
     <div className="rounded-xl border border-border p-3">
       <div className="flex flex-wrap items-center gap-3">
         {boost.images?.[0] ? (
-          <img src={boost.images[0]} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+          <img
+            src={thumb(boost.images[0], 150)}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="h-14 w-14 shrink-0 rounded-lg object-cover"
+          />
         ) : (
           <span className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
             <Rocket className="h-5 w-5" />

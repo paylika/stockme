@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { uploadImage, MAX_PHOTO_SIZE } from "@/lib/image-upload";
+import { IMG, thumb } from "@/lib/img";
 
 /**
  * Avis et notes d'un produit — étoiles, commentaire et photos, comme sur
@@ -353,7 +354,7 @@ export function ProductReviews({ productId, sellerId }: { productId: string; sel
                       {r.images.map((src) => (
                         <a key={src} href={src} target="_blank" rel="noopener noreferrer">
                           <img
-                            src={src}
+                            src={thumb(src, IMG.review)}
                             alt=""
                             loading="lazy"
                             className="h-20 w-20 rounded-lg border border-border object-cover"
