@@ -1,7 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { formatFCFA } from "@/lib/format";
-import { SERVICE_WHATSAPP } from "@/lib/constants";
-import {
+import { SERVICE_WHATSAPP } from "@/lib/constants";import {
   XAALISPAY,
   XAALISPAY_BENEFITS,
   XAALISPAY_OFFER,
@@ -9,155 +7,173 @@ import {
   claimMessage,
 } from "@/lib/xaalispay";
 import { Button } from "@/components/ui/button";
-import { Check, Gift, Lock, ShieldCheck, Smartphone, Store } from "lucide-react";
-
-const SUPPORT_TEL = SERVICE_WHATSAPP;
+import { Check, ChevronDown, Gift, Lock, ShieldCheck, Smartphone, Store } from "lucide-react";
 
 /**
- * LE BLOC DE CONFIANCE — affiché au moment exact où l'argent se décide.
+ * LE BLOC DE CONFIANCE — pensé MOBILE D'ABORD.
  *
- * Sur une fiche produit, juste sous le bouton WhatsApp : c'est là que l'acheteur
- * se demande « et si je paie et qu'il ne livre pas ? ». Une bannière en haut de
- * page ne sert à rien ; ce bloc-là répond à la question au bon moment.
- *
- * `variant="buyer"`  → sur les fiches produits et les boutiques
- * `variant="seller"` → dans l'espace vendeur (leur bénéfice, à eux)
+ * Sur une fiche produit, l'acheteur est au pouce, pressé, sur un petit écran.
+ * Le bloc est donc :
+ *   • COURT : la promesse + UN bouton plein largeur (44 px de haut minimum) ;
+ *   • replié : les 4 étapes et les détails ne s'affichent que si on les demande ;
+ *   • sans empilement de boutons : une seule action principale, les autres en
+ *     liens texte discrets — jamais quatre boutons qui se battent pour la place.
  */
 export function SecurePaymentBlock({
   variant = "buyer",
-  productName,
-  priceFcfa,
   proposalHref,
 }: {
   variant?: "buyer" | "seller";
+  /** Produit / prix, gardés pour compatibilité d'appel. */
   productName?: string;
   priceFcfa?: number | null;
   /** Lien WhatsApp pré-rempli avec la proposition de paiement protégé. */
   proposalHref?: string | null;
 }) {
-  const benefits = variant === "seller" ? XAALISPAY_BENEFITS.seller : XAALISPAY_BENEFITS.buyer;
+  const buyer = variant === "buyer";
+  const benefits = buyer ? XAALISPAY_BENEFITS.buyer : XAALISPAY_BENEFITS.seller;
 
   return (
     <section className="mt-4 overflow-hidden rounded-2xl border border-cobalt/30 bg-cobalt/5">
-      {/* En-tête : logo partenaire + promesse */}
-      <div className="flex items-start gap-3 border-b border-cobalt/20 bg-white/60 p-4">
+      {/* ---------- Ce qu'on voit tout de suite ---------- */}
+      <div className="flex items-start gap-3 p-3.5">
         <img
           src="/partners/xaalispay-mark.png"
           alt="XaalisPay"
-          className="h-10 w-10 shrink-0 rounded-xl object-contain"
+          className="h-9 w-9 shrink-0 rounded-lg object-contain"
           loading="lazy"
           decoding="async"
         />
         <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-1.5 text-sm font-bold">
-            <Lock className="h-3.5 w-3.5 text-cobalt" />
-            {variant === "seller"
-              ? "Encaissez avant de livrer, en toute sécurité"
-              : "Payer sans risque, avec XaalisPay"}
+          <p className="flex items-center gap-1.5 text-[13px] font-bold leading-tight">
+            <Lock className="h-3.5 w-3.5 shrink-0 text-cobalt" />
+            {buyer ? "Payer sans risque" : "Être payé avant de livrer"}
+            <span className="text-muted-foreground">· XaalisPay</span>
           </p>
-          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-            {variant === "seller" ? (
+          <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+            {buyer ? (
               <>
-                Le client paie d'abord : l'argent est <strong className="text-foreground">bloqué chez XaalisPay</strong>{" "}
-                (Wave, Orange Money, Free Money). Vous livrez sans craindre les commandes fantômes, et vous êtes payé
-                automatiquement à la réception.
+                Votre argent reste <strong className="text-foreground">bloqué</strong> jusqu'à la réception. S'il
+                n'arrive pas, vous êtes remboursé.
               </>
             ) : (
               <>
-                Ici, on ne vous demande pas de faire confiance : votre argent reste{" "}
-                <strong className="text-foreground">bloqué chez XaalisPay</strong> jusqu'à ce que vous ayez reçu et
-                vérifié la marchandise.
+                Le client paie <strong className="text-foreground">d'abord</strong> : vous livrez sans craindre les
+                commandes fantômes.
               </>
             )}
           </p>
         </div>
       </div>
 
-      {/* Les 4 étapes, en clair */}
-      <ol className="grid gap-2 p-4 sm:grid-cols-2">
-        {XAALISPAY_STEPS.map((s) => (
-          <li key={s.n} className="flex items-start gap-2.5">
-            <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-cobalt text-[10px] font-bold text-white">
-              {s.n}
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[11px] font-bold leading-snug">{s.title}</span>
-              <span className="block text-[11px] leading-snug text-muted-foreground">{s.detail}</span>
-            </span>
-          </li>
-        ))}
-      </ol>
-
-      {/* Ce que ça change concrètement */}
-      <ul className="grid gap-1.5 px-4 sm:grid-cols-2">
-        {benefits.map((b) => (
-          <li key={b} className="flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
-            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" />
-            <span>{b}</span>
-          </li>
-        ))}
-      </ul>
-
-      {/* L'offre de lancement : la raison de faire le premier pas aujourd'hui */}
-      <div className="mx-4 mt-4 flex items-start gap-2.5 rounded-xl border border-volt/50 bg-volt/10 px-3 py-2.5">
-        <Gift className="mt-0.5 h-4 w-4 shrink-0 text-volt" />
-        <span className="min-w-0 text-xs leading-relaxed">
-          <strong className="text-foreground">
-            {variant === "seller" ? XAALISPAY_OFFER.seller.title : XAALISPAY_OFFER.buyer.title}
-          </strong>
-          <span className="mt-0.5 block text-muted-foreground">
-            {variant === "seller" ? XAALISPAY_OFFER.seller.detail : XAALISPAY_OFFER.buyer.detail}
-          </span>
-        </span>
-      </div>
-
-      {/* Actions : la proposition à envoyer, puis l'installation */}
-      <div className="mt-4 flex flex-wrap gap-2 border-t border-cobalt/20 p-4">
-        {proposalHref && variant === "buyer" ? (
-          <a href={proposalHref} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1">
+      {/* ---------- L'action principale, pleine largeur, sous le pouce ---------- */}
+      <div className="space-y-2 px-3.5 pb-3.5">
+        {buyer && proposalHref ? (
+          <a href={proposalHref} target="_blank" rel="noopener noreferrer" className="block">
             <Button variant="volt" className="h-12 w-full text-sm font-bold">
               <ShieldCheck className="mr-1.5 h-4 w-4" /> Proposer le paiement protégé
             </Button>
           </a>
-        ) : null}
+        ) : buyer ? (
+          <a href={XAALISPAY.site} target="_blank" rel="noopener noreferrer" className="block">
+            <Button variant="volt" className="h-12 w-full text-sm font-bold">
+              <Smartphone className="mr-1.5 h-4 w-4" /> Installer XaalisPay
+            </Button>
+          </a>
+        ) : (
+          <a
+            href={`https://wa.me/${SERVICE_WHATSAPP}?text=${encodeURIComponent(claimMessage("seller"))}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block"
+          >
+            <Button variant="volt" className="h-12 w-full text-sm font-bold">
+              <Gift className="mr-1.5 h-4 w-4" /> Réclamer les 2 000 F de mise en avant
+            </Button>
+          </a>
+        )}
 
-        <a href={XAALISPAY.site} target="_blank" rel="noopener noreferrer">
-          <Button variant={proposalHref && variant === "buyer" ? "outline" : "volt"} className="h-12 text-sm font-bold">
-            <Smartphone className="mr-1.5 h-4 w-4" /> Installer XaalisPay
-          </Button>
-        </a>
+        {/* Offre vendeur : elle ne concerne QUE le vendeur (StockMe ne paie
+            jamais les frais de séquestre). */}
+        {!buyer && (
+          <p className="rounded-xl border border-volt/50 bg-volt/10 px-3 py-2 text-[11px] leading-snug">
+            <strong className="text-foreground">{XAALISPAY_OFFER.seller.title}</strong>
+            <span className="mt-0.5 block text-muted-foreground">{XAALISPAY_OFFER.seller.detail}</span>
+          </p>
+        )}
 
-        <a
-          href={`https://wa.me/${SUPPORT_TEL}?text=${encodeURIComponent(claimMessage(variant))}`}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Button variant="ghost" className="h-12 text-xs font-semibold">
-            <Gift className="mr-1.5 h-3.5 w-3.5 text-volt" /> Réclamer l'offre
-          </Button>
-        </a>
-
-        <Link to="/paiement-securise" className="min-w-0">
-          <Button variant="ghost" className="h-12 text-xs">
+        {/* Liens secondaires : discrets, jamais en concurrence avec l'action */}
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pt-0.5 text-[11px]">
+          <Link to="/paiement-securise" className="font-semibold text-cobalt underline underline-offset-2">
             Comment ça marche ?
-          </Button>
-        </Link>
+          </Link>
+          {buyer && (
+            <a
+              href={XAALISPAY.site}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground underline underline-offset-2"
+            >
+              Installer XaalisPay
+            </a>
+          )}
+          {!buyer && (
+            <a
+              href={XAALISPAY.site}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground underline underline-offset-2"
+            >
+              Voir XaalisPay
+            </a>
+          )}
+        </div>
       </div>
 
-      {variant === "buyer" && (
-        <p className="px-4 pb-4 text-[11px] leading-relaxed text-muted-foreground">
-          Frais de protection : {formatFCFA(XAALISPAY.protectionFee)} par commande protégée
-          {priceFcfa ? ` — soit ${formatFCFA(XAALISPAY.protectionFee)} sur ${formatFCFA(priceFcfa)}` : ""}. Disponible au{" "}
-          {XAALISPAY.countries.join(", ")}.
-        </p>
-      )}
+      {/* ---------- Les détails, repliés : on ne noie pas la page ---------- */}
+      <details className="group border-t border-cobalt/20">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3.5 py-2.5 text-[11px] font-semibold">
+          Les 4 étapes, et ce que ça change
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition group-open:rotate-180" />
+        </summary>
+        <div className="px-3.5 pb-3.5">
+          <ol className="space-y-2">
+            {XAALISPAY_STEPS.map((s) => (
+              <li key={s.n} className="flex items-start gap-2.5">
+                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-cobalt text-[10px] font-bold text-white">
+                  {s.n}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[11px] font-bold leading-snug">{s.title}</span>
+                  <span className="block text-[11px] leading-snug text-muted-foreground">{s.detail}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+
+          <ul className="mt-3 space-y-1.5 border-t border-cobalt/20 pt-3">
+            {benefits.map((b) => (
+              <li key={b} className="flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
+                <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" />
+                <span>{b}</span>
+              </li>
+            ))}
+          </ul>
+
+          <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
+            XaalisPay facture sa protection à l'acheteur : le montant exact est affiché dans l'application avant que
+            vous validiez. Aucun frais caché. Disponible au {XAALISPAY.countries.join(", ")} — paiement par{" "}
+            {XAALISPAY.methods.join(", ")}.
+          </p>
+        </div>
+      </details>
     </section>
   );
 }
 
 /**
- * Version ultra-courte, à poser partout où la place manque
- * (encart produit, espace vendeur, tunnel de paiement).
+ * Version ultra-courte pour les endroits où la place est comptée
+ * (tableau de bord vendeur, encarts).
  */
 export function SecurePaymentStrip({ variant = "buyer" }: { variant?: "buyer" | "seller" }) {
   return (
@@ -174,7 +190,11 @@ export function SecurePaymentStrip({ variant = "buyer" }: { variant?: "buyer" | 
       />
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5 text-xs font-bold">
-          {variant === "seller" ? <Store className="h-3.5 w-3.5 text-cobalt" /> : <Lock className="h-3.5 w-3.5 text-cobalt" />}
+          {variant === "seller" ? (
+            <Store className="h-3.5 w-3.5 text-cobalt" />
+          ) : (
+            <Lock className="h-3.5 w-3.5 text-cobalt" />
+          )}
           {variant === "seller" ? "Soyez payé avant de livrer" : "Payez les yeux fermés"}
         </span>
         <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">

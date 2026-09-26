@@ -723,8 +723,6 @@ function ProductPage() {
               {user && waNumber ? (
                 <SecurePaymentBlock
                   variant="buyer"
-                  productName={product.name}
-                  priceFcfa={hasPromo ? product.promo_price_fcfa : product.price_fcfa}
                   proposalHref={whatsappLink(
                     waNumber,
                     securePaymentProposal({

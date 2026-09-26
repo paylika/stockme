@@ -10,7 +10,7 @@ import { formatFCFA } from "@/lib/format";
 import { AlertTriangle, BadgeCheck, Camera, Edit2, MapPin, Package, Pencil, Plus, Save, Trash2, UserRound, Wallet, X } from "lucide-react";
 import { StatusSwitch } from "@/components/StatusSwitch";
 import { BoostButton, SellerMoneyProvider, useSellerMoney } from "@/components/SellerMoneyProvider";
-import { SecurePaymentStrip } from "@/components/SecurePayment";
+import { SecurePaymentBlock } from "@/components/SecurePayment";
 import { FREE_PRODUCTS, EXTRA_PUBLICATION_PRICE } from "@/lib/pricing";
 import { toast } from "sonner";
 
@@ -163,9 +163,10 @@ function Dashboard() {
         )}
 
         {/* Se faire payer sans risque : c'est la hantise n°1 du vendeur
-            (commande fantôme, livraison jamais payée). XaalisPay répond à ça. */}
+            (commande fantôme, livraison jamais payée). XaalisPay répond à ça,
+            et l'offre de mise en avant donne la raison d'essayer tout de suite. */}
         <div className="mt-4">
-          <SecurePaymentStrip variant="seller" />
+          <SecurePaymentBlock variant="seller" />
         </div>
 
         {/* Quota de publications atteint : on ne laisse jamais le vendeur bloqué

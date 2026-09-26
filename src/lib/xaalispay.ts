@@ -73,18 +73,12 @@ export const XAALISPAY_BENEFITS = {
 /**
  * L'INCITATION — pourquoi faire le premier pas MAINTENANT.
  *
- * Un service de paiement ne s'installe pas par curiosité : il s'utilise quand
- * il débloque une situation ET qu'il y a un bénéfice immédiat. Ces deux offres
- * sont volontairement concrètes, limitées à la PREMIÈRE transaction, et
- * déclenchées par un simple message WhatsApp (donc vérifiables à la main, sans
- * développement supplémentaire).
+ * ⚠️ StockMe NE prend PAS en charge les frais de séquestre : XaalisPay facture
+ * sa protection à l'acheteur, et le montant exact s'affiche dans l'application
+ * avant qu'il valide. On ne promet donc jamais la gratuité — on promet un
+ * bénéfice à celui qui essuie les plâtres : le VENDEUR.
  */
 export const XAALISPAY_OFFER = {
-  buyer: {
-    title: `Votre 1ʳᵉ commande protégée : les ${XAALISPAY.protectionFee.toLocaleString("fr-FR")} FCFA de protection offerts`,
-    detail:
-      "StockMe paie les frais de protection de votre première transaction XaalisPay. Vous ne prenez aucun risque pour essayer.",
-  },
   seller: {
     title: "Votre 1ʳᵉ vente protégée : +2 000 FCFA de mise en avant offerts",
     detail:
@@ -92,13 +86,13 @@ export const XAALISPAY_OFFER = {
   },
 } as const;
 
-/** Message de réclamation de l'offre (traitement manuel, sous 24 h). */
-export function claimMessage(kind: "buyer" | "seller", who?: string | null): string {
-  const offre = kind === "buyer" ? XAALISPAY_OFFER.buyer.title : XAALISPAY_OFFER.seller.title;
+/** Message de réclamation (traitement manuel, sous 24 h). */
+export function claimMessage(kind: "seller", who?: string | null): string {
   return [
-    `Bonjour StockMe, je veux profiter de l'offre XaalisPay : ${offre}.`,
+    "Bonjour StockMe, je veux profiter de l'offre XaalisPay :",
+    XAALISPAY_OFFER.seller.title + ".",
     who ? `Mon compte / boutique : ${who}` : "",
-    "Je viens d'installer l'application XaalisPay, pouvez-vous activer l'offre ?",
+    "Comment on procède ?",
   ]
     .filter(Boolean)
     .join("\n");
