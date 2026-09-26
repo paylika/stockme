@@ -29,8 +29,20 @@ export const MAX_PHOTOS_PER_PRODUCT = 10;
 
 /** Prix d'une journée de mise en avant — LE MÊME pour tout le monde. */
 export const BOOST_DAY_PRICE = 1000;
+
+/**
+ * Les 3 formules proposées d'un clic (le prix est toujours jours × 1 000 F).
+ * Aucune remise, aucune astuce : la durée EST le montant. C'est ce qui rend
+ * l'achat immédiatement compréhensible (« 30 000 F = 1 mois »).
+ */
+export const BOOST_PACKS: { days: number; label: string; popular?: boolean }[] = [
+  { days: 7, label: "1 semaine" },
+  { days: 15, label: "2 semaines", popular: true },
+  { days: 30, label: "1 mois" },
+];
+
 /** Durées proposées d'un clic (en jours). */
-export const BOOST_DAY_PRESETS = [3, 7, 15, 30];
+export const BOOST_DAY_PRESETS = BOOST_PACKS.map((p) => p.days);
 /** Bornes de saisie libre du nombre de jours. */
 export const BOOST_MIN_DAYS = 1;
 export const BOOST_MAX_DAYS = 90;

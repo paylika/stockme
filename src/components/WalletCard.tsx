@@ -3,14 +3,12 @@ import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { formatFCFA } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/stockme-client";
-import type { BoostRow, PendingPayment, WalletData } from "@/hooks/useWallet";
+import type { BoostRow, WalletData } from "@/hooks/useWallet";
 import { toggleBoostStatus } from "@/components/SellerMoneyProvider";
-import { BOOST_DAY_PRICE, boostDaysFor, boostPriceFor } from "@/lib/pricing";
+import { BOOST_DAY_PRICE, BOOST_PACKS, boostDaysFor, boostPriceFor } from "@/lib/pricing";
 import {
-  AlertTriangle,
   ArrowDownLeft,
   ChevronDown,
-  Clock,
   Eye,
   Heart,
   MessageCircle,
@@ -26,32 +24,28 @@ import {
 type Props = {
   wallet: WalletData | null;
   loading: boolean;
-  /** Ouvre le rechargement, éventuellement avec un montant pré-rempli. */
-  onRecharge: (amount?: number) => void;
-  /** Reprendre un paiement en attente : on modifie le montant et on repart. */
-  onEditPending: (pending: PendingPayment) => void;
+  /** Ouvre le rechargement (montant et formules pré-remplis si fournis). */
+  onRecharge: (amount?: number, presets?: number[]) => void;
+  /** Rouvre la fenêtre de mise en avant d'un produit (prolonger / reprendre). */
+  onProlong: (product: { id: string; name: string }) => void;
   onChanged?: () => void;
 };
 
-/** Jours ajoutés d'un clic sur « Prolonger ». */
-const EXTEND_DAYS = 7;
+/** Montants des 3 formules : 7 000 / 15 000 / 30 000 F. */
+const PACK_AMOUNTS = BOOST_PACKS.map((p) => boostPriceFor(p.days));
 
 /**
- * Portefeuille du vendeur — volontairement simple, dans cet ordre :
- *   1. combien j'ai ;
- *   2. combien de jours cela représente ;
- *   3. ce qui tourne en ce moment (avec pause et prolongation) ;
- *   4. ce que ça me rapporte.
- * Le prix d'une journée est le même pour tout le monde : il n'y a donc aucun
- * réglage à comprendre, seulement une durée à choisir.
+ * Ce qui tourne et ce que ça rapporte.
+ *
+ * Les paiements abandonnés ne sont PAS ici : ils s'affichent dans la fenêtre de
+ * paiement, au moment où le vendeur achète réellement (avant, ils occupaient la
+ * page en permanence pour rien).
  */
-export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChanged }: Props) {
+export function WalletCard({ wallet, loading, onRecharge, onProlong, onChanged }: Props) {
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  // Réparation automatique : quand le vendeur ouvre son portefeuille, si une
-  // campagne est active et financée mais que son annonce n'est plus servie
-  // (annonce expirée, journée manquée par la tâche quotidienne), on la remet en
-  // service. Aucun débit : la journée est déjà payée.
+  // Réparation automatique : campagne active et financée mais annonce plus
+  // servie (annonce expirée, journée manquée) → on la remet en service.
   useEffect(() => {
     let cancel = false;
     (async () => {
@@ -73,7 +67,6 @@ export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChang
   const activeBoosts = wallet.boosts.filter((b) => b.status === "active");
   const dailySpend = activeBoosts.reduce((s, b) => s + b.daily_budget_fcfa, 0);
   const daysLeft = dailySpend > 0 ? Math.floor(balance / dailySpend) : 0;
-  // Sans campagne en cours : ce que le solde permettrait de jours au tarif unique.
   const daysAvailable = boostDaysFor(balance);
 
   const onToggle = async (campaignId: string, next: "active" | "paused") => {
@@ -83,7 +76,6 @@ export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChang
     if (ok) onChanged?.();
   };
 
-  // ---- Performance globale (toutes campagnes confondues) ----
   const totals = wallet.boosts.reduce(
     (acc, b) => {
       acc.impressions += b.impressions ?? 0;
@@ -100,7 +92,7 @@ export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChang
 
   return (
     <div className="space-y-4">
-      {/* ---------- 1. Le solde, et ce qu'il représente ---------- */}
+      {/* ---------- Mon solde ---------- */}
       <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -108,104 +100,64 @@ export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChang
               <Wallet className="h-6 w-6" />
             </span>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                Mon solde
-              </p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Mon solde</p>
               <p className="text-3xl font-bold tracking-tight">{formatFCFA(balance)}</p>
               <p className="text-[11px] text-muted-foreground">
                 {dailySpend > 0
-                  ? `${formatFCFA(dailySpend)} engagés par jour · ≈ ${daysLeft} jour${daysLeft > 1 ? "s" : ""} restants`
-                  : `1 mise en avant coûte ${formatFCFA(BOOST_DAY_PRICE)} par jour${
-                      daysAvailable > 0 ? ` · de quoi tenir ${daysAvailable} jour${daysAvailable > 1 ? "s" : ""}` : ""
-                    }`}
+                  ? `${formatFCFA(dailySpend)} engagés par jour · ≈ ${daysLeft} jour${daysLeft > 1 ? "s" : ""} de diffusion`
+                  : daysAvailable > 0
+                    ? `de quoi tenir ${daysAvailable} jour${daysAvailable > 1 ? "s" : ""} de mise en avant`
+                    : `1 mise en avant coûte ${formatFCFA(BOOST_DAY_PRICE)} par jour`}
               </p>
             </div>
           </div>
-          <Button variant="volt" className="h-11" onClick={() => onRecharge()}>
+          <Button variant="volt" className="h-11" onClick={() => onRecharge(undefined, PACK_AMOUNTS)}>
             <ArrowDownLeft className="mr-1.5 h-4 w-4" /> Recharger
           </Button>
         </div>
       </div>
 
-      {/* ---------- 2. Alerte : la diffusion va s'arrêter ---------- */}
-      {dailySpend > 0 && daysLeft <= 1 && (
-        <div className="flex flex-wrap items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold">
-              {daysLeft === 0 ? "La mise en avant ne peut plus être payée" : "Il reste 1 jour de mise en avant"}
-            </p>
-            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-              Il faut {formatFCFA(dailySpend)} par jour. Sans recharge, la diffusion s'arrête et votre produit quitte
-              les emplacements mis en avant — vous pourrez la reprendre plus tard, rien n'est perdu.
-            </p>
-          </div>
-          <Button variant="volt" className="h-10" onClick={() => onRecharge(dailySpend * EXTEND_DAYS)}>
-            <Plus className="mr-1 h-4 w-4" /> {EXTEND_DAYS} jours — {formatFCFA(dailySpend * EXTEND_DAYS)}
-          </Button>
-        </div>
-      )}
-
-      {/* ---------- 3. Paiement en attente : on le reprend ---------- */}
-      {wallet.pending.length > 0 && (
-        <div className="rounded-2xl border border-volt/40 bg-volt/10 p-4">
-          <div className="flex flex-wrap items-start gap-3">
-            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-volt" />
+      {/* ---------- Continuer la diffusion (jamais un cul-de-sac) ---------- */}
+      {dailySpend > 0 && daysLeft <= 2 && (
+        <div className="rounded-2xl border border-volt/50 bg-volt/10 p-4">
+          <div className="flex items-start gap-3">
+            <Rocket className="mt-0.5 h-5 w-5 shrink-0 text-volt" />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold">
-                {wallet.pending.length === 1
-                  ? "Un paiement attend d'être finalisé"
-                  : `${wallet.pending.length} paiements attendent d'être finalisés`}
+                {daysLeft === 0
+                  ? "Votre mise en avant va s'arrêter aujourd'hui"
+                  : `Il reste ${daysLeft} jour${daysLeft > 1 ? "s" : ""} de diffusion`}
               </p>
               <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                Vous n'avez pas terminé ce paiement. Reprenez-le plutôt que d'en créer un nouveau — le lien reste
-                valable 24 h.
+                Choisissez la durée à ajouter : {formatFCFA(BOOST_DAY_PRICE)} par jour, rien d'autre à faire ensuite.
+                Le produit reste en tête de l'accueil tant qu'il reste du solde.
               </p>
-
-              <ul className="mt-2 space-y-2">
-                {wallet.pending.map((p) => (
-                  <li key={p.id} className="rounded-xl border border-volt/30 bg-background/70 p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold">
-                          {formatFCFA(p.amount_fcfa)}
-                          {p.purpose === "wallet_topup" && (
-                            <span className="ml-2 text-[11px] font-normal text-muted-foreground">rechargement</span>
-                          )}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {new Date(p.created_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}
-                          {p.method ? ` · ${p.method}` : ""}
-                        </p>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        {p.checkout_url ? (
-                          <a href={p.checkout_url}>
-                            <Button variant="volt" size="sm" className="h-9">
-                              Reprendre le paiement
-                            </Button>
-                          </a>
-                        ) : null}
-                        <Button variant="outline" size="sm" className="h-9" onClick={() => onEditPending(p)}>
-                          Modifier le montant
-                        </Button>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
             </div>
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {BOOST_PACKS.map((p) => (
+              <button
+                key={p.days}
+                type="button"
+                onClick={() => onRecharge(boostPriceFor(p.days), PACK_AMOUNTS)}
+                className="rounded-xl border border-volt/50 bg-background px-2 py-2 text-center transition hover:bg-volt/15"
+              >
+                <span className="block text-sm font-bold">{p.days} jours</span>
+                <span className="block text-[11px] font-semibold text-foreground">
+                  {formatFCFA(boostPriceFor(p.days))}
+                </span>
+                <span className="block text-[10px] text-muted-foreground">{p.label}</span>
+              </button>
+            ))}
           </div>
         </div>
       )}
 
-      {/* ---------- 4. Ce qui tourne en ce moment ---------- */}
+      {/* ---------- Ce qui tourne en ce moment ---------- */}
       <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-bold tracking-tight">
-            Mes produits en avant{" "}
-            {activeBoosts.length > 0 ? `(${activeBoosts.length} en diffusion)` : ""}
+            Mes produits en avant {activeBoosts.length > 0 ? `(${activeBoosts.length} en diffusion)` : ""}
           </h3>
           {dailySpend > 0 && (
             <span className="text-[11px] text-muted-foreground">
@@ -219,14 +171,8 @@ export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChang
             <Rocket className="mx-auto h-6 w-6 text-muted-foreground" />
             <p className="mt-2 text-sm font-medium">Aucune mise en avant pour l'instant</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Ouvrez l'onglet <strong>Produits</strong>, appuyez sur <strong>Booster</strong> sur un produit, puis
-              choisissez le nombre de jours.
+              Choisissez un produit dans la liste ci-dessus, puis la durée : il passe en tête de l'accueil.
             </p>
-            <Link to="/profile" search={{ tab: "produits" }} className="mt-3 inline-block">
-              <Button variant="volt" className="h-10">
-                <Rocket className="mr-1.5 h-4 w-4" /> Choisir un produit à booster
-              </Button>
-            </Link>
           </div>
         ) : (
           <div className="mt-3 space-y-3">
@@ -237,15 +183,14 @@ export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChang
                 busy={busyId === b.id}
                 balance={balance}
                 onToggle={onToggle}
-                /* « Prolonger » = ajouter 7 jours au tarif unique (7 000 F). */
-                onExtend={() => onRecharge(boostPriceFor(EXTEND_DAYS))}
+                onProlong={() => onProlong({ id: b.product_id, name: b.product_name ?? "Produit" })}
               />
             ))}
           </div>
         )}
       </div>
 
-      {/* ---------- 5. Ce que ça rapporte ---------- */}
+      {/* ---------- Ce que ça rapporte ---------- */}
       {wallet.boosts.length > 0 && (
         <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
           <h3 className="text-sm font-bold tracking-tight">Résultats de mes mises en avant</h3>
@@ -296,7 +241,7 @@ export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChang
         </div>
       )}
 
-      {/* ---------- 6. Mouvements (repliés : on ne les consulte pas tous les jours) ---------- */}
+      {/* ---------- Mouvements (repliés) ---------- */}
       {wallet.transactions.length > 0 && (
         <details className="rounded-2xl border border-border bg-card p-4 sm:p-5">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
@@ -383,24 +328,21 @@ function BoostLine({
   busy,
   balance,
   onToggle,
-  onExtend,
+  onProlong,
 }: {
   boost: BoostRow;
   busy: boolean;
   balance: number;
   onToggle: (campaignId: string, nextStatus: "active" | "paused") => void;
-  onExtend: () => void;
+  onProlong: () => void;
 }) {
   const active = boost.status === "active";
   const ctr = boost.impressions > 0 ? (boost.clicks / boost.impressions) * 100 : 0;
   const daysPaid = boost.days_served;
-  // Ce que le solde permettrait encore de jours à ce tarif (le solde est commun
-  // à toutes les campagnes : c'est une estimation, on le dit simplement).
   const daysLeft = boostDaysFor(balance);
 
   return (
     <div className="rounded-xl border border-border p-3">
-      {/* En-tête de campagne */}
       <div className="flex flex-wrap items-center gap-3">
         {boost.images?.[0] ? (
           <img src={boost.images[0]} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
@@ -428,12 +370,18 @@ function BoostLine({
             }`}
           >
             <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-success" : "bg-muted-foreground"}`} />
-            {active ? `En diffusion · ≈ ${daysLeft} j restants` : "En pause — rien n'est débité"}
+            {active ? `En diffusion · ≈ ${daysLeft} j` : "En pause — rien n'est débité"}
           </span>
         </div>
 
         <div className="flex shrink-0 flex-wrap gap-2">
-          <Button variant="outline" size="sm" className="h-9" disabled={busy} onClick={() => onToggle(boost.id, active ? "paused" : "active")}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9"
+            disabled={busy}
+            onClick={() => onToggle(boost.id, active ? "paused" : "active")}
+          >
             {active ? (
               <>
                 <Pause className="mr-1 h-3.5 w-3.5" /> Pause
@@ -444,13 +392,12 @@ function BoostLine({
               </>
             )}
           </Button>
-          <Button variant="volt" size="sm" className="h-9" onClick={onExtend}>
-            <Plus className="mr-1 h-3.5 w-3.5" /> Prolonger {EXTEND_DAYS} jours
+          <Button variant="volt" size="sm" className="h-9" onClick={onProlong}>
+            <Plus className="mr-1 h-3.5 w-3.5" /> Ajouter des jours
           </Button>
         </div>
       </div>
 
-      {/* KPI de la campagne */}
       <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
         <MiniKpi label="Vues" value={boost.impressions.toLocaleString("fr-FR")} icon={Eye} />
         <MiniKpi label="Clics" value={boost.clicks.toLocaleString("fr-FR")} icon={MousePointerClick} />

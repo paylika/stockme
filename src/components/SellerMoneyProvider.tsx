@@ -55,8 +55,12 @@ export type SellerMoneyCtx = {
   loading: boolean;
   balance: number;
   refresh: () => void;
-  /** Ouvre le rechargement, éventuellement pré-rempli (ex. 500 F pour publier). */
-  openTopUp: (amount?: number) => void;  /** Reprendre un paiement en attente en modifiant son montant. */
+  /**
+   * Ouvre le rechargement, éventuellement pré-rempli.
+   * `presets` remplace les montants proposés (ex. 7 000 / 15 000 / 30 000 F
+   * pour les formules de mise en avant).
+   */
+  openTopUp: (amount?: number, presets?: number[]) => void;  /** Reprendre un paiement en attente en modifiant son montant. */
   resumePending: (pending: { amount_fcfa: number }) => void;
   openBoost: (product: BoostTarget) => void;
 };
@@ -92,6 +96,7 @@ export function SellerMoneyProvider({
 
   const [topUpOpen, setTopUpOpen] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState<number | null>(null);
+  const [topUpPresets, setTopUpPresets] = useState<number[] | undefined>(undefined);
   const [boost, setBoost] = useState<BoostTarget | null>(null);
 
   const visible = payments.enabled || (isAdminEmail(user?.email) && payments.methods.length > 0);
@@ -107,15 +112,20 @@ export function SellerMoneyProvider({
     };
   }, [visible]);
 
-  const openTopUp = useCallback((amount?: number) => {
+  const openTopUp = useCallback((amount?: number, presets?: number[]) => {
     setTopUpAmount(typeof amount === "number" && amount > 0 ? amount : null);
+    setTopUpPresets(presets && presets.length > 0 ? presets : undefined);
     setTopUpOpen(true);
   }, []);
 
-  const resumePending = useCallback((pending: { amount_fcfa: number }) => {
-    setTopUpAmount(pending.amount_fcfa);
-    setTopUpOpen(true);
-  }, []);
+  const resumePending = useCallback(
+    (pending: { amount_fcfa: number }) => {
+      setTopUpAmount(pending.amount_fcfa);
+      setTopUpPresets(undefined);
+      setTopUpOpen(true);
+    },
+    [],
+  );
 
   const value = useMemo<SellerMoneyCtx>(
     () => ({
@@ -140,11 +150,16 @@ export function SellerMoneyProvider({
         open={topUpOpen}
         onOpenChange={(o) => {
           setTopUpOpen(o);
-          if (!o) setTopUpAmount(null);
+          if (!o) {
+            setTopUpAmount(null);
+            setTopUpPresets(undefined);
+          }
         }}
         methods={payments.methods}
         defaultPhone={defaultPhone}
         initialAmount={topUpAmount}
+        presets={topUpPresets}
+        pending={wallet?.pending ?? []}
       />
 
       {boost && (

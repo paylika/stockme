@@ -20,11 +20,18 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   methods: string[];
   defaultPhone?: string | null;
-  /** Montant pré-rempli (reprise d'un paiement en attente). */
+  /** Montant pré-rempli (reprise d'un paiement en attente, formule de boost…). */
   initialAmount?: number | null;
+  /** Montants proposés d'un clic (par défaut : recharges classiques). */
+  presets?: number[];
+  /**
+   * Paiements abandonnés. On ne les affiche QUE dans cette fenêtre : c'est ici
+   * que le vendeur en a besoin. Sur la page, ils prenaient de la place pour rien.
+   */
+  pending?: { id: string; amount_fcfa: number; created_at: string; method: string | null; checkout_url: string | null }[];
 };
 
-const PRESETS = [1000, 2000, 5000, 10000];
+const DEFAULT_PRESETS = [1000, 2000, 5000, 10000];
 
 /**
  * Rechargement du portefeuille : le vendeur choisit un montant et un moyen de
@@ -34,7 +41,16 @@ const PRESETS = [1000, 2000, 5000, 10000];
  * On annule d'abord les demandes de paiement abandonnées (plus de 5 minutes)
  * pour ne jamais empiler les paiements en attente.
  */
-export function TopUpDialog({ open, onOpenChange, methods, defaultPhone, initialAmount }: Props) {
+export function TopUpDialog({
+  open,
+  onOpenChange,
+  methods,
+  defaultPhone,
+  initialAmount,
+  presets,
+  pending = [],
+}: Props) {
+  const amounts = presets && presets.length > 0 ? presets : DEFAULT_PRESETS;
   const [amount, setAmount] = useState<number>(2000);
   const [customAmount, setCustomAmount] = useState("");
   const [method, setMethod] = useState<PayMethod>("card");
@@ -48,13 +64,14 @@ export function TopUpDialog({ open, onOpenChange, methods, defaultPhone, initial
     setBusy(false);
     // Reprise d'un paiement en attente : on repart de son montant.
     if (initialAmount && initialAmount >= 100) {
-      if (PRESETS.includes(initialAmount)) {
+      if (amounts.includes(initialAmount)) {
         setAmount(initialAmount);
         setCustomAmount("");
       } else {
         setCustomAmount(String(initialAmount));
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, methods, initialAmount]);
 
   useEffect(() => {
@@ -105,7 +122,7 @@ export function TopUpDialog({ open, onOpenChange, methods, defaultPhone, initial
         <div className="space-y-2">
           <Label>Montant à recharger</Label>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {PRESETS.map((v) => (
+            {amounts.map((v) => (
               <button
                 key={v}
                 type="button"
@@ -181,6 +198,42 @@ export function TopUpDialog({ open, onOpenChange, methods, defaultPhone, initial
           Vous allez payer <strong className="text-foreground">{formatFCFA(finalAmount || 0)}</strong>. Le solde est
           crédité automatiquement dès la confirmation du paiement.
         </div>
+
+        {/* Paiement abandonné : c'est ICI qu'on le propose, pas sur la page. */}
+        {pending.length > 0 && (
+          <div className="rounded-xl border border-volt/40 bg-volt/10 p-3">
+            <p className="text-xs font-bold">
+              {pending.length === 1
+                ? "Un paiement n'a pas été terminé"
+                : `${pending.length} paiements n'ont pas été terminés`}
+            </p>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+              Reprenez-le au lieu d'en créer un nouveau : le lien reste valable 24 h et le montant est déjà choisi.
+            </p>
+            <ul className="mt-2 space-y-2">
+              {pending.map((p) => (
+                <li key={p.id} className="rounded-lg border border-volt/30 bg-background/70 p-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="min-w-0 text-xs">
+                      <strong className="text-foreground">{formatFCFA(p.amount_fcfa)}</strong>
+                      <span className="ml-2 text-muted-foreground">
+                        {new Date(p.created_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}
+                        {p.method ? ` · ${p.method}` : ""}
+                      </span>
+                    </span>
+                    {p.checkout_url ? (
+                      <a href={p.checkout_url} target="_blank" rel="noopener noreferrer">
+                        <Button variant="volt" size="sm" className="h-8">
+                          Reprendre
+                        </Button>
+                      </a>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <Button
           variant="volt"

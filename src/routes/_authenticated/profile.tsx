@@ -8,13 +8,14 @@ import { Button } from "@/components/ui/button";
 import { StatusSwitch } from "@/components/StatusSwitch";
 import { VerifiedBadge, VerifiedBadgeGold } from "@/components/VerifiedBadge";
 import { BoostButton, useSellerMoney } from "@/components/SellerMoneyProvider";
+import { BoostLauncher } from "@/components/BoostLauncher";
 import { WalletCard } from "@/components/WalletCard";
 import { ProfileEditDialog } from "@/components/ProfileEditDialog";
 import { ShopBanner } from "@/components/ShopBanner";
 import { UpgradeDialog } from "@/components/UpgradeDialog";
 import { VerifiedPaymentDialog } from "@/components/VerifiedPaymentDialog";
 import { usePaymentsStatus } from "@/lib/features";
-import { BOOST_DAY_PRICE, planById, planOf, type PlanId } from "@/lib/pricing";
+import { planById, planOf, type PlanId } from "@/lib/pricing";
 import { useAuth } from "@/hooks/useAuth";
 import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
@@ -734,7 +735,7 @@ function ProfilePage() {
         )}
 
         {/* ---------- Sponsorisation ---------- */}
-        {tab === "promo" && <SponsorshipPanel plan={planOf(profile)} />}
+        {tab === "promo" && <SponsorshipPanel plan={planOf(profile)} products={products} />}
 
         {/* Logout */}
         <div className="mt-8 border-t border-dashed border-border pt-6">
@@ -821,14 +822,14 @@ function StatCard({
 }
 
 /**
- * Onglet « Sponsorisation » : mise en avant des produits.
+ * Onglet « Sponsorisation » : c'est ici qu'on met un produit en avant.
  *
- * Volontairement SANS bouton d'achat : le badge se prend en haut de la page
- * (bloc « Faites vérifier votre boutique ») et la mise en avant se lance depuis
- * l'onglet Produits, sur le produit concerné. Ici, on explique et on pilote :
- * solde, jours restants, pause / prolongation, résultats.
+ * Tout se fait sur place (produit → durée → paiement ou activation) : le
+ * vendeur n'a jamais à changer de page ni à chercher un bouton. Le badge, lui,
+ * se prend en haut de la page (bloc « Faites vérifier votre boutique »), donc on
+ * ne le repropose pas ici.
  */
-function SponsorshipPanel({ plan }: { plan: PlanId }) {
+function SponsorshipPanel({ plan, products }: { plan: PlanId; products: Product[] | null }) {
   const money = useSellerMoney();
 
   const currentLabel =
@@ -836,49 +837,40 @@ function SponsorshipPanel({ plan }: { plan: PlanId }) {
 
   return (
     <div className="mt-5 space-y-4">
-      {/* Mon offre + mode d'emploi en 3 étapes (mise en avant à 1 000 F/jour) */}
-      <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              Mon offre
-            </span>
-            <span className="rounded-full bg-volt/15 px-2.5 py-1 text-[11px] font-bold text-foreground">
-              {currentLabel}
-            </span>
-          </div>
-          <Link to="/tarifs" className="text-[11px] text-muted-foreground underline underline-offset-2">
-            Voir les offres
-          </Link>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            Mon offre
+          </span>
+          <span className="rounded-full bg-volt/15 px-2.5 py-1 text-[11px] font-bold text-foreground">
+            {currentLabel}
+          </span>
         </div>
-
-        <ol className="mt-3 grid gap-2 sm:grid-cols-3">
-          {[
-            { n: "1", t: "Rechargez votre solde", d: "Carte bancaire (Visa / Mastercard)." },
-            { n: "2", t: "Choisissez le produit", d: "Onglet Produits, bouton « Booster »." },
-            { n: "3", t: "Choisissez les jours", d: `${formatFCFA(BOOST_DAY_PRICE)} par jour, pause quand vous voulez.` },
-          ].map((s) => (
-            <li key={s.n} className="flex items-start gap-2.5 rounded-xl bg-muted/50 p-3">
-              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-volt text-[11px] font-bold text-volt-foreground">
-                {s.n}
-              </span>
-              <span className="min-w-0">
-                <span className="block text-xs font-bold leading-snug">{s.t}</span>
-                <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">{s.d}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
+        <Link to="/tarifs" className="text-[11px] text-muted-foreground underline underline-offset-2">
+          Voir les offres
+        </Link>
       </div>
 
       {money ? (
-        <WalletCard
-          wallet={money.wallet}
-          loading={money.loading}
-          onRecharge={money.openTopUp}
-          onEditPending={(p) => money.resumePending(p)}
-          onChanged={money.refresh}
-        />
+        <>
+          {/* Le poste de pilotage : choisir le produit, la durée, payer. */}
+          <BoostLauncher
+            products={products}
+            balance={money.balance}
+            campaigns={money.wallet?.boosts ?? []}
+            onTopUp={money.openTopUp}
+            onStarted={money.refresh}
+          />
+
+          {/* Ce qui tourne déjà, et ce que ça rapporte. */}
+          <WalletCard
+            wallet={money.wallet}
+            loading={money.loading}
+            onRecharge={money.openTopUp}
+            onProlong={(p) => money.openBoost(p)}
+            onChanged={money.refresh}
+          />
+        </>
       ) : (
         <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-center">
           <Zap className="mx-auto h-6 w-6 text-muted-foreground" />
