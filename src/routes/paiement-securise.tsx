@@ -5,8 +5,8 @@ import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
 import { Button } from "@/components/ui/button";
 import { buildSeoHead } from "@/lib/seo";
-import { XAALISPAY, XAALISPAY_BENEFITS, XAALISPAY_STEPS } from "@/lib/xaalispay";
-import { AlertTriangle, Check, Lock, ShieldCheck, Smartphone, Store } from "lucide-react";
+import { XAALISPAY, XAALISPAY_BENEFITS, XAALISPAY_OFFER, XAALISPAY_STEPS } from "@/lib/xaalispay";
+import { AlertTriangle, Check, Gift, Lock, ShieldCheck, Smartphone, Store } from "lucide-react";
 
 export const Route = createFileRoute("/paiement-securise")({
   head: () => {
@@ -171,6 +171,13 @@ function SecurePaymentPage() {
               <strong className="text-foreground">Le réflexe qui rapporte :</strong> quand un acheteur vous propose
               XaalisPay, c'est un client sérieux qui veut payer TOUT DE SUITE — dites oui, vous êtes payé à la
               réception.
+            </p>
+            <p className="mt-2 flex items-start gap-1.5 rounded-xl border border-volt/50 bg-volt/10 px-3 py-2 text-[11px] leading-relaxed">
+              <Gift className="mt-0.5 h-3.5 w-3.5 shrink-0 text-volt" />
+              <span>
+                <strong className="text-foreground">{XAALISPAY_OFFER.seller.title}</strong>
+                <span className="mt-0.5 block text-muted-foreground">{XAALISPAY_OFFER.seller.detail}</span>
+              </span>
             </p>
           </section>
         </div>
