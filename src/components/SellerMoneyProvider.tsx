@@ -56,8 +56,7 @@ export type SellerMoneyCtx = {
   balance: number;
   refresh: () => void;
   /** Ouvre le rechargement, éventuellement pré-rempli (ex. 500 F pour publier). */
-  openTopUp: (amount?: number) => void;
-  /** Reprendre un paiement en attente en modifiant son montant. */
+  openTopUp: (amount?: number) => void;  /** Reprendre un paiement en attente en modifiant son montant. */
   resumePending: (pending: { amount_fcfa: number }) => void;
   openBoost: (product: BoostTarget) => void;
 };
@@ -155,6 +154,17 @@ export function SellerMoneyProvider({
           productId={boost.id}
           productName={boost.name}
           balance={wallet?.balance_fcfa ?? 0}
+          /* Une mise en avant existe déjà sur ce produit ? On ne la double pas :
+             le pop-up propose alors de la prolonger ou de la reprendre. */
+          existing={(() => {
+            const c = wallet?.boosts?.find((b) => b.product_id === boost.id);
+            if (!c) return null;
+            return {
+              status: c.status === "active" ? ("active" as const) : ("paused" as const),
+              daysServed: c.days_served,
+              totalSpent: c.total_spent_fcfa,
+            };
+          })()}
           onTopUpRequested={openTopUp}
           onStarted={() => {
             refresh();

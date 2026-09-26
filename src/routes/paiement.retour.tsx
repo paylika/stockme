@@ -168,7 +168,7 @@ function PaymentReturn() {
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Dernière étape : activez StockMe PRO — {formatFCFA(proMonthly)}/mois (au lieu de 3 500 F).
-                  Mise en avant à 400 F/jour et 72 h offertes chaque mois. Résiliable à tout moment.
+                  Mise en avant à 1 000 F/jour et 3 jours offerts chaque mois. Résiliable à tout moment.
                 </p>
                 <Button
                   variant="volt"
@@ -210,8 +210,8 @@ function PaymentReturn() {
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                       {isBadgePayment ? (
                         <>
-                          C'est notre cadeau de bienvenue : de quoi mettre un produit en tête du catalogue pendant
-                          72 h. <strong className="text-foreground">Choisissez le produit à mettre en avant maintenant</strong> —
+                          C'est notre cadeau de bienvenue : de quoi mettre un produit en tête du catalogue.{" "}
+                          <strong className="text-foreground">Choisissez le produit à mettre en avant maintenant</strong> —
                           c'est ce qui déclenche de vraies visites.
                         </>
                       ) : (

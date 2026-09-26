@@ -408,7 +408,7 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
             <BadgeCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
             <span>
               <strong className="text-foreground">{formatFCFA(VERIFICATION_BONUS_FCFA)} de mise en avant offerts</strong>{" "}
-              immédiatement (72 h).
+              immédiatement, à utiliser quand vous voulez.
             </span>
           </p>
           <p className="inline-flex items-start gap-1.5 text-muted-foreground">

@@ -14,7 +14,7 @@ import { ShopBanner } from "@/components/ShopBanner";
 import { UpgradeDialog } from "@/components/UpgradeDialog";
 import { VerifiedPaymentDialog } from "@/components/VerifiedPaymentDialog";
 import { usePaymentsStatus } from "@/lib/features";
-import { PAID_PLANS, PRO_AVAILABLE, FREE_PRODUCTS, VERIFICATION_BONUS_FCFA, planById, planOf, type PlanId } from "@/lib/pricing";
+import { BOOST_DAY_PRICE, planById, planOf, type PlanId } from "@/lib/pricing";
 import { useAuth } from "@/hooks/useAuth";
 import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
@@ -42,7 +42,6 @@ import {
   Phone,
   Rocket,
   ShieldQuestion,
-  Sparkles,
   Trash2,
   Zap,
 } from "lucide-react";
@@ -735,9 +734,7 @@ function ProfilePage() {
         )}
 
         {/* ---------- Sponsorisation ---------- */}
-        {tab === "promo" && (
-          <SponsorshipPanel plan={planOf(profile)} onUpgrade={(target) => { setUpgradePlan(target); setUpgradeOpen(true); }} />
-        )}
+        {tab === "promo" && <SponsorshipPanel plan={planOf(profile)} />}
 
         {/* Logout */}
         <div className="mt-8 border-t border-dashed border-border pt-6">
@@ -824,82 +821,54 @@ function StatCard({
 }
 
 /**
- * Onglet « Sponsorisation » : offre en cours, solde, rechargement, mises en avant.
- * Le contenu du solde vient du contexte vendeur (il n'apparaît que si le
- * paiement est actuellement actif).
+ * Onglet « Sponsorisation » : mise en avant des produits.
+ *
+ * Volontairement SANS bouton d'achat : le badge se prend en haut de la page
+ * (bloc « Faites vérifier votre boutique ») et la mise en avant se lance depuis
+ * l'onglet Produits, sur le produit concerné. Ici, on explique et on pilote :
+ * solde, jours restants, pause / prolongation, résultats.
  */
-function SponsorshipPanel({
-  plan,
-  onUpgrade,
-}: {
-  plan: PlanId;
-  onUpgrade: (target: "verifie" | "pro") => void;
-}) {
+function SponsorshipPanel({ plan }: { plan: PlanId }) {
   const money = useSellerMoney();
 
-  // Progression logique : Gratuit → Fournisseur vérifié (→ PRO quand il revient)
   const currentLabel =
-    plan === "gratuit" ? "Gratuit" : plan === "verifie" ? "Fournisseur vérifié" : "StockMe PRO";
-  const currentNote =
-    plan === "gratuit"
-      ? `${FREE_PRODUCTS} produits · 10 photos · mise en avant à 500 F/jour`
-      : plan === "verifie"
-      ? "Badge actif · priorité dans la recherche · 1 500 F de mise en avant offerts"
-      : "Badge actif · mise en avant à 400 F/jour · statistiques avancées";
-
-  // Tant que PRO est masqué, la seule montée possible est le badge.
-  const next = plan === "gratuit" ? PAID_PLANS[0] : PRO_AVAILABLE && plan === "verifie" ? PAID_PLANS[1] : null;
-  const atMax = !next && (plan === "verifie" || plan === "pro" || plan === "pro_annuel");
+    plan === "gratuit" ? "Offre gratuite" : plan === "verifie" ? "Fournisseur vérifié" : "StockMe PRO";
 
   return (
     <div className="mt-5 space-y-4">
-      {/* Offre en cours + montée d'offre */}
+      {/* Mon offre + mode d'emploi en 3 étapes (mise en avant à 1 000 F/jour) */}
       <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Mon offre</p>
-            <p className="mt-0.5 text-lg font-bold tracking-tight">{currentLabel}</p>
-            <p className="text-xs text-muted-foreground">{currentNote}</p>
-          </div>
-          {next ? (
-            <Button
-              variant="volt"
-              className="h-11"
-              onClick={() => onUpgrade(next.id === "verifie" ? "verifie" : "pro")}
-            >
-              <Sparkles className="mr-1.5 h-4 w-4" />
-              {next.id === "verifie" ? "Faire vérifier" : "Passer à PRO"} — {formatFCFA(next.price)}
-              <span className="ml-1 text-[11px] font-normal opacity-80">{next.period}</span>
-            </Button>
-          ) : atMax ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-success/15 px-2.5 py-1 text-[11px] font-semibold text-success">
-              <Check className="h-3 w-3" /> Boutique vérifiée
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Mon offre
             </span>
-          ) : null}
+            <span className="rounded-full bg-volt/15 px-2.5 py-1 text-[11px] font-bold text-foreground">
+              {currentLabel}
+            </span>
+          </div>
+          <Link to="/tarifs" className="text-[11px] text-muted-foreground underline underline-offset-2">
+            Voir les offres
+          </Link>
         </div>
 
-        {next && (
-          <p className="mt-3 rounded-xl bg-muted/50 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-            {next.id === "verifie" ? (
-              <>
-                Avec <strong className="text-foreground">Fournisseur vérifié</strong> : le badge sur toutes vos annonces,
-                la priorité dans la recherche, et{" "}
-                <strong className="text-foreground">{formatFCFA(VERIFICATION_BONUS_FCFA)} de mise en avant offerts</strong>{" "}
-                pour essayer (72 h).
-                {PRO_AVAILABLE && <> Ensuite, PRO se rajoute pour {formatFCFA(2500)}/mois.</>}
-              </>
-            ) : (
-              <>
-                <strong className="text-foreground">StockMe PRO</strong> : mise en avant à 400 F/jour,{" "}
-                <strong className="text-foreground">72 h de boost offertes chaque mois</strong> et statistiques avancées.
-                Votre badge reste acquis tant que l'abonnement court.{" "}
-              </>
-            )}
-            <Link to="/tarifs" className="underline underline-offset-2">
-              Voir toutes les offres
-            </Link>
-          </p>
-        )}
+        <ol className="mt-3 grid gap-2 sm:grid-cols-3">
+          {[
+            { n: "1", t: "Rechargez votre solde", d: "Carte bancaire (Visa / Mastercard)." },
+            { n: "2", t: "Choisissez le produit", d: "Onglet Produits, bouton « Booster »." },
+            { n: "3", t: "Choisissez les jours", d: `${formatFCFA(BOOST_DAY_PRICE)} par jour, pause quand vous voulez.` },
+          ].map((s) => (
+            <li key={s.n} className="flex items-start gap-2.5 rounded-xl bg-muted/50 p-3">
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-volt text-[11px] font-bold text-volt-foreground">
+                {s.n}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-xs font-bold leading-snug">{s.t}</span>
+                <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">{s.d}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
       </div>
 
       {money ? (

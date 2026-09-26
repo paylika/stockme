@@ -21,11 +21,19 @@ export type PlanId = "gratuit" | "verifie" | "pro" | "pro_annuel";
  *   • 20 produits publiés offerts (gratuit compris) ;
  *   • 10 photos par produit (gratuit compris) ;
  *   • au-delà de 20 produits : 500 F par publication, prélevés sur le solde ;
- *   • mise en avant : 500 F/jour, pour tous.
+ *   • mise en avant : 1 000 F/jour, pour tous (prix unique, aucune option).
  */
 export const FREE_PRODUCTS = 20;
 export const EXTRA_PUBLICATION_PRICE = 500;
 export const MAX_PHOTOS_PER_PRODUCT = 10;
+
+/** Prix d'une journée de mise en avant — LE MÊME pour tout le monde. */
+export const BOOST_DAY_PRICE = 1000;
+/** Durées proposées d'un clic (en jours). */
+export const BOOST_DAY_PRESETS = [3, 7, 15, 30];
+/** Bornes de saisie libre du nombre de jours. */
+export const BOOST_MIN_DAYS = 1;
+export const BOOST_MAX_DAYS = 90;
 
 export type Plan = {
   id: PlanId;
@@ -57,13 +65,13 @@ export const FREE_PLAN = {
   name: "Gratuit",
   price: 0,
   period: "pour toujours",
-  boostPerDay: 500,
+  boostPerDay: 1000,
   tagline: "Publiez vos produits et vendez dès aujourd'hui",
   features: [
     `${FREE_PRODUCTS} produits publiés`,
     `${MAX_PHOTOS_PER_PRODUCT} photos par produit`,
     "Statistiques de base (vues, contacts, favoris)",
-    "Mise en avant à 500 F/jour",
+    `Mise en avant à ${BOOST_DAY_PRICE.toLocaleString("fr-FR")} F/jour`,
     `Au-delà de ${FREE_PRODUCTS} produits : ${EXTRA_PUBLICATION_PRICE} F par publication`,
   ],
   missing: ["Badge Fournisseur vérifié", "Priorité dans la recherche", "1 500 F de mise en avant offerts"],
@@ -99,13 +107,13 @@ export const PAID_PLANS: Plan[] = [
     days: 365,
     recurring: null,
     dbPlan: "verifie",
-    boostPerDay: 500,
+    boostPerDay: BOOST_DAY_PRICE,
     tagline: "La confiance qui fait écrire les acheteurs",
     badge: "Le badge",
     features: [
       "Badge « Fournisseur vérifié » sur toutes vos annonces",
       "Priorité dans la recherche (et dans les résultats de recherche par image)",
-      "1 500 F de mise en avant offerts pour essayer (72 h)",
+      "1 500 F de mise en avant offerts pour essayer",
       "Statistiques avancées (vues, clics, contacts)",
       "Assistance prioritaire WhatsApp",
     ],
@@ -120,13 +128,12 @@ export const PAID_PLANS: Plan[] = [
     days: 30,
     recurring: "month",
     dbPlan: "pro",
-    boostPerDay: 400,
+    boostPerDay: BOOST_DAY_PRICE,
     tagline: "Pour dominer votre catégorie",
     badge: "Tarif de lancement",
     features: [
       "Tout ce que contient l'offre Fournisseur vérifié",
-      "Mise en avant à 400 F/jour (le meilleur tarif)",
-      "72 h de mise en avant offertes chaque mois",
+      "3 jours de mise en avant offerts chaque mois",
       "Statistiques avancées : pays des acheteurs, taux de contact, valeur du stock",
       "Prélèvement automatique, résiliable à tout moment",
       "Assistance prioritaire + accompagnement",
@@ -141,14 +148,14 @@ export const PAID_PLANS: Plan[] = [
     days: 365,
     recurring: null,
     dbPlan: "pro",
-    boostPerDay: 400,
+    boostPerDay: BOOST_DAY_PRICE,
     tagline: "12 mois de PRO, 2 mois offerts",
     badge: "2 mois offerts",
     features: [
       "Tout StockMe PRO pendant 12 mois",
       "Paiement unique : plus rien à penser pendant un an",
       "Votre badge reste acquis même si vous arrêtez ensuite",
-      "Mise en avant à 400 F/jour pendant 12 mois",
+      "Mise en avant au même tarif pendant 12 mois",
       "Soit 2 083 F/mois au lieu de 2 500",
     ],
   },
@@ -157,13 +164,25 @@ export const PAID_PLANS: Plan[] = [
 /** Les 4 offres alignées, pour la page d'offres publique. */
 export const ALL_PLANS: AnyPlan[] = [FREE_PLAN, ...PAID_PLANS];
 
-/** Prix d'une journée de mise en avant — le MÊME pour tout le monde. */
+/**
+ * Prix d'une journée de mise en avant — IDENTIQUE pour tout le monde.
+ * (Conservé sous forme de table par offre : PRO est masqué aujourd'hui, mais
+ * le jour où il revient, il n'y a qu'une ligne à changer ici.)
+ */
 export const BOOST_DAILY_PRICE: Record<PlanId, number> = {
-  gratuit: 500,
-  verifie: 500,
-  pro: 500,
-  pro_annuel: 500,
+  gratuit: BOOST_DAY_PRICE,
+  verifie: BOOST_DAY_PRICE,
+  pro: BOOST_DAY_PRICE,
+  pro_annuel: BOOST_DAY_PRICE,
 };
+
+/** Combien de jours de mise en avant un solde permet-il de payer ? */
+export const boostDaysFor = (balanceFcfa: number): number =>
+  Math.max(0, Math.floor(Math.max(0, balanceFcfa) / BOOST_DAY_PRICE));
+
+/** Combien faut-il de solde pour N jours de mise en avant ? */
+export const boostPriceFor = (days: number): number =>
+  Math.max(0, Math.floor(days)) * BOOST_DAY_PRICE;
 
 /** Durée du bonus offert à la vérification (jours de mise en avant). */
 export const VERIFICATION_BONUS_DAYS = 3;
