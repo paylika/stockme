@@ -6,10 +6,7 @@ import { useMobileAction } from "@/lib/mobile-action";
 
 export function MobileNav() {
   const { user } = useAuth();
-  const { pathname, search } = useLocation();
-  // « Annonce » et « Profil » mènent tous deux à /profile : l'onglet les sépare,
-  // sinon les deux s'allumeraient en même temps.
-  const onAdsTab = pathname.startsWith("/profile") && (search as { tab?: string })?.tab === "promo";
+  const { pathname } = useLocation();
   // Sur une fiche produit, le bouton central devient l'action d'achat :
   // la navigation reste entièrement visible (on ne masque plus la barre).
   const action = useMobileAction();
@@ -30,11 +27,10 @@ export function MobileNav() {
       activeMatch: "/dashboard/new",
     },
     {
-      to: user ? "/profile" : "/auth",
-      label: "Annonce",
+      to: "/demandes",
+      label: "Demandes",
       icon: IconFlame,
-      search: user ? { tab: "promo" } : { redirect: "/profile", mode: "signup" },
-      activeMatch: "/profile",
+      activeMatch: "/demandes",
     },
     {
       to: user ? "/profile" : "/auth",
@@ -55,13 +51,7 @@ export function MobileNav() {
           {items.map((it, idx) => {
             const Icon = it.icon;
             const matchPath = (it as any).activeMatch ?? it.to;
-            const label = (it as any).label;
-            const active =
-              label === "Annonce"
-                ? onAdsTab
-                : label === "Profil"
-                  ? pathname.startsWith("/profile") && !onAdsTab
-                  : pathname === matchPath || (matchPath !== "/" && pathname.startsWith(matchPath));
+            const active = pathname === matchPath || (matchPath !== "/" && pathname.startsWith(matchPath));
             if ((it as any).primary) {
               // Action d'achat prioritaire sur une fiche produit
               if (action) {

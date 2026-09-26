@@ -165,6 +165,117 @@ export type Database = {
         }
         Relationships: []
       }
+      buying_requests: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          description: string | null
+          category: string | null
+          quantity: number | null
+          unit: string
+          budget_fcfa: number | null
+          city: string | null
+          country: string | null
+          image_url: string | null
+          ai_keywords: string[]
+          status: string
+          responses_count: number
+          created_at: string
+          updated_at: string
+          expires_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          description?: string | null
+          category?: string | null
+          quantity?: number | null
+          unit?: string
+          budget_fcfa?: number | null
+          city?: string | null
+          country?: string | null
+          image_url?: string | null
+          ai_keywords?: string[]
+          status?: string
+          responses_count?: number
+          created_at?: string
+          updated_at?: string
+          expires_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          description?: string | null
+          category?: string | null
+          quantity?: number | null
+          unit?: string
+          budget_fcfa?: number | null
+          city?: string | null
+          country?: string | null
+          image_url?: string | null
+          ai_keywords?: string[]
+          status?: string
+          responses_count?: number
+          created_at?: string
+          updated_at?: string
+          expires_at?: string
+        }
+        Relationships: []
+      }
+      request_responses: {
+        Row: {
+          id: string
+          request_id: string
+          seller_id: string
+          message: string | null
+          price_fcfa: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          request_id: string
+          seller_id: string
+          message?: string | null
+          price_fcfa?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          request_id?: string
+          seller_id?: string
+          message?: string | null
+          price_fcfa?: number | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      request_reports: {
+        Row: {
+          id: string
+          request_id: string
+          reporter_id: string | null
+          reason: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          request_id: string
+          reporter_id?: string | null
+          reason?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          request_id?: string
+          reporter_id?: string | null
+          reason?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -667,6 +778,64 @@ export type Database = {
           p_offset?: number
         }
         Returns: Record<string, unknown>
+      }
+      create_buying_request: {
+        Args: {
+          p_title: string
+          p_description?: string | null
+          p_category?: string | null
+          p_quantity?: number | null
+          p_unit?: string | null
+          p_budget_fcfa?: number | null
+          p_city?: string | null
+          p_country?: string | null
+          p_image_url?: string | null
+          p_ai_keywords?: string[] | null
+        }
+        Returns: Record<string, unknown>
+      }
+      get_buying_requests: {
+        Args: {
+          p_category?: string | null
+          p_city?: string | null
+          p_q?: string | null
+          p_limit?: number
+          p_offset?: number
+          p_mine_only?: boolean
+        }
+        Returns: Record<string, unknown>
+      }
+      get_buying_request_detail: {
+        Args: { p_id: string }
+        Returns: Record<string, unknown>
+      }
+      respond_to_buying_request: {
+        Args: {
+          p_request_id: string
+          p_message?: string | null
+          p_price_fcfa?: number | null
+        }
+        Returns: Record<string, unknown>
+      }
+      close_buying_request: {
+        Args: { p_id: string }
+        Returns: Record<string, unknown>
+      }
+      report_buying_request: {
+        Args: { p_id: string; p_reason?: string | null }
+        Returns: Record<string, unknown>
+      }
+      admin_set_buying_request_status: {
+        Args: { p_id: string; p_status: string }
+        Returns: Record<string, unknown>
+      }
+      admin_buying_requests: {
+        Args: Record<string, never>
+        Returns: Record<string, unknown>
+      }
+      count_matching_requests: {
+        Args: Record<string, never>
+        Returns: number
       }
       get_ranked_products: {
         Args: {

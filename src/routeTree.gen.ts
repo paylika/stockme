@@ -14,12 +14,14 @@ import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BrowseRouteImport } from './routes/browse'
+import { Route as DemandesRouteImport } from './routes/demandes'
 import { Route as DropshippingRouteImport } from './routes/dropshipping'
 import { Route as LegalRouteImport } from './routes/legal'
 import { Route as RechercheImageRouteImport } from './routes/recherche-image'
 import { Route as TarifsRouteImport } from './routes/tarifs'
 import { Route as AdminAdminRouteImport } from './routes/_admin/admin'
 import { Route as AdminAdsRouteImport } from './routes/_admin/ads'
+import { Route as AdminDemandesAdminRouteImport } from './routes/_admin/demandes-admin'
 import { Route as AdminProductsRouteImport } from './routes/_admin/products'
 import { Route as AdminRevenueRouteImport } from './routes/_admin/revenue'
 import { Route as AdminUsersRouteImport } from './routes/_admin/users'
@@ -27,6 +29,8 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedFavoritesRouteImport } from './routes/_authenticated/favorites'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as ApiGeoRouteImport } from './routes/api.geo'
+import { Route as DemandesIdRouteImport } from './routes/demandes.$id'
+import { Route as DemandesNouvelleRouteImport } from './routes/demandes.nouvelle'
 import { Route as LegalCguRouteImport } from './routes/legal.cgu'
 import { Route as LegalConfidentialiteRouteImport } from './routes/legal.confidentialite'
 import { Route as LegalCookiesRouteImport } from './routes/legal.cookies'
@@ -69,6 +73,11 @@ const BrowseRoute = BrowseRouteImport.update({
   path: '/browse',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemandesRoute = DemandesRouteImport.update({
+  id: '/demandes',
+  path: '/demandes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DropshippingRoute = DropshippingRouteImport.update({
   id: '/dropshipping',
   path: '/dropshipping',
@@ -97,6 +106,11 @@ const AdminAdminRoute = AdminAdminRouteImport.update({
 const AdminAdsRoute = AdminAdsRouteImport.update({
   id: '/ads',
   path: '/ads',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDemandesAdminRoute = AdminDemandesAdminRouteImport.update({
+  id: '/demandes-admin',
+  path: '/demandes-admin',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminProductsRoute = AdminProductsRouteImport.update({
@@ -133,6 +147,16 @@ const ApiGeoRoute = ApiGeoRouteImport.update({
   id: '/api/geo',
   path: '/api/geo',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DemandesIdRoute = DemandesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => DemandesRoute,
+} as any)
+const DemandesNouvelleRoute = DemandesNouvelleRouteImport.update({
+  id: '/nouvelle',
+  path: '/nouvelle',
+  getParentRoute: () => DemandesRoute,
 } as any)
 const LegalCguRoute = LegalCguRouteImport.update({
   id: '/cgu',
@@ -232,12 +256,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/browse': typeof BrowseRoute
+  '/demandes': typeof DemandesRouteWithChildren
   '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
   '/recherche-image': typeof RechercheImageRoute
   '/tarifs': typeof TarifsRoute
   '/admin': typeof AdminAdminRoute
   '/ads': typeof AdminAdsRoute
+  '/demandes-admin': typeof AdminDemandesAdminRoute
   '/products': typeof AdminProductsRoute
   '/revenue': typeof AdminRevenueRoute
   '/users': typeof AdminUsersRoute
@@ -245,6 +271,8 @@ export interface FileRoutesByFullPath {
   '/favorites': typeof AuthenticatedFavoritesRoute
   '/profile': typeof AuthenticatedProfileRouteWithChildren
   '/api/geo': typeof ApiGeoRoute
+  '/demandes/$id': typeof DemandesIdRoute
+  '/demandes/nouvelle': typeof DemandesNouvelleRoute
   '/legal/cgu': typeof LegalCguRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/cookies': typeof LegalCookiesRoute
@@ -268,12 +296,14 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/browse': typeof BrowseRoute
+  '/demandes': typeof DemandesRouteWithChildren
   '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
   '/recherche-image': typeof RechercheImageRoute
   '/tarifs': typeof TarifsRoute
   '/admin': typeof AdminAdminRoute
   '/ads': typeof AdminAdsRoute
+  '/demandes-admin': typeof AdminDemandesAdminRoute
   '/products': typeof AdminProductsRoute
   '/revenue': typeof AdminRevenueRoute
   '/users': typeof AdminUsersRoute
@@ -281,6 +311,8 @@ export interface FileRoutesByTo {
   '/favorites': typeof AuthenticatedFavoritesRoute
   '/profile': typeof AuthenticatedProfileRouteWithChildren
   '/api/geo': typeof ApiGeoRoute
+  '/demandes/$id': typeof DemandesIdRoute
+  '/demandes/nouvelle': typeof DemandesNouvelleRoute
   '/legal/cgu': typeof LegalCguRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/cookies': typeof LegalCookiesRoute
@@ -307,12 +339,14 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth': typeof AuthRoute
   '/browse': typeof BrowseRoute
+  '/demandes': typeof DemandesRouteWithChildren
   '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
   '/recherche-image': typeof RechercheImageRoute
   '/tarifs': typeof TarifsRoute
   '/_admin/admin': typeof AdminAdminRoute
   '/_admin/ads': typeof AdminAdsRoute
+  '/_admin/demandes-admin': typeof AdminDemandesAdminRoute
   '/_admin/products': typeof AdminProductsRoute
   '/_admin/revenue': typeof AdminRevenueRoute
   '/_admin/users': typeof AdminUsersRoute
@@ -320,6 +354,8 @@ export interface FileRoutesById {
   '/_authenticated/favorites': typeof AuthenticatedFavoritesRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRouteWithChildren
   '/api/geo': typeof ApiGeoRoute
+  '/demandes/$id': typeof DemandesIdRoute
+  '/demandes/nouvelle': typeof DemandesNouvelleRoute
   '/legal/cgu': typeof LegalCguRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/cookies': typeof LegalCookiesRoute
@@ -345,12 +381,14 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/browse'
+    | '/demandes'
     | '/dropshipping'
     | '/legal'
     | '/recherche-image'
     | '/tarifs'
     | '/admin'
     | '/ads'
+    | '/demandes-admin'
     | '/products'
     | '/revenue'
     | '/users'
@@ -358,6 +396,8 @@ export interface FileRouteTypes {
     | '/favorites'
     | '/profile'
     | '/api/geo'
+    | '/demandes/$id'
+    | '/demandes/nouvelle'
     | '/legal/cgu'
     | '/legal/confidentialite'
     | '/legal/cookies'
@@ -381,12 +421,14 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/browse'
+    | '/demandes'
     | '/dropshipping'
     | '/legal'
     | '/recherche-image'
     | '/tarifs'
     | '/admin'
     | '/ads'
+    | '/demandes-admin'
     | '/products'
     | '/revenue'
     | '/users'
@@ -394,6 +436,8 @@ export interface FileRouteTypes {
     | '/favorites'
     | '/profile'
     | '/api/geo'
+    | '/demandes/$id'
+    | '/demandes/nouvelle'
     | '/legal/cgu'
     | '/legal/confidentialite'
     | '/legal/cookies'
@@ -419,12 +463,14 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/browse'
+    | '/demandes'
     | '/dropshipping'
     | '/legal'
     | '/recherche-image'
     | '/tarifs'
     | '/_admin/admin'
     | '/_admin/ads'
+    | '/_admin/demandes-admin'
     | '/_admin/products'
     | '/_admin/revenue'
     | '/_admin/users'
@@ -432,6 +478,8 @@ export interface FileRouteTypes {
     | '/_authenticated/favorites'
     | '/_authenticated/profile'
     | '/api/geo'
+    | '/demandes/$id'
+    | '/demandes/nouvelle'
     | '/legal/cgu'
     | '/legal/confidentialite'
     | '/legal/cookies'
@@ -458,6 +506,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
   BrowseRoute: typeof BrowseRoute
+  DemandesRoute: typeof DemandesRouteWithChildren
   DropshippingRoute: typeof DropshippingRoute
   LegalRoute: typeof LegalRouteWithChildren
   RechercheImageRoute: typeof RechercheImageRoute
@@ -513,6 +562,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BrowseRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demandes': {
+      id: '/demandes'
+      path: '/demandes'
+      fullPath: '/demandes'
+      preLoaderRoute: typeof DemandesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dropshipping': {
       id: '/dropshipping'
       path: '/dropshipping'
@@ -553,6 +609,13 @@ declare module '@tanstack/react-router' {
       path: '/ads'
       fullPath: '/ads'
       preLoaderRoute: typeof AdminAdsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/demandes-admin': {
+      id: '/_admin/demandes-admin'
+      path: '/demandes-admin'
+      fullPath: '/demandes-admin'
+      preLoaderRoute: typeof AdminDemandesAdminRouteImport
       parentRoute: typeof AdminRoute
     }
     '/_admin/products': {
@@ -603,6 +666,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/geo'
       preLoaderRoute: typeof ApiGeoRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/demandes/$id': {
+      id: '/demandes/$id'
+      path: '/$id'
+      fullPath: '/demandes/$id'
+      preLoaderRoute: typeof DemandesIdRouteImport
+      parentRoute: typeof DemandesRoute
+    }
+    '/demandes/nouvelle': {
+      id: '/demandes/nouvelle'
+      path: '/nouvelle'
+      fullPath: '/demandes/nouvelle'
+      preLoaderRoute: typeof DemandesNouvelleRouteImport
+      parentRoute: typeof DemandesRoute
     }
     '/legal/cgu': {
       id: '/legal/cgu'
@@ -736,6 +813,7 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminAdminRoute: typeof AdminAdminRoute
   AdminAdsRoute: typeof AdminAdsRoute
+  AdminDemandesAdminRoute: typeof AdminDemandesAdminRoute
   AdminProductsRoute: typeof AdminProductsRoute
   AdminRevenueRoute: typeof AdminRevenueRoute
   AdminUsersRoute: typeof AdminUsersRoute
@@ -744,6 +822,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAdminRoute: AdminAdminRoute,
   AdminAdsRoute: AdminAdsRoute,
+  AdminDemandesAdminRoute: AdminDemandesAdminRoute,
   AdminProductsRoute: AdminProductsRoute,
   AdminRevenueRoute: AdminRevenueRoute,
   AdminUsersRoute: AdminUsersRoute,
@@ -794,6 +873,20 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
   AuthenticatedRouteChildren,
 )
 
+interface DemandesRouteChildren {
+  DemandesIdRoute: typeof DemandesIdRoute
+  DemandesNouvelleRoute: typeof DemandesNouvelleRoute
+}
+
+const DemandesRouteChildren: DemandesRouteChildren = {
+  DemandesIdRoute: DemandesIdRoute,
+  DemandesNouvelleRoute: DemandesNouvelleRoute,
+}
+
+const DemandesRouteWithChildren = DemandesRoute._addFileChildren(
+  DemandesRouteChildren,
+)
+
 interface LegalRouteChildren {
   LegalCguRoute: typeof LegalCguRoute
   LegalConfidentialiteRoute: typeof LegalConfidentialiteRoute
@@ -816,6 +909,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
   BrowseRoute: BrowseRoute,
+  DemandesRoute: DemandesRouteWithChildren,
   DropshippingRoute: DropshippingRoute,
   LegalRoute: LegalRouteWithChildren,
   RechercheImageRoute: RechercheImageRoute,

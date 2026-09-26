@@ -43,6 +43,7 @@ import {
   Phone,
   Rocket,
   ShieldQuestion,
+  Sparkles,
   Trash2,
   Zap,
 } from "lucide-react";
@@ -413,6 +414,12 @@ function ProfilePage() {
               className="inline-flex items-center gap-1.5 font-semibold text-foreground underline underline-offset-2 hover:text-primary"
             >
               <Heart className="h-3.5 w-3.5" /> Mes favoris
+            </Link>
+            <Link
+              to="/demandes"
+              className="inline-flex items-center gap-1.5 font-semibold text-foreground underline underline-offset-2 hover:text-primary"
+            >
+              <Sparkles className="h-3.5 w-3.5" /> Mes demandes
             </Link>
           </div>
 

@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import { isAdminEmail } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
+import { countMatchingRequests } from "@/lib/buying-requests";
 import logoUrl from "@/assets/stockme-logo.png";
 
 const COLLAPSE_KEY = "stockme:sidebar:collapsed";
@@ -66,7 +67,6 @@ type NavItem = {
 export function AppSidebar() {
   const { user } = useAuth();
   const pathname = useRouterState({ select: (r) => r.location.pathname });
-  const searchStr = useRouterState({ select: (r) => r.location.searchStr ?? "" });
   const navigate = useNavigate();
 
   const [collapsed, setCollapsed] = useState(false);
@@ -126,8 +126,20 @@ export function AppSidebar() {
   }, [pathname, user, refresh, refreshMoney]);
 
   const isActive = (m: string) => pathname === m || (m !== "/" && pathname.startsWith(m));
-  /** « Annonce » et « Profil » mènent tous deux à /profile : l'onglet les sépare. */
-  const onAdsTab = pathname.startsWith("/profile") && searchStr.includes("tab=promo");
+
+  // Demandes d'achat qui correspondent à mes catégories / ma ville : c'est le
+  // compteur qui fait revenir un fournisseur sur le site (de l'argent à prendre).
+  const [requests, setRequests] = useState(0);
+  useEffect(() => {
+    if (!user) return;
+    let cancel = false;
+    countMatchingRequests().then((n) => {
+      if (!cancel) setRequests(n);
+    });
+    return () => {
+      cancel = true;
+    };
+  }, [user, pathname]);
 
   // ---------- Les 5 entrées, point final ----------
   const navItems: NavItem[] = [
@@ -135,13 +147,11 @@ export function AppSidebar() {
     { to: "/dropshipping", label: "Dropshipping", icon: IconStock, match: "/dropshipping" },
     // La vraie action (bouton orange) est rendue à part, entre les deux.
     {
-      to: user ? "/profile" : "/auth",
-      label: "Annonce",
+      to: "/demandes",
+      label: "Demandes",
       icon: IconFlame,
-      match: "__ads__",
-      count: activeBoosts || undefined,
-      search: user ? { tab: "promo" } : undefined,
-      authRedirect: user ? undefined : { redirect: "/profile", mode: "signup" },
+      match: "/demandes",
+      count: requests || undefined,
     },
     {
       to: user ? "/profile" : "/auth",
@@ -306,14 +316,10 @@ export function AppSidebar() {
           </SidebarMenuItem>
 
           <SidebarMenuItem>
-            <NavRow item={navItems[2]} active={onAdsTab} collapsed={collapsed} />
+            <NavRow item={navItems[2]} active={isActive("/demandes")} collapsed={collapsed} />
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <NavRow
-              item={navItems[3]}
-              active={isActive("/profile") && !onAdsTab}
-              collapsed={collapsed}
-            />
+            <NavRow item={navItems[3]} active={isActive("/profile")} collapsed={collapsed} />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarContent>

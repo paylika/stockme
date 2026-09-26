@@ -1,11 +1,12 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Megaphone, Package, TrendingUp, Users } from "lucide-react";
+import { Handshake, LayoutDashboard, Megaphone, Package, TrendingUp, Users } from "lucide-react";
 
 export const ADMIN_NAV = [
   { to: "/admin", label: "Pilotage", icon: LayoutDashboard, match: "/admin" },
   { to: "/revenue", label: "Revenus", icon: TrendingUp, match: "/revenue" },
   { to: "/products", label: "Produits", icon: Package, match: "/products" },
   { to: "/ads", label: "Annonces", icon: Megaphone, match: "/ads" },
+  { to: "/demandes-admin", label: "Demandes d'achat", icon: Handshake, match: "/demandes-admin" },
   { to: "/users", label: "Utilisateurs & accès", icon: Users, match: "/users" },
 ] as const;
 
