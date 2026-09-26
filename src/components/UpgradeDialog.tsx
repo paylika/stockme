@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { formatFCFA } from "@/lib/format";
 import { PAID_PLANS, PACK_TOTAL, PRO_AVAILABLE, VERIFICATION_BONUS_FCFA, type Plan, type PlanId } from "@/lib/pricing";
 import { METHOD_LABELS, goToCheckout, type PayMethod } from "@/lib/pay-client";
+import { VerifiedPaymentDialog } from "@/components/VerifiedPaymentDialog";
 import stripeLogo from "@/assets/stripe-logo.svg";
 import { BadgeCheck, Check, CreditCard, Loader2, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -31,6 +32,9 @@ type Props = {
    * On ne mélange jamais les deux : celui qui a cliqué sait déjà ce qu'il veut.
    */
   focus?: "verifie" | "pro";
+  /** Nom de la boutique : sert au message WhatsApp du badge (validation manuelle). */
+  shopName?: string | null;
+  contactName?: string | null;
 };
 
 /**
@@ -39,7 +43,7 @@ type Props = {
  *   • focus "verifie" → l'offre du badge seule (ÉTAPE 1) ;
  *   • focus "pro" → les offres PRO seules (ÉTAPE 2).
  */
-export function UpgradeDialog({ open, onOpenChange, methods, isVerified, defaultPhone, focus }: Props) {
+export function UpgradeDialog({ open, onOpenChange, methods, isVerified, defaultPhone, focus, shopName, contactName }: Props) {
   const [selected, setSelected] = useState<PlanId>("pro");
   const [method, setMethod] = useState<PayMethod>("card");
   const [phone, setPhone] = useState(defaultPhone ?? "");
@@ -116,6 +120,23 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
       toast.error(err instanceof Error ? err.message : "Paiement impossible");
     }
   };
+
+  // ---- Achat du BADGE uniquement ----
+  // Le badge ne s'achète JAMAIS par carte : il se paie par Wave / Orange Money
+  // sur le numéro du service, puis l'équipe l'active à la main après la capture.
+  // On délègue donc tout le parcours « badge » au pop-up de paiement WhatsApp.
+  // (La carte reste réservée au rechargement du solde et aux publications
+  // supplémentaires, qui n'utilisent pas cette fenêtre.)
+  if (badgeMode && !nothingToBuy) {
+    return (
+      <VerifiedPaymentDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        shopName={shopName}
+        contactName={contactName}
+      />
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

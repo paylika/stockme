@@ -96,7 +96,8 @@ export function TopUpDialog({ open, onOpenChange, methods, defaultPhone, initial
             <Wallet className="h-5 w-5 text-volt" /> Recharger mon solde
           </DialogTitle>
           <DialogDescription className="text-left">
-            Votre solde finance vos mises en avant, jour après jour. Pas d'abonnement, pas d'engagement.
+            Votre solde finance vos mises en avant, jour après jour, et vos publications supplémentaires (500 F au-delà
+            de 20 produits). Pas d'abonnement, pas d'engagement.
           </DialogDescription>
         </DialogHeader>
 

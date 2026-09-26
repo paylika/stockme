@@ -12,6 +12,7 @@ import { WalletCard } from "@/components/WalletCard";
 import { ProfileEditDialog } from "@/components/ProfileEditDialog";
 import { ShopBanner } from "@/components/ShopBanner";
 import { UpgradeDialog } from "@/components/UpgradeDialog";
+import { VerifiedPaymentDialog } from "@/components/VerifiedPaymentDialog";
 import { usePaymentsStatus } from "@/lib/features";
 import { PAID_PLANS, PRO_AVAILABLE, FREE_PRODUCTS, VERIFICATION_BONUS_FCFA, planById, planOf, type PlanId } from "@/lib/pricing";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,7 +31,6 @@ import {
   Check,
   Eye,
   ExternalLink,
-  CreditCard,
   Gift,
   Heart,
   LogOut,
@@ -129,6 +129,8 @@ function ProfilePage() {
   // Le bloc « faire vérifier ma boutique » est DÉPLIÉ par défaut (l'offre doit
   // être vue immédiatement) tout en restant repliable d'un clic.
   const [badgeOpen, setBadgeOpen] = useState(true);
+  // Achat du badge : Wave / Orange Money par WhatsApp, activation manuelle.
+  const [badgePayOpen, setBadgePayOpen] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Photo de profil : envoi immédiat depuis cette page (pas besoin de passer par « Modifier le profil »).
@@ -483,29 +485,20 @@ function ProfilePage() {
                     </li>
                   ))}
                 </ul>
-                {payments.enabled && payments.methods.includes("card") ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setUpgradePlan("verifie");
-                        setUpgradeOpen(true);
-                      }}
-                      className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-volt px-4 text-xs font-bold text-volt-foreground transition hover:brightness-110"
-                    >
-                      <CreditCard className="h-4 w-4" /> Payer par carte — {formatFCFA(VERIFIED_BADGE_PRICE_FCFA)} / an
-                    </button>
-                    <p className="text-[11px] leading-relaxed text-muted-foreground">
-                      Paiement sécurisé par carte bancaire (Visa / Mastercard). Le badge s'active automatiquement,
-                      sans aucune démarche à faire.
-                    </p>
-                  </>
-                ) : (
-                  <p className="rounded-lg border border-border bg-background/60 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-                    Le paiement par carte est en cours d'activation. Revenez dans quelques heures : votre badge
-                    s'activera automatiquement après le paiement, sans aucune démarche.
-                  </p>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setBadgePayOpen(true)}
+                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-volt px-4 text-xs font-bold text-volt-foreground transition hover:brightness-110"
+                >
+                  <MessageCircle className="h-4 w-4" /> Payer par WhatsApp — {formatFCFA(VERIFIED_BADGE_PRICE_FCFA)} / an
+                </button>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  Paiement par <strong className="text-foreground">Wave</strong> ou{" "}
+                  <strong className="text-foreground">Orange Money</strong> au{" "}
+                  <strong className="text-foreground">+221 78 663 53 31</strong>, puis vous envoyez la capture sur
+                  WhatsApp. Le badge est activé par notre équipe{" "}
+                  <strong className="text-foreground">sous 24 h</strong> après réception.
+                </p>
               </div>
             </details>
           )}
@@ -784,6 +777,17 @@ function ProfilePage() {
         isVerified={isVerified}
         defaultPhone={profile?.whatsapp}
         focus={upgradePlan}
+        shopName={profile?.shop_name}
+        contactName={profile?.full_name}
+      />
+
+      {/* Badge : paiement Wave / Orange Money, preuve envoyée sur WhatsApp,
+          activation manuelle par l'équipe StockMe. */}
+      <VerifiedPaymentDialog
+        open={badgePayOpen}
+        onOpenChange={setBadgePayOpen}
+        shopName={profile?.shop_name}
+        contactName={profile?.full_name}
       />
     </div>
   );

@@ -7,9 +7,10 @@ import { MobileFooter } from "@/components/MobileFooter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatFCFA } from "@/lib/format";
-import { AlertTriangle, BadgeCheck, Camera, Edit2, MapPin, Package, Pencil, Plus, Save, Trash2, UserRound, X } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Camera, Edit2, MapPin, Package, Pencil, Plus, Save, Trash2, UserRound, Wallet, X } from "lucide-react";
 import { StatusSwitch } from "@/components/StatusSwitch";
-import { BoostButton, SellerMoneyProvider } from "@/components/SellerMoneyProvider";
+import { BoostButton, SellerMoneyProvider, useSellerMoney } from "@/components/SellerMoneyProvider";
+import { FREE_PRODUCTS, EXTRA_PUBLICATION_PRICE } from "@/lib/pricing";
 import { toast } from "sonner";
 
 type P = {
@@ -32,6 +33,9 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function Dashboard() {
   const { pathname } = useLocation();
+  // Portefeuille global : permet de recharger SANS quitter la page quand le
+  // vendeur a épuisé ses publications offertes.
+  const money = useSellerMoney();
   const [items, setItems] = useState<P[] | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [qty, setQty] = useState<number>(0);
@@ -100,6 +104,8 @@ function Dashboard() {
   const initials = sellerName.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   const isVerified =
     !!seller?.verified && (!seller.verified_until || new Date(seller.verified_until) > new Date());
+  /** Publications réellement en ligne : c'est ce compteur que facture la base. */
+  const publishedCount = (items ?? []).filter((p) => p.published).length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -155,8 +161,39 @@ function Dashboard() {
           </div>
         )}
 
-        <SellerMoneyProvider defaultPhone={null} onChanged={load}>
+        {/* Quota de publications atteint : on ne laisse jamais le vendeur bloqué
+            avec un simple message — le bouton de recharge est juste en dessous. */}
+        {items !== null && publishedCount >= FREE_PRODUCTS && (
+          <div className="mt-4 rounded-2xl border border-volt/40 bg-volt/10 p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Package className="h-6 w-6 shrink-0 text-volt" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold">
+                  {publishedCount} produits en ligne : vos {FREE_PRODUCTS} publications offertes sont utilisées
+                </p>
+                <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                  Chaque nouvelle publication coûte{" "}
+                  <strong className="text-foreground">{formatFCFA(EXTRA_PUBLICATION_PRICE)}</strong>, prélevés sur votre
+                  solde{money ? ` (${formatFCFA(money.balance)} disponible)` : ""}. Rechargez, puis publiez autant de
+                  produits que vous voulez — aucun abonnement.
+                </p>
+              </div>
+              {money ? (
+                <Button variant="volt" className="h-11" onClick={() => money.openTopUp(EXTRA_PUBLICATION_PRICE)}>
+                  <Wallet className="mr-1.5 h-4 w-4" /> Recharger {formatFCFA(EXTRA_PUBLICATION_PRICE)}
+                </Button>
+              ) : (
+                <Link to="/profile" search={{ tab: "promo" }}>
+                  <Button variant="volt" className="h-11">
+                    <Wallet className="mr-1.5 h-4 w-4" /> Recharger mon solde
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
 
+        <SellerMoneyProvider defaultPhone={null} onChanged={load}>
         <div className="mt-8">
           {items === null ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

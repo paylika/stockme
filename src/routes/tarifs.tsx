@@ -34,6 +34,10 @@ function PricingPage() {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [suggested, setSuggested] = useState<"verifie" | "pro">("pro");
   const [isVerified, setIsVerified] = useState(false);
+  // Nom de la boutique / du contact : part dans le message WhatsApp du badge
+  // (le badge est activé à la main après réception de la capture de paiement).
+  const [shopName, setShopName] = useState<string | null>(null);
+  const [contactName, setContactName] = useState<string | null>(null);
 
   // On sait si le visiteur connecté est déjà vérifié : dans ce cas, on ne lui
   // proposera jamais d'acheter un badge qu'il possède déjà.
@@ -45,12 +49,19 @@ function PricingPage() {
       if (!uid) return;
       const { data } = await supabase
         .from("profiles")
-        .select("verified,verified_until")
+        .select("verified,verified_until,shop_name,full_name")
         .eq("id", uid)
         .maybeSingle();
-      const p = data as { verified: boolean; verified_until: string | null } | null;
+      const p = data as {
+        verified: boolean;
+        verified_until: string | null;
+        shop_name: string | null;
+        full_name: string | null;
+      } | null;
       if (!cancel) {
         setIsVerified(!!p?.verified && (!p.verified_until || new Date(p.verified_until) > new Date()));
+        setShopName(p?.shop_name ?? null);
+        setContactName(p?.full_name ?? null);
       }
     })();
     return () => {
@@ -120,6 +131,10 @@ function PricingPage() {
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
                 Paiement unique · valable 12 mois · soit {formatFCFA(badge.monthlyEquivalent ?? 417)} / mois
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Payable par <strong className="text-foreground">Wave</strong> ou{" "}
+                <strong className="text-foreground">Orange Money</strong> — badge activé sous 24 h après votre capture.
               </p>
 
               <div className="mt-4 rounded-xl bg-volt/10 px-3 py-2 text-xs">
@@ -455,6 +470,8 @@ function PricingPage() {
         methods={payments.methods}
         isVerified={isVerified}
         focus={suggested}
+        shopName={shopName}
+        contactName={contactName}
       />
 
       <MobileFooter />

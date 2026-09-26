@@ -11,12 +11,23 @@ import { uploadImagesResilient, MAX_PHOTOS, FREE_MAX_PHOTOS, type UploadFailure 
 import { requireUserId } from "@/lib/current-user";
 import { FREE_PRODUCTS, EXTRA_PUBLICATION_PRICE } from "@/lib/pricing";
 import { formatFCFA } from "@/lib/format";
-import { Package } from "lucide-react";
+import { useSellerMoney } from "@/components/SellerMoneyProvider";
+import { Package, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/dashboard/new")({
   component: NewProduct,
 });
+
+/**
+ * Message renvoyé par le garde-fou de la base (`products_guard_limits`) quand le
+ * vendeur a épuisé ses publications offertes et que son solde est trop bas.
+ * On le reconnaît pour afficher un VRAI bouton de rechargement au lieu d'une
+ * simple erreur rouge. Exemple :
+ *   « Vous avez atteint vos 20 produits publiés offerts. Chaque publication
+ *     supplémentaire coûte 500 FCFA : rechargez votre solde (disponible : 0 FCFA). »
+ */
+const PUBLICATION_LIMIT_RE = /publi[ée]s offerts|publication suppl[ée]mentaire|rechargez votre solde/i;
 
 type Pending = {
   productId: string;
@@ -27,6 +38,7 @@ type Pending = {
 
 function NewProduct() {
   const navigate = useNavigate();
+  const money = useSellerMoney();
   const [uploadingStatus, setUploadingStatus] = useState("");
   const [pending, setPending] = useState<Pending | null>(null);
   const [retrying, setRetrying] = useState(false);
@@ -36,6 +48,8 @@ function NewProduct() {
   const [quota, setQuota] = useState<{ published: number; balance: number } | null>(null);
   /** Numéro WhatsApp du compte : pré-rempli dans le formulaire. */
   const [accountWhatsapp, setAccountWhatsapp] = useState<string | null>(null);
+  /** La base a refusé la publication faute de solde : on propose le rechargement. */
+  const [limitRefusal, setLimitRefusal] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -121,6 +135,21 @@ function NewProduct() {
         if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 1000));
       }
     }
+    // Limite de publications atteinte et solde insuffisant : la base refuse.
+    // Au lieu d'une erreur rouge sans issue, on affiche un VRAI bouton de
+    // rechargement (500 F) et le formulaire reste rempli tel quel.
+    if (insertError && PUBLICATION_LIMIT_RE.test(insertError)) {
+      const found = /disponible\s*:\s*(\d+)/i.exec(insertError);
+      const solde = found ? Number(found[1]) : 0;
+      setLimitRefusal(insertError);
+      setQuota((q) => ({ published: q?.published ?? FREE_PRODUCTS, balance: solde }));
+      setUploadingStatus("");
+      toast.error(`Solde insuffisant : il faut ${formatFCFA(EXTRA_PUBLICATION_PRICE)} pour publier ce produit.`, {
+        duration: 12000,
+      });
+      if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     if (insertError) throw new Error(`Produit non publié : ${insertError}`);
 
     // Protecteur : si la colonne des paliers de prix n'existe pas encore en base
@@ -202,38 +231,67 @@ function NewProduct() {
         </p>
 
         {/* Prix de la publication au-delà du quota offert : le vendeur doit le
-            savoir AVANT de remplir le formulaire, pas au moment de publier. */}
+            savoir AVANT de remplir le formulaire, et avoir un bouton pour
+            recharger les 500 F immédiatement (sans quitter la page). */}
         {quota && quota.published >= FREE_PRODUCTS && !pending && (
           <div
-            className={`mt-4 flex flex-wrap items-start gap-3 rounded-2xl border p-4 ${
+            className={`mt-4 rounded-2xl border p-4 ${
               quota.balance >= EXTRA_PUBLICATION_PRICE
                 ? "border-volt/40 bg-volt/10"
                 : "border-destructive/30 bg-destructive/5"
             }`}
           >
-            <Package className="mt-0.5 h-5 w-5 shrink-0 text-volt" />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold">
-                Cette publication coûtera {formatFCFA(EXTRA_PUBLICATION_PRICE)}
-              </p>
-              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                Vous avez déjà {quota.published} produits en ligne (vos {FREE_PRODUCTS} premiers sont offerts). Le
-                montant est prélevé sur votre solde : {formatFCFA(quota.balance)} disponible.
-                {quota.balance < EXTRA_PUBLICATION_PRICE && (
-                  <>
-                    {" "}
-                    <strong className="text-destructive">
-                      Rechargez d'abord votre solde, sinon la publication sera refusée.
-                    </strong>
-                  </>
+            <div className="flex items-start gap-3">
+              <Package className="mt-0.5 h-5 w-5 shrink-0 text-volt" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold">Vous avez atteint vos {FREE_PRODUCTS} produits offerts</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                  Vous avez {quota.published} produits en ligne. Chaque publication supplémentaire coûte{" "}
+                  <strong className="text-foreground">{formatFCFA(EXTRA_PUBLICATION_PRICE)}</strong>, prélevés
+                  automatiquement sur votre solde : <strong className="text-foreground">{formatFCFA(quota.balance)}</strong>{" "}
+                  disponible.
+                </p>
+                {quota.balance >= EXTRA_PUBLICATION_PRICE ? (
+                  <p className="mt-1.5 text-xs font-semibold text-success">
+                    Votre solde suffit : remplissez le formulaire puis appuyez sur Publier — les{" "}
+                    {formatFCFA(EXTRA_PUBLICATION_PRICE)} seront prélevés à ce moment-là.
+                  </p>
+                ) : (
+                  <p className="mt-1.5 text-xs font-semibold text-destructive">
+                    Il vous manque {formatFCFA(EXTRA_PUBLICATION_PRICE - quota.balance)} : rechargez pour pouvoir
+                    publier.
+                  </p>
                 )}
-              </p>
+                {limitRefusal && (
+                  <p className="mt-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-[11px] leading-relaxed text-destructive">
+                    Votre dernière tentative a été refusée : {limitRefusal.replace(/^Produit non publié\s*:\s*/i, "")}
+                  </p>
+                )}
+              </div>
             </div>
-            <Link to="/profile" search={{ tab: "promo" }}>
-              <Button variant="volt" className="h-10">
-                Recharger
-              </Button>
-            </Link>
+
+            {/* Le bouton utile : il ouvre la recharge de 500 F par-dessus la page
+                (le formulaire n'est pas perdu, rien n'est rechargé). */}
+            <div className="mt-3 flex flex-wrap gap-2">
+              {money ? (
+                <>
+                  <Button variant="volt" className="h-10" onClick={() => money.openTopUp(EXTRA_PUBLICATION_PRICE)}>
+                    <Wallet className="mr-1.5 h-4 w-4" /> Recharger {formatFCFA(EXTRA_PUBLICATION_PRICE)}
+                  </Button>
+                  {quota.balance < EXTRA_PUBLICATION_PRICE && (
+                    <Button variant="outline" className="h-10" onClick={() => money.openTopUp()}>
+                      Autre montant
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <Link to="/profile" search={{ tab: "promo" }}>
+                  <Button variant="volt" className="h-10">
+                    <Wallet className="mr-1.5 h-4 w-4" /> Recharger mon solde
+                  </Button>
+                </Link>
+              )}
+            </div>
           </div>
         )}
 

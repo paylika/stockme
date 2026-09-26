@@ -55,7 +55,8 @@ export type SellerMoneyCtx = {
   loading: boolean;
   balance: number;
   refresh: () => void;
-  openTopUp: () => void;
+  /** Ouvre le rechargement, éventuellement pré-rempli (ex. 500 F pour publier). */
+  openTopUp: (amount?: number) => void;
   /** Reprendre un paiement en attente en modifiant son montant. */
   resumePending: (pending: { amount_fcfa: number }) => void;
   openBoost: (product: BoostTarget) => void;
@@ -107,8 +108,8 @@ export function SellerMoneyProvider({
     };
   }, [visible]);
 
-  const openTopUp = useCallback(() => {
-    setTopUpAmount(null);
+  const openTopUp = useCallback((amount?: number) => {
+    setTopUpAmount(typeof amount === "number" && amount > 0 ? amount : null);
     setTopUpOpen(true);
   }, []);
 
