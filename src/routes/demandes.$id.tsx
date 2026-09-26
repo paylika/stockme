@@ -9,11 +9,13 @@ import { Label } from "@/components/ui/label";
 import { formatFCFA, whatsappLink } from "@/lib/format";
 import {
   closeBuyingRequest,
+  findSimilarProducts,
   getBuyingRequest,
   reportBuyingRequest,
   respondToRequest,
   sellerContactMessage,
   type RequestDetail,
+  type RequestSuggestion,
 } from "@/lib/buying-requests";
 import { useAuth } from "@/hooks/useAuth";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
@@ -45,6 +47,7 @@ function RequestDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [data, setData] = useState<RequestDetail | null>(null);
+  const [similar, setSimilar] = useState<RequestSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [message, setMessage] = useState("");
@@ -57,7 +60,7 @@ function RequestDetailPage() {
     try {
       setData(await getBuyingRequest(id));
     } catch {
-      setData({ ok: false, request: null, responses: [], suggestions: [], reason: "error" });
+      setData({ ok: false, request: null, responses: [], reason: "error" });
     } finally {
       setLoading(false);
     }
@@ -228,13 +231,13 @@ function RequestDetailPage() {
             </div>
 
             {/* ---------- Ça existe déjà : la vente immédiate ---------- */}
-            {data.suggestions.length > 0 && (
+            {similar.length > 0 && (
               <div className="mt-4 rounded-2xl border border-success/40 bg-success/5 p-4">
                 <p className="flex items-center gap-2 text-sm font-bold text-success">
                   <CheckCircle2 className="h-4 w-4" /> Ce produit existe déjà sur StockMe
                 </p>
                 <ul className="mt-3 flex gap-3 overflow-x-auto no-scrollbar pb-1">
-                  {data.suggestions.map((s) => (
+                  {similar.map((s) => (
                     <li key={s.id} className="w-32 shrink-0">
                       <Link to="/product/$id" params={{ id: s.id }} className="block">
                         {s.images?.[0] ? (
@@ -300,24 +303,6 @@ function RequestDetailPage() {
                             <p className="mt-2 whitespace-pre-line rounded-lg bg-muted/50 px-2.5 py-2 text-xs leading-relaxed">
                               {res.message}
                             </p>
-                          )}
-
-                          {res.seller_top_products.length > 0 && (
-                            <ul className="mt-2 flex gap-2 overflow-x-auto no-scrollbar">
-                              {res.seller_top_products.map((p) => (
-                                <li key={p.id} className="w-16 shrink-0">
-                                  <Link to="/product/$id" params={{ id: p.id }} title={p.name}>
-                                    {p.image ? (
-                                      <img src={p.image} alt="" className="h-16 w-16 rounded-lg object-cover" />
-                                    ) : (
-                                      <span className="grid h-16 w-16 place-items-center rounded-lg bg-muted">
-                                        <Package className="h-4 w-4 text-muted-foreground" />
-                                      </span>
-                                    )}
-                                  </Link>
-                                </li>
-                              ))}
-                            </ul>
                           )}
 
                           <div className="mt-3 flex flex-wrap gap-2">

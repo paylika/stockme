@@ -1,20 +1,21 @@
 -- ############################################################################
--- STOCKME — TOUT LE SQL EN ATTENTE, À COLLER D'UN SEUL COUP
--- Supabase -> SQL Editor -> New query -> coller TOUT ce fichier -> Run
+-- STOCKME — TOUT LE SQL EN ATTENTE, A COLLER DANS SUPABASE (SQL Editor)
 --
 -- 6 parties independantes, sans danger, relancables :
---   1. AVIS PRODUITS (etoiles + commentaires + photos)      -> INDISPENSABLE
+--   1. AVIS PRODUITS (etoiles + commentaires + photos)        -> DEJA INSTALLE
 --   2. BADGE : activer les vendeurs qui ont deja paye
 --   3. DIFFUSION D'ANNONCES INTELLIGENTE (rotation equitable)
 --   4. Ne pas facturer une journee qui n'a pas pu etre servie
---   5. DEMANDES D'ACHAT (« Je recherche ») : les acheteurs postent, les
---      fournisseurs repondent, l'acheteur choisit qui il contacte
+--   5. DEMANDES D'ACHAT (les acheteurs postent, les fournisseurs repondent)
 --   6. (option) aligner les mises en avant en cours sur 1 000 F/jour
+--
+-- Astuce : collez UNE PARTIE A LA FOIS et lancez. La partie 5 finit par une
+-- requete de controle : elle doit renvoyer true partout.
 -- ############################################################################
 
 
 -- ############################################################################
--- PARTIE 1 / 6 — AVIS PRODUITS
+-- PARTIE 1 / 6 — AVIS PRODUITS (deja installe, rien a faire)
 -- ############################################################################
 CREATE TABLE IF NOT EXISTS public.product_reviews (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -162,7 +163,6 @@ WHERE pi.purpose = 'subscription' AND pi.status = 'paid'
 ORDER BY pi.paid_at DESC;
 
 -- 2.b) Activation du badge 12 mois pour tous ces vendeurs
-BEGIN;
 ALTER TABLE public.profiles DISABLE TRIGGER profiles_guard_verified;
 WITH payeurs AS (
   SELECT DISTINCT pi.user_id
@@ -178,10 +178,8 @@ UPDATE public.profiles p
   FROM payeurs
  WHERE p.id = payeurs.user_id;
 ALTER TABLE public.profiles ENABLE TRIGGER profiles_guard_verified;
-COMMIT;
 
--- 2.c) Une seule boutique (nom recu sur WhatsApp) : remplacez le nom et lancez
-BEGIN;
+-- 2.c) Une seule boutique (nom recu sur WhatsApp) : remplacez le nom puis lancez
 ALTER TABLE public.profiles DISABLE TRIGGER profiles_guard_verified;
 UPDATE public.profiles
    SET verified = true,
@@ -189,7 +187,6 @@ UPDATE public.profiles
        verified_until = GREATEST(COALESCE(verified_until, now()), now()) + interval '12 months'
  WHERE lower(btrim(COALESCE(shop_name, ''))) = lower(btrim('NOM DE LA BOUTIQUE'));
 ALTER TABLE public.profiles ENABLE TRIGGER profiles_guard_verified;
-COMMIT;
 
 
 -- ############################################################################
@@ -231,7 +228,7 @@ RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $fn$
 DECLARE v json;
 BEGIN
   SELECT coalesce(json_agg(row_to_json(t)), '[]'::json) INTO v FROM (
@@ -289,7 +286,7 @@ BEGIN
   ) t;
   RETURN v;
 END;
-$$;
+$fn$;
 REVOKE EXECUTE ON FUNCTION public.get_sponsored_products(int) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_sponsored_products(int) TO anon, authenticated;
 
@@ -303,7 +300,7 @@ RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $fn$
 DECLARE v json;
 BEGIN
   SELECT coalesce(json_agg(row_to_json(t)), '[]'::json) INTO v FROM (
@@ -331,7 +328,7 @@ BEGIN
   ) t;
   RETURN v;
 END;
-$$;
+$fn$;
 REVOKE EXECUTE ON FUNCTION public.get_active_ads() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_active_ads() TO anon, authenticated;
 
@@ -402,7 +399,7 @@ RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $fn$
 DECLARE
   c record;
   v_balance int;
@@ -475,7 +472,7 @@ BEGIN
   RETURN json_build_object('ok', true, 'served', v_served, 'paused', v_paused,
                            'skipped', v_skipped, 'ran_at', now());
 END;
-$$;
+$fn$;
 REVOKE EXECUTE ON FUNCTION public.boost_run_daily() FROM PUBLIC, anon, authenticated;
 
 -- ============================================================
@@ -486,33 +483,23 @@ FROM pg_proc p WHERE p.proname = 'boost_run_daily';
 
 
 -- ############################################################################
--- PARTIE 5 / 6 — DEMANDES D'ACHAT (« Je recherche »)
+-- PARTIE 5 / 6 — DEMANDES D'ACHAT
 -- ############################################################################
 -- ============================================================
 -- StockMe — DEMANDES D'ACHAT (« Je recherche »)
 --
--- LE MANQUE QUE ÇA COMBLE
---   StockMe ne connaissait que l'OFFRE : un vendeur publie, un acheteur trouve.
---   Mais un acheteur qui cherche un produit ABSENT du site n'avait aucun moyen
---   de le dire — il partait, et on ne le revoyait jamais. Ici il poste sa
---   demande (quoi, combien, budget, ville), les fournisseurs qui l'ont
---   postulent, et l'acheteur choisit qui il contacte.
+-- L'acheteur poste ce qu'il cherche (produit absent du site), les fournisseurs
+-- qui l'ont postulent (« J'ai ce produit »), et l'acheteur choisit qui il
+-- contacte. Le numéro de l'acheteur n'est JAMAIS exposé.
 --
--- RÈGLES DE SÉCURITÉ (décidées avec le fondateur)
---   • L'acheteur ne laisse JAMAIS son numéro : les fournisseurs postulent, il
---     choisit. Son numéro n'apparaît dans aucune réponse.
---   • Tout numéro écrit dans le texte est masqué automatiquement.
---   • 3 demandes actives maximum par compte, 1 par jour.
---   • Pour répondre, il faut être un vrai vendeur (au moins 1 produit en ligne).
---   • Publication immédiate + bouton « Signaler » + masquage par l'admin.
---
--- Idempotent : peut être relancé sans effet de bord.
+-- Garde-fous : 3 demandes actives max, 1 par jour, numéros masqués dans le
+-- texte, réponse réservée aux vendeurs ayant ≥ 1 produit en ligne.
+-- Idempotent : relançable sans effet de bord.
 -- ============================================================
 
-
--- ============================================================
+-- ------------------------------------------------------------
 -- 1. Tables
--- ============================================================
+-- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.buying_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -538,7 +525,6 @@ CREATE INDEX IF NOT EXISTS buying_requests_open_idx
 CREATE INDEX IF NOT EXISTS buying_requests_category_idx ON public.buying_requests(category);
 CREATE INDEX IF NOT EXISTS buying_requests_city_idx ON public.buying_requests(city);
 
--- Un fournisseur répond UNE fois par demande.
 CREATE TABLE IF NOT EXISTS public.request_responses (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id uuid NOT NULL REFERENCES public.buying_requests(id) ON DELETE CASCADE,
@@ -550,7 +536,6 @@ CREATE TABLE IF NOT EXISTS public.request_responses (
 CREATE UNIQUE INDEX IF NOT EXISTS request_responses_unique_idx
   ON public.request_responses (request_id, seller_id);
 
--- Signalements (faux, spam, concurrence déloyale…)
 CREATE TABLE IF NOT EXISTS public.request_reports (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id uuid NOT NULL REFERENCES public.buying_requests(id) ON DELETE CASCADE,
@@ -561,10 +546,9 @@ CREATE TABLE IF NOT EXISTS public.request_reports (
 CREATE UNIQUE INDEX IF NOT EXISTS request_reports_unique_idx
   ON public.request_reports (request_id, reporter_id);
 
--- ============================================================
--- 2. Sécurité : lecture seule, et jamais en direct
---    Aucune policy d'écriture : tout passe par les fonctions ci-dessous.
--- ============================================================
+-- ------------------------------------------------------------
+-- 2. Sécurité : lecture publique, écriture UNIQUEMENT par les fonctions
+-- ------------------------------------------------------------
 ALTER TABLE public.buying_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.request_responses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.request_reports ENABLE ROW LEVEL SECURITY;
@@ -577,9 +561,9 @@ CREATE POLICY buying_requests_read ON public.buying_requests
     OR public.has_role(auth.uid(), 'admin')
   );
 
--- ============================================================
+-- ------------------------------------------------------------
 -- 3. Publier une demande
--- ============================================================
+-- ------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.create_buying_request(
   p_title text,
   p_description text DEFAULT NULL,
@@ -596,7 +580,7 @@ RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $fn$
 DECLARE
   v_uid uuid := auth.uid();
   v_title text;
@@ -617,15 +601,14 @@ BEGIN
   IF length(v_title) > 120 THEN v_title := left(v_title, 120); END IF;
   IF length(v_desc) > 1200 THEN v_desc := left(v_desc, 1200); END IF;
 
-  -- Un numéro de téléphone écrit dans le texte est MASQUÉ (les coordonnées
-  -- passent par la plateforme : c'est ce qui protège l'acheteur du démarchage).
+  -- Un numéro écrit dans le texte est MASQUÉ (les coordonnées passent par la
+  -- plateforme : c'est ce qui protège l'acheteur du démarchage).
   IF v_title ~ '[0-9][0-9 .+-]{7,}[0-9]' OR v_desc ~ '[0-9][0-9 .+-]{7,}[0-9]' THEN
     v_masked := true;
     v_title := regexp_replace(v_title, '[0-9][0-9 .+-]{7,}[0-9]', '[numéro masqué]', 'g');
     v_desc := regexp_replace(v_desc, '[0-9][0-9 .+-]{7,}[0-9]', '[numéro masqué]', 'g');
   END IF;
 
-  -- Garde-fous : 3 demandes actives, 1 publication par jour.
   SELECT count(*) INTO v_open FROM public.buying_requests
    WHERE user_id = v_uid AND status = 'open' AND expires_at > now();
   IF coalesce(v_open, 0) >= 3 THEN
@@ -654,13 +637,13 @@ BEGIN
 
   RETURN json_build_object('ok', true, 'id', v_id, 'masked', v_masked);
 END;
-$$;
+$fn$;
 REVOKE EXECUTE ON FUNCTION public.create_buying_request(text, text, text, int, text, int, text, text, text, text[]) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.create_buying_request(text, text, text, int, text, int, text, text, text, text[]) TO authenticated;
 
--- ============================================================
+-- ------------------------------------------------------------
 -- 4. Lister les demandes (public) — ou seulement les miennes
--- ============================================================
+-- ------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.get_buying_requests(
   p_category text DEFAULT NULL,
   p_city text DEFAULT NULL,
@@ -670,13 +653,11 @@ CREATE OR REPLACE FUNCTION public.get_buying_requests(
   p_mine_only boolean DEFAULT false
 )
 RETURNS json
-LANGUAGE plpgsql
+LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public
-AS $$
-DECLARE v json;
-BEGIN
-  SELECT coalesce(json_agg(row_to_json(t)), '[]'::json) INTO v FROM (
+AS $fn$
+  SELECT coalesce(json_agg(row_to_json(t)), '[]'::json) FROM (
     SELECT
       r.id, r.title, r.description, r.category, r.quantity, r.unit, r.budget_fcfa,
       r.city, r.country, r.image_url, r.ai_keywords, r.status, r.responses_count,
@@ -691,9 +672,10 @@ BEGIN
       ) AS already_responded
     FROM public.buying_requests r
     LEFT JOIN public.profiles pf ON pf.id = r.user_id
-    WHERE (NOT coalesce(p_mine_only, false)
-             AND r.status = 'open' AND r.expires_at > now()
-           OR coalesce(p_mine_only, false) AND r.user_id = auth.uid())
+    WHERE (
+        (NOT coalesce(p_mine_only, false) AND r.status = 'open' AND r.expires_at > now())
+        OR (coalesce(p_mine_only, false) AND r.user_id = auth.uid())
+      )
       AND (p_category IS NULL OR r.category = p_category)
       AND (p_city IS NULL OR r.city = p_city)
       AND (p_q IS NULL OR r.title ILIKE '%' || p_q || '%'
@@ -702,94 +684,77 @@ BEGIN
     LIMIT greatest(1, least(coalesce(p_limit, 30), 60))
     OFFSET greatest(coalesce(p_offset, 0), 0)
   ) t;
-  RETURN v;
-END;
-$$;
+$fn$;
 REVOKE EXECUTE ON FUNCTION public.get_buying_requests(text, text, text, int, int, boolean) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_buying_requests(text, text, text, int, int, boolean) TO anon, authenticated;
 
--- ============================================================
--- 5. Détail d'une demande : + réponses (visibles par l'acheteur seulement)
---    + produits qui existent DÉJÀ sur le site (la vente immédiate)
--- ============================================================
+-- ------------------------------------------------------------
+-- 5. Détail d'une demande + réponses (visibles par l'acheteur seulement)
+-- ------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.get_buying_request_detail(p_id uuid)
 RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $fn$
 DECLARE
-  r public.buying_requests;
+  v_req public.buying_requests;
   v_mine boolean;
-  v_admin boolean := public.has_role(auth.uid(), 'admin');
+  v_responses json;
 BEGIN
-  SELECT * INTO r FROM public.buying_requests WHERE id = p_id;
-  IF r.id IS NULL THEN RETURN json_build_object('ok', false, 'reason', 'not_found'); END IF;
-
-  v_mine := (r.user_id = auth.uid());
-  IF r.status = 'hidden' AND NOT (v_mine OR v_admin) THEN
+  SELECT * INTO v_req FROM public.buying_requests WHERE id = p_id;
+  IF v_req.id IS NULL THEN
     RETURN json_build_object('ok', false, 'reason', 'not_found');
+  END IF;
+
+  v_mine := (v_req.user_id = auth.uid());
+  IF v_req.status = 'hidden' AND NOT (v_mine OR public.has_role(auth.uid(), 'admin')) THEN
+    RETURN json_build_object('ok', false, 'reason', 'not_found');
+  END IF;
+
+  v_responses := '[]'::json;
+  IF v_mine OR public.has_role(auth.uid(), 'admin') THEN
+    SELECT coalesce(json_agg(row_to_json(x)), '[]'::json) INTO v_responses FROM (
+      SELECT rr.id, rr.seller_id, rr.message, rr.price_fcfa, rr.created_at,
+             coalesce(nullif(pf.shop_name, ''), nullif(pf.full_name, ''), 'Fournisseur') AS seller_name,
+             pf.whatsapp AS seller_whatsapp, pf.phone AS seller_phone, pf.city AS seller_city,
+             coalesce(pf.verified AND (pf.verified_until IS NULL OR pf.verified_until > now()), false) AS seller_verified,
+             (SELECT count(*) FROM public.products p
+               WHERE p.owner_id = rr.seller_id AND p.published = true) AS seller_products
+      FROM public.request_responses rr
+      LEFT JOIN public.profiles pf ON pf.id = rr.seller_id
+      WHERE rr.request_id = p_id
+      ORDER BY rr.created_at ASC
+    ) x;
   END IF;
 
   RETURN json_build_object(
     'ok', true,
     'request', json_build_object(
-      'id', r.id, 'title', r.title, 'description', r.description, 'category', r.category,
-      'quantity', r.quantity, 'unit', r.unit, 'budget_fcfa', r.budget_fcfa,
-      'city', r.city, 'country', r.country, 'image_url', r.image_url,
-      'ai_keywords', r.ai_keywords, 'status', r.status, 'responses_count', r.responses_count,
-      'created_at', r.created_at,
-      'jours_restants', greatest(0, ceil(extract(epoch FROM (r.expires_at - now())) / 86400))::int,
+      'id', v_req.id, 'title', v_req.title, 'description', v_req.description,
+      'category', v_req.category, 'quantity', v_req.quantity, 'unit', v_req.unit,
+      'budget_fcfa', v_req.budget_fcfa, 'city', v_req.city, 'country', v_req.country,
+      'image_url', v_req.image_url, 'status', v_req.status,
+      'responses_count', v_req.responses_count, 'created_at', v_req.created_at,
+      'jours_restants', greatest(0, ceil(extract(epoch FROM (v_req.expires_at - now())) / 86400))::int,
       'mine', v_mine,
-      'buyer_name', (SELECT coalesce(nullif(pf.shop_name, ''), 'Acheteur StockMe') FROM public.profiles pf WHERE pf.id = r.user_id),
+      'buyer_name', coalesce(
+        (SELECT nullif(pf.shop_name, '') FROM public.profiles pf WHERE pf.id = v_req.user_id),
+        'Acheteur StockMe'),
       'already_responded', EXISTS (
-        SELECT 1 FROM public.request_responses rr WHERE rr.request_id = r.id AND rr.seller_id = auth.uid()
-      )
+        SELECT 1 FROM public.request_responses rr
+         WHERE rr.request_id = v_req.id AND rr.seller_id = auth.uid())
     ),
-    -- Coordonnées des fournisseurs : UNIQUEMENT pour l'acheteur (et l'admin).
-    'responses', CASE WHEN v_mine OR v_admin THEN coalesce((
-      SELECT json_agg(row_to_json(x)) FROM (
-        SELECT rr.id, rr.seller_id, rr.message, rr.price_fcfa, rr.created_at,
-               coalesce(nullif(pf.shop_name, ''), nullif(pf.full_name, ''), 'Fournisseur') AS seller_name,
-               pf.whatsapp AS seller_whatsapp, pf.phone AS seller_phone, pf.city AS seller_city,
-               coalesce(pf.verified AND (pf.verified_until IS NULL OR pf.verified_until > now()), false) AS seller_verified,
-               (SELECT count(*) FROM public.products p
-                 WHERE p.owner_id = rr.seller_id AND p.published = true) AS seller_products,
-               coalesce((SELECT json_agg(json_build_object('id', p.id, 'name', p.name, 'image', p.images[1])
-                          ORDER BY p.created_at DESC)
-                           FROM (SELECT * FROM public.products p2
-                                  WHERE p2.owner_id = rr.seller_id AND p2.published = true
-                                  ORDER BY p2.created_at DESC LIMIT 3) p), '[]'::json) AS seller_top_products
-        FROM public.request_responses rr
-        LEFT JOIN public.profiles pf ON pf.id = rr.seller_id
-        WHERE rr.request_id = r.id
-        ORDER BY rr.created_at ASC
-      ) x
-    ), '[]'::json) ELSE '[]'::json END,
-    -- Ce qui existe DÉJÀ sur le site : mieux que d'attendre une réponse.
-    'suggestions', coalesce((
-      SELECT json_agg(row_to_json(s)) FROM (
-        SELECT p.id, p.name, p.price_fcfa, p.promo_price_fcfa, p.images, p.city, p.moq, p.owner_id
-        FROM public.products p
-        WHERE p.published = true AND p.sold_out = false
-          AND (
-            (r.category IS NOT NULL AND p.category = r.category)
-            OR EXISTS (SELECT 1 FROM unnest(r.ai_keywords) k WHERE p.name ILIKE '%' || k || '%')
-            OR p.name ILIKE '%' || split_part(r.title, ' ', 1) || '%'
-          )
-        ORDER BY p.created_at DESC
-        LIMIT 6
-      ) s
-    ), '[]'::json)
+    'responses', v_responses
   );
 END;
-$$;
+$fn$;
 REVOKE EXECUTE ON FUNCTION public.get_buying_request_detail(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_buying_request_detail(uuid) TO anon, authenticated;
 
--- ============================================================
--- 6. Répondre à une demande (« Je l'ai »)
--- ============================================================
+-- ------------------------------------------------------------
+-- 6. Répondre (« J'ai ce produit »)
+-- ------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.respond_to_buying_request(
   p_request_id uuid,
   p_message text DEFAULT NULL,
@@ -799,7 +764,7 @@ RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $fn$
 DECLARE
   v_uid uuid := auth.uid();
   v_req public.buying_requests;
@@ -815,14 +780,14 @@ BEGIN
     RETURN json_build_object('ok', false, 'reason', 'closed');
   END IF;
 
-  -- Il faut être un vrai vendeur : au moins un produit en ligne.
   SELECT count(*) INTO v_products
     FROM public.products WHERE owner_id = v_uid AND published = true;
   IF coalesce(v_products, 0) = 0 THEN
     RETURN json_build_object('ok', false, 'reason', 'no_products');
   END IF;
 
-  IF EXISTS (SELECT 1 FROM public.request_responses WHERE request_id = p_request_id AND seller_id = v_uid) THEN
+  IF EXISTS (SELECT 1 FROM public.request_responses
+              WHERE request_id = p_request_id AND seller_id = v_uid) THEN
     RETURN json_build_object('ok', false, 'reason', 'already');
   END IF;
 
@@ -836,23 +801,23 @@ BEGIN
   UPDATE public.buying_requests
      SET responses_count = responses_count + 1, updated_at = now()
    WHERE id = p_request_id
-   RETURNING responses_count INTO v_count;
+  RETURNING responses_count INTO v_count;
 
   RETURN json_build_object('ok', true, 'count', coalesce(v_count, 1));
 END;
-$$;
+$fn$;
 REVOKE EXECUTE ON FUNCTION public.respond_to_buying_request(uuid, text, int) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.respond_to_buying_request(uuid, text, int) TO authenticated;
 
--- ============================================================
--- 7. Clôturer (« j'ai trouvé »), signaler, modérer
--- ============================================================
+-- ------------------------------------------------------------
+-- 7. Clôturer, signaler, modérer
+-- ------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.close_buying_request(p_id uuid)
 RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $fn$
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Connexion requise'; END IF;
   UPDATE public.buying_requests
@@ -860,7 +825,7 @@ BEGIN
    WHERE id = p_id AND (user_id = auth.uid() OR public.has_role(auth.uid(), 'admin'));
   RETURN json_build_object('ok', true);
 END;
-$$;
+$fn$;
 REVOKE EXECUTE ON FUNCTION public.close_buying_request(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.close_buying_request(uuid) TO authenticated;
 
@@ -869,7 +834,7 @@ RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $fn$
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Connexion requise'; END IF;
   INSERT INTO public.request_reports (request_id, reporter_id, reason)
@@ -877,7 +842,7 @@ BEGIN
   ON CONFLICT (request_id, reporter_id) DO NOTHING;
   RETURN json_build_object('ok', true);
 END;
-$$;
+$fn$;
 REVOKE EXECUTE ON FUNCTION public.report_buying_request(uuid, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.report_buying_request(uuid, text) TO authenticated;
 
@@ -886,7 +851,7 @@ RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $fn$
 BEGIN
   IF NOT public.has_role(auth.uid(), 'admin') THEN
     RAISE EXCEPTION 'Accès réservé aux administrateurs';
@@ -897,18 +862,21 @@ BEGIN
   UPDATE public.buying_requests SET status = p_status, updated_at = now() WHERE id = p_id;
   RETURN json_build_object('ok', true);
 END;
-$$;
+$fn$;
 REVOKE EXECUTE ON FUNCTION public.admin_set_buying_request_status(uuid, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.admin_set_buying_request_status(uuid, text) TO authenticated;
 
--- Liste admin : signalements + demandes masquées
+-- ------------------------------------------------------------
+-- 8. Liste admin + compteur du menu
+-- ------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_buying_requests()
 RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
-DECLARE v json;
+AS $fn$
+DECLARE
+  v json;
 BEGIN
   IF NOT public.has_role(auth.uid(), 'admin') THEN
     RAISE EXCEPTION 'Accès réservé aux administrateurs';
@@ -916,7 +884,7 @@ BEGIN
   SELECT coalesce(json_agg(row_to_json(t)), '[]'::json) INTO v FROM (
     SELECT r.id, r.title, r.description, r.category, r.quantity, r.unit, r.budget_fcfa,
            r.city, r.status, r.responses_count, r.created_at,
-           coalesce(nullif(pf.shop_name, ''), nullif(pf.full_name, ''), '—') AS demandeur,
+           coalesce(nullif(pf.shop_name, ''), nullif(pf.full_name, ''), '-') AS demandeur,
            pf.whatsapp AS demandeur_whatsapp, pf.phone AS demandeur_phone,
            (SELECT count(*) FROM public.request_reports rp WHERE rp.request_id = r.id) AS signalements
     FROM public.buying_requests r
@@ -927,20 +895,16 @@ BEGIN
   ) t;
   RETURN v;
 END;
-$$;
+$fn$;
 REVOKE EXECUTE ON FUNCTION public.admin_buying_requests() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.admin_buying_requests() TO authenticated;
 
--- ============================================================
--- 8. Notification : combien de demandes correspondent à MES catégories ?
---    (c'est le compteur affiché dans le menu)
--- ============================================================
 CREATE OR REPLACE FUNCTION public.count_matching_requests()
 RETURNS int
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $fn$
 DECLARE
   v_uid uuid := auth.uid();
   v_cats text[];
@@ -972,14 +936,13 @@ BEGIN
 
   RETURN coalesce(v_n, 0);
 END;
-$$;
+$fn$;
 REVOKE EXECUTE ON FUNCTION public.count_matching_requests() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.count_matching_requests() TO authenticated;
 
-
--- ============================================================
--- CONTRÔLES (doivent renvoyer true)
--- ============================================================
+-- ------------------------------------------------------------
+-- 9. CONTRÔLE (doit renvoyer true partout)
+-- ------------------------------------------------------------
 SELECT
   to_regclass('public.buying_requests') IS NOT NULL AS table_demandes,
   to_regclass('public.request_responses') IS NOT NULL AS table_reponses,
@@ -990,15 +953,9 @@ SELECT
      'admin_set_buying_request_status', 'admin_buying_requests', 'count_matching_requests'
    )) = 9 AS les_9_fonctions;
 
--- Voir les demandes publiées
--- select title, category, quantity, unit, budget_fcfa, city, responses_count, status
---   from public.buying_requests order by created_at desc;
-
 
 -- ############################################################################
 -- PARTIE 6 / 6 — (OPTION) Mises en avant DEJA EN COURS : passer a 1 000 F/jour
--- A ne lancer QUE si vous acceptez que leur debit quotidien augmente tout de
--- suite. Les nouvelles mises en avant sont deja a 1 000 F/jour.
 -- ############################################################################
 
 -- UPDATE public.boost_campaigns SET daily_budget_fcfa = 1000 WHERE status = 'active';

@@ -23,7 +23,7 @@ RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $fn$
 DECLARE
   c record;
   v_balance int;
@@ -96,7 +96,7 @@ BEGIN
   RETURN json_build_object('ok', true, 'served', v_served, 'paused', v_paused,
                            'skipped', v_skipped, 'ran_at', now());
 END;
-$$;
+$fn$;
 REVOKE EXECUTE ON FUNCTION public.boost_run_daily() FROM PUBLIC, anon, authenticated;
 
 -- ============================================================

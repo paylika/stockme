@@ -43,7 +43,6 @@ export type RequestResponse = {
   seller_city: string | null;
   seller_verified: boolean;
   seller_products: number;
-  seller_top_products: { id: string; name: string; image: string | null }[];
 };
 
 export type RequestSuggestion = {
@@ -51,10 +50,9 @@ export type RequestSuggestion = {
   name: string;
   price_fcfa: number;
   promo_price_fcfa: number | null;
-  images: string[];
+  images: string[] | null;
   city: string;
   moq: number;
-  owner_id: string;
 };
 
 export type RequestDetail = {
@@ -62,7 +60,6 @@ export type RequestDetail = {
   reason?: string;
   request: (BuyingRequest & { expires_at?: string }) | null;
   responses: RequestResponse[];
-  suggestions: RequestSuggestion[];
 };
 
 const asArray = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
@@ -96,8 +93,56 @@ export async function getBuyingRequest(id: string): Promise<RequestDetail> {
     reason: d.reason,
     request: d.request ?? null,
     responses: asArray<RequestResponse>(d.responses),
-    suggestions: asArray<RequestSuggestion>(d.suggestions),
   };
+}
+
+/**
+ * « Ce produit existe déjà sur StockMe » — la vente immédiate.
+ *
+ * Calculé ici (et non en base) : on cherche les mots-clés reconnus par l'IA sur
+ * la photo, plus le premier mot significatif du titre, dans les fiches en ligne.
+ */
+export async function findSimilarProducts(request: {
+  title: string;
+  category?: string | null;
+  ai_keywords?: string[] | null;
+}): Promise<RequestSuggestion[]> {
+  const STOP = new Set([
+    "je", "cherche", "recherche", "besoin", "veux", "pour", "des", "les", "une", "un", "de",
+    "du", "la", "le", "en", "et", "avec", "sur", "au", "aux", "que", "qui", "il", "me", "faut",
+  ]);
+  const words = request.title
+    .toLowerCase()
+    .split(/[^a-zà-ÿ0-9]+/i)
+    .filter((w) => w.length > 3 && !STOP.has(w))
+    .slice(0, 3);
+  const keywords = [...(request.ai_keywords ?? []).slice(0, 4), ...words]
+    .map((k) => k.replace(/[,()%]/g, " ").trim())
+    .filter((k) => k.length > 2)
+    .slice(0, 5);
+
+  if (keywords.length === 0 && !request.category) return [];
+
+  try {
+    let query = supabase
+      .from("products")
+      .select("id,name,price_fcfa,promo_price_fcfa,images,city,moq")
+      .eq("published", true)
+      .eq("sold_out", false)
+      .limit(6);
+
+    if (keywords.length > 0) {
+      query = query.or(keywords.map((k) => `name.ilike.%${k}%`).join(","));
+    } else if (request.category) {
+      query = query.eq("category", request.category);
+    }
+
+    const { data, error } = await query;
+    if (error) return [];
+    return (data as RequestSuggestion[] | null) ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export type CreateRequestInput = {

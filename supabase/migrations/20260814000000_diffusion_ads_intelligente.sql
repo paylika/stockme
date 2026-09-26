@@ -34,7 +34,7 @@ RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $fn$
 DECLARE v json;
 BEGIN
   SELECT coalesce(json_agg(row_to_json(t)), '[]'::json) INTO v FROM (
@@ -92,7 +92,7 @@ BEGIN
   ) t;
   RETURN v;
 END;
-$$;
+$fn$;
 REVOKE EXECUTE ON FUNCTION public.get_sponsored_products(int) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_sponsored_products(int) TO anon, authenticated;
 
@@ -106,7 +106,7 @@ RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $fn$
 DECLARE v json;
 BEGIN
   SELECT coalesce(json_agg(row_to_json(t)), '[]'::json) INTO v FROM (
@@ -134,7 +134,7 @@ BEGIN
   ) t;
   RETURN v;
 END;
-$$;
+$fn$;
 REVOKE EXECUTE ON FUNCTION public.get_active_ads() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_active_ads() TO anon, authenticated;
 
