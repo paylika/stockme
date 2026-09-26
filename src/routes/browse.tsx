@@ -77,15 +77,24 @@ function Browse() {
       setBoostedIds(boosted);
       setAdByProduct(adMap);
 
-      const list = ((data as Product[] | null) ?? [])
-        .slice()
-        .sort((a, b) => (boosted.has(a.id) ? 0 : 1) - (boosted.has(b.id) ? 0 : 1));
-      setItems(list);
+      // DIFFUSION INTELLIGENTE — on n'empile plus toutes les annonces en tête.
+      // Avec 6 mises en avant actives, les 6 premiers résultats étaient payants :
+      // l'acheteur ne voyait plus le catalogue, et les annonceurs se marchaient
+      // dessus. On place donc les annonces UNE PAR UNE, espacées dans la liste
+      // (comme les places de marché) : la visibilité reste réelle sans noyer
+      // les produits normaux.
+      const base = ((data as Product[] | null) ?? []).slice();
+      const SPONSOR_SLOTS = [0, 5, 11, 18];
+      const sponsoredRows = base.filter((p) => boosted.has(p.id)).slice(0, SPONSOR_SLOTS.length);
+      const natural = base.filter((p) => !boosted.has(p.id));
+      // On insère de la fin vers le début pour ne pas décaler les positions.
+      for (let i = sponsoredRows.length - 1; i >= 0; i--) {
+        natural.splice(Math.min(SPONSOR_SLOTS[i], natural.length), 0, sponsoredRows[i]);
+      }
+      setItems(natural);
 
-      // Une mise en avant réellement affichée en tête de liste = une vue annonce.
-      // Sans ce comptage, le vendeur ne voyait AUCUN résultat alors que son
-      // produit était bien remonté en haut de « Parcourir le stock ».
-      list.filter((p) => boosted.has(p.id)).forEach((p) => trackAdImpression(adMap.get(p.id)));
+      // Une mise en avant réellement placée dans la liste = une vue annonce.
+      sponsoredRows.forEach((p) => trackAdImpression(adMap.get(p.id)));
     };
     run();
     return () => { cancel = true; };

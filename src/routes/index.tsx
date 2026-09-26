@@ -53,7 +53,13 @@ type SponsoredProduct = Product & { ad_id: string };
 
 const PAGE_SIZE = 24;
 /** Positions sponsorisées dans la grille (index 1 et 2 = cartes n°2 et n°3). */
-const SPONSOR_SLOTS = [1, 2];
+/**
+ * Emplacements payés de la grille.
+ * ESPACÉS (et non collés au début) : la 2e et la 6e carte, pas les deux
+ * premières. L'acheteur voit ainsi du contenu neuf avant la deuxième annonce —
+ * et les annonceurs ne se marchent pas dessus.
+ */
+const SPONSOR_SLOTS = [1, 5];
 const SORTS = [
   { id: "nouveau", label: "Nouveautés" },
   { id: "pertinence", label: "Pertinence" },
