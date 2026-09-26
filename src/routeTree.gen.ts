@@ -18,6 +18,7 @@ import { Route as DemandesRouteImport } from './routes/demandes'
 import { Route as DropshippingRouteImport } from './routes/dropshipping'
 import { Route as LegalRouteImport } from './routes/legal'
 import { Route as RechercheImageRouteImport } from './routes/recherche-image'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TarifsRouteImport } from './routes/tarifs'
 import { Route as AdminAdminRouteImport } from './routes/_admin/admin'
 import { Route as AdminAdsRouteImport } from './routes/_admin/ads'
@@ -91,6 +92,11 @@ const LegalRoute = LegalRouteImport.update({
 const RechercheImageRoute = RechercheImageRouteImport.update({
   id: '/recherche-image',
   path: '/recherche-image',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TarifsRoute = TarifsRouteImport.update({
@@ -260,6 +266,7 @@ export interface FileRoutesByFullPath {
   '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
   '/recherche-image': typeof RechercheImageRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tarifs': typeof TarifsRoute
   '/admin': typeof AdminAdminRoute
   '/ads': typeof AdminAdsRoute
@@ -300,6 +307,7 @@ export interface FileRoutesByTo {
   '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
   '/recherche-image': typeof RechercheImageRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tarifs': typeof TarifsRoute
   '/admin': typeof AdminAdminRoute
   '/ads': typeof AdminAdsRoute
@@ -343,6 +351,7 @@ export interface FileRoutesById {
   '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
   '/recherche-image': typeof RechercheImageRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tarifs': typeof TarifsRoute
   '/_admin/admin': typeof AdminAdminRoute
   '/_admin/ads': typeof AdminAdsRoute
@@ -385,6 +394,7 @@ export interface FileRouteTypes {
     | '/dropshipping'
     | '/legal'
     | '/recherche-image'
+    | '/sitemap.xml'
     | '/tarifs'
     | '/admin'
     | '/ads'
@@ -425,6 +435,7 @@ export interface FileRouteTypes {
     | '/dropshipping'
     | '/legal'
     | '/recherche-image'
+    | '/sitemap.xml'
     | '/tarifs'
     | '/admin'
     | '/ads'
@@ -467,6 +478,7 @@ export interface FileRouteTypes {
     | '/dropshipping'
     | '/legal'
     | '/recherche-image'
+    | '/sitemap.xml'
     | '/tarifs'
     | '/_admin/admin'
     | '/_admin/ads'
@@ -510,6 +522,7 @@ export interface RootRouteChildren {
   DropshippingRoute: typeof DropshippingRoute
   LegalRoute: typeof LegalRouteWithChildren
   RechercheImageRoute: typeof RechercheImageRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TarifsRoute: typeof TarifsRoute
   ApiGeoRoute: typeof ApiGeoRoute
   PaiementRetourRoute: typeof PaiementRetourRoute
@@ -588,6 +601,13 @@ declare module '@tanstack/react-router' {
       path: '/recherche-image'
       fullPath: '/recherche-image'
       preLoaderRoute: typeof RechercheImageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tarifs': {
@@ -913,6 +933,7 @@ const rootRouteChildren: RootRouteChildren = {
   DropshippingRoute: DropshippingRoute,
   LegalRoute: LegalRouteWithChildren,
   RechercheImageRoute: RechercheImageRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   TarifsRoute: TarifsRoute,
   ApiGeoRoute: ApiGeoRoute,
   PaiementRetourRoute: PaiementRetourRoute,

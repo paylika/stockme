@@ -15,7 +15,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { WhatsAppGroupPopup } from "@/components/WhatsAppGroupPopup";
 import { ScrollKeeper } from "@/components/ScrollKeeper";
 import { SellerMoneyProvider } from "@/components/SellerMoneyProvider";
-import { supabase } from "@/integrations/supabase/stockme-client";
+import { supabase, STOCKME_SUPABASE_URL } from "@/integrations/supabase/stockme-client";
 import { useEffect } from "react";
 import {
   buildSeoHead,
@@ -88,6 +88,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       links: [
         { rel: "preconnect", href: "https://fonts.googleapis.com" },
         { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+        /* Les photos produits ET l'API vivent chez Supabase : sans ce
+           pré-connexion, le navigateur paie un aller-retour DNS + TLS complet
+           avant d'afficher la première image. */
+        { rel: "preconnect", href: STOCKME_SUPABASE_URL },
+        { rel: "dns-prefetch", href: STOCKME_SUPABASE_URL },
         { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Instrument+Serif&family=Inter:wght@400;500;600;700&display=swap" },
         { rel: "stylesheet", href: appCss },
         ...links,

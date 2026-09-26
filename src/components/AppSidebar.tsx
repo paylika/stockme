@@ -38,7 +38,7 @@ import {
 import { isAdminEmail } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
 import { countMatchingRequests } from "@/lib/buying-requests";
-import logoUrl from "@/assets/stockme-logo.png";
+import logoUrl from "@/assets/stockme-logo.jpg";
 
 const COLLAPSE_KEY = "stockme:sidebar:collapsed";
 /** Pages où le solde / les produits / le badge peuvent avoir changé. */
@@ -74,7 +74,9 @@ export function AppSidebar() {
 
   const { info, refresh } = useSidebarInfo(!!user);
   const money = useSellerMoney();
-  const { wallet: walletFallback, refresh: refreshWallet } = useWallet(!!user);
+  // Le portefeuille ne se charge QUE s'il n'est pas déjà fourni par la racine :
+  // sans ce garde-fou, chaque page déclenchait DEUX appels à `wallet_overview`.
+  const { wallet: walletFallback, refresh: refreshWallet } = useWallet(!!user && !money);
   // Un seul portefeuille pour tout le site (fourni par la racine) ; on retombe
   // sur une lecture locale si le fournisseur n'est pas encore monté.
   const wallet = money?.wallet ?? walletFallback;
@@ -129,17 +131,32 @@ export function AppSidebar() {
 
   // Demandes d'achat qui correspondent à mes catégories / ma ville : c'est le
   // compteur qui fait revenir un fournisseur sur le site (de l'argent à prendre).
+  // Recalculé au maximum une fois par minute : c'est une requête en moins à
+  // chaque clic de navigation.
   const [requests, setRequests] = useState(0);
   useEffect(() => {
     if (!user) return;
+    let last = 0;
+    try {
+      last = Number(sessionStorage.getItem("stockme:requests-count-at") ?? "0");
+    } catch {
+      last = 0;
+    }
+    if (Date.now() - last < 60_000) return;
     let cancel = false;
     countMatchingRequests().then((n) => {
-      if (!cancel) setRequests(n);
+      if (cancel) return;
+      setRequests(n);
+      try {
+        sessionStorage.setItem("stockme:requests-count-at", String(Date.now()));
+      } catch {
+        /* stockage indisponible : on recalculera, sans gravité */
+      }
     });
     return () => {
       cancel = true;
     };
-  }, [user, pathname]);
+  }, [user]);
 
   // ---------- Les 5 entrées, point final ----------
   const navItems: NavItem[] = [

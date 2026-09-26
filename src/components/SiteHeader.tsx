@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { AdminButton } from "@/components/AdminButton";
 import { ImageSearchButton } from "@/components/ImageSearchButton";
-import logoUrl from "@/assets/stockme-logo.png";
+import logoUrl from "@/assets/stockme-logo.jpg";
 import {
   IconPin as MapPin,
   IconSearch as Search,

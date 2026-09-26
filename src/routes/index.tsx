@@ -96,38 +96,19 @@ function Index() {
   }, []);
 
   /**
-   * Le badge « Fournisseur vérifié » sur les cartes sponsorisées.
+   * Le badge « Fournisseur vérifié » sur les cartes.
    *
-   * `get_sponsored_products` ne renvoie ni `owner_id` ni `seller_verified` :
-   * une mise en avant payée s'affichait donc SANS le badge, même pour un
-   * vendeur vérifié. On va chercher le propriétaire des produits mis en avant
-   * pour retrouver son statut. (Le correctif propre est aussi côté base.)
+   * Depuis que `get_sponsored_products` renvoie `owner_id` ET `seller_verified`,
+   * la requête de rattrapage qui allait rechercher le propriétaire de chaque
+   * annonce a été SUPPRIMÉE : c'était une requête réseau de plus sur la page
+   * d'accueil (et donc du temps d'affichage en plus) pour une donnée déjà là.
    */
   const verifiedSellers = useVerifiedSellers();
-  const [sponsoredOwners, setSponsoredOwners] = useState<Map<string, string>>(new Map());
 
-  useEffect(() => {
-    if (sponsored.length === 0) return;
-    let cancel = false;
-    supabase
-      .from("products")
-      .select("id,owner_id")
-      .in("id", sponsored.map((s) => s.id))
-      .then(({ data }) => {
-        if (cancel) return;
-        setSponsoredOwners(
-          new Map(((data as { id: string; owner_id: string }[] | null) ?? []).map((r) => [r.id, r.owner_id])),
-        );
-      });
-    return () => {
-      cancel = true;
-    };
-  }, [sponsored]);
-
-  /** Un vendeur est-il vérifié ? (donnée directe, sinon via le propriétaire). */
+  /** Un vendeur est-il vérifié ? (donnée directe, sinon via le cache des vendeurs). */
   const isSellerVerified = (product: Product) => {
     if (product.seller_verified) return true;
-    const owner = product.owner_id ?? sponsoredOwners.get(product.id);
+    const owner = product.owner_id;
     return !!owner && verifiedSellers.has(owner);
   };
 
@@ -575,6 +556,7 @@ function Index() {
                   sellerVerified={isSellerVerified(row.product)}
                   onOpen={row.adId ? () => trackAdClick(row.adId) : undefined}
                   delayMs={(i % PAGE_SIZE) * 40}
+                  priority={i < 2}
                 />
               ))}
             </div>

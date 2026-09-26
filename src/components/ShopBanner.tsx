@@ -1,5 +1,5 @@
 import { useState } from "react";
-import logoUrl from "@/assets/stockme-logo.png";
+import logoUrl from "@/assets/stockme-logo.jpg";
 
 type Props = {
   /** Image de couverture du vendeur (null = bannière StockMe par défaut). */

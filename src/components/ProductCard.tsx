@@ -44,9 +44,22 @@ type Props = {
   sellerVerified?: boolean;
   /** Appelé au clic (mesure des performances d'une annonce). */
   onOpen?: () => void;
+  /**
+   * Carte visible immédiatement à l'écran (les 2 premières) : son image est
+   * chargée en priorité, les suivantes en différé. C'est ce qui fait gagner
+   * le plus de temps sur un téléphone en 3G.
+   */
+  priority?: boolean;
 };
 
-export function ProductCard({ product, delayMs = 0, sponsored = false, sellerVerified = false, onOpen }: Props) {
+export function ProductCard({
+  product,
+  delayMs = 0,
+  sponsored = false,
+  sellerVerified = false,
+  onOpen,
+  priority = false,
+}: Props) {
   const img = product.images[0];
   // Si l'image ne se charge pas (fichier supprimé, réseau coupé), on affiche un
   // visuel propre au lieu de l'icône « image cassée » du navigateur.
@@ -78,7 +91,8 @@ export function ProductCard({ product, delayMs = 0, sponsored = false, sellerVer
           <img
             src={img}
             alt={product.name}
-            loading="lazy"
+            loading={priority ? "eager" : "lazy"}
+            fetchPriority={priority ? "high" : "auto"}
             decoding="async"
             onError={() => setImageFailed(true)}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"

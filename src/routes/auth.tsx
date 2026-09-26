@@ -35,7 +35,7 @@ import { toast } from "sonner";
 import { buildSeoHead } from "@/lib/seo";
 import { Eye, EyeOff } from "lucide-react";
 import { IconCheck, IconChevronDown } from "@/components/icons";
-import logoUrl from "@/assets/stockme-logo.png";
+import logoUrl from "@/assets/stockme-logo.jpg";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>): { redirect?: string; mode?: "login" | "signup" } => ({

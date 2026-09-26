@@ -16,7 +16,6 @@ export type SidebarInfo = {
   lifetime: boolean;
   verifiedUntil: string | null;
   products: number;
-  favorites: number;
   hasWhatsapp: boolean;
   hasBanner: boolean;
   /** Produits publiés (id, nom, photo) : sert au pop-up « Booster » du sidebar. */
@@ -38,7 +37,9 @@ export function useSidebarInfo(enabled: boolean) {
       return;
     }
 
-    const [profRes, prodRes, favRes] = await Promise.all([
+    // Deux requêtes au lieu de trois : le compteur de favoris n'est plus affiché
+    // dans le menu (les favoris ont leur propre page), il ne servait plus à rien.
+    const [profRes, prodRes] = await Promise.all([
       supabase
         .from("profiles")
         .select("shop_name,full_name,avatar_url,verified,verified_until,banner_url,whatsapp")
@@ -52,7 +53,6 @@ export function useSidebarInfo(enabled: boolean) {
         .eq("published", true)
         .order("created_at", { ascending: false })
         .limit(8),
-      supabase.from("favorites").select("id", { count: "exact", head: true }).eq("user_id", uid),
     ]);
 
     const p = profRes.data as {
@@ -77,7 +77,6 @@ export function useSidebarInfo(enabled: boolean) {
       lifetime: verified && !verifiedUntil,
       verifiedUntil,
       products: prodRes.count ?? rows.length,
-      favorites: favRes.count ?? 0,
       hasWhatsapp: !!(p?.whatsapp && p.whatsapp.trim()),
       hasBanner: !!(p?.banner_url && p.banner_url.trim()),
       items: rows.map((r) => ({ id: r.id, name: r.name, image: r.images?.[0] ?? null })),

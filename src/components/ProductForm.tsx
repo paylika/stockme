@@ -266,6 +266,19 @@ export function ProductForm({
     const totalImages = existingImages.length + newFiles.length;
 
     if (trimmedName.length < 2) return stop("Nom du produit requis");
+    // COHÉRENCE DU CATALOGUE : un nom de produit est un NOM, pas une adresse.
+    // (On a trouvé en production une fiche qui s'appelait
+    // « https://www.alibaba.com/x/1lBGnCF » : illisible pour l'acheteur,
+    // introuvable dans la recherche, et impossible à mettre en avant.)
+    if (/https?:\/\/|www\./i.test(trimmedName) || /\b[a-z0-9-]+\.(com|net|org|fr|sn|ci|ml|bf|ne|gn|bj|tg|gh|ng)\b/i.test(trimmedName)) {
+      return stop("Le nom du produit ne peut pas être un lien : écrivez le nom de l'article (ex. « Climatiseur split 1,5 CV »).");
+    }
+    if (!/[a-zA-ZÀ-ÿ]{3}/.test(trimmedName)) {
+      return stop("Le nom du produit doit contenir des lettres (pas seulement des chiffres ou des symboles).");
+    }
+    if (trimmedName.length > 90) {
+      return stop("Nom trop long : 90 caractères maximum (mettez les détails dans la description).");
+    }
     if (!category || !city) return stop("Catégorie et localité requises");
     if (totalImages < 1 || totalImages > maxPhotos)
       return stop(`Ajoutez entre 1 et ${maxPhotos} photos.`);
@@ -336,6 +349,7 @@ export function ProductForm({
           id="name"
           required
           value={name}
+          maxLength={90}
           onChange={(e) => setName(e.target.value)}
           placeholder="Ex: T-shirts coton bio (lot)"
         />

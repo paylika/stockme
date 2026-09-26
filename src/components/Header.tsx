@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { AdminButton } from "@/components/AdminButton";
 import { IconHeart } from "@/components/icons";
 import { useAuth } from "@/hooks/useAuth";
-import logoUrl from "@/assets/stockme-logo.png";
+import logoUrl from "@/assets/stockme-logo.jpg";
 
 export function Header() {
   const { user } = useAuth();

@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Mail, MessageCircle, Phone } from "lucide-react";
-import logoUrl from "@/assets/stockme-logo.png";
+import logoUrl from "@/assets/stockme-logo.jpg";
 
 const CONTACT_EMAIL = "app.orderly@gmail.com";
 const WHATSAPP_DISPLAY = "+221 78 663 53 31";

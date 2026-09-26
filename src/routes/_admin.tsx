@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { ADMIN_NAV, AdminSidebar } from "@/components/AdminSidebar";
 import { buildSeoHead } from "@/lib/seo";
-import logoUrl from "@/assets/stockme-logo.png";
+import logoUrl from "@/assets/stockme-logo.jpg";
 
 export const Route = createFileRoute("/_admin")({
   beforeLoad: async ({ location }) => {
