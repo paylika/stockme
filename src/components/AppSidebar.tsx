@@ -4,13 +4,10 @@ import {
   IconAdmin,
   IconBadge,
   IconBox,
-  IconCheck,
   IconChevronDown,
   IconClock,
   IconCoins,
   IconFlame,
-  IconGrid,
-  IconHeart,
   IconHome,
   IconSell,
   IconStock,
@@ -21,9 +18,6 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -61,18 +55,21 @@ type NavItem = {
 };
 
 /**
- * Sidebar de l'ordinateur. Il porte TOUTE la navigation desktop (le Header est
- * masqué à partir de md) : identité de la boutique, recherche, argent du
- * vendeur, checklist de démarrage, puis les 3 sections Acheter / Vendre / Compte.
- * Réductible en icônes (bouton en bas ou Ctrl/Cmd + B), état mémorisé.
+ * Navigation de l'ordinateur — VOLONTAIREMENT COURTE : 5 entrées, pas une de
+ * plus (Accueil · Dropshipping · Publier · Annonce · Profil). Tout le reste
+ * (mes produits, statistiques, favoris, historique) vit dans « Profil », où il
+ * y a la place de l'expliquer.
+ *
+ * La barre ne défile PAS : son contenu tient toujours dans la hauteur de
+ * l'écran, donc pas de barre de défilement à l'intérieur du menu.
  */
 export function AppSidebar() {
   const { user } = useAuth();
   const pathname = useRouterState({ select: (r) => r.location.pathname });
+  const searchStr = useRouterState({ select: (r) => r.location.searchStr ?? "" });
   const navigate = useNavigate();
 
   const [collapsed, setCollapsed] = useState(false);
-  const [checkOpen, setCheckOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const { info, refresh } = useSidebarInfo(!!user);
@@ -129,43 +126,23 @@ export function AppSidebar() {
   }, [pathname, user, refresh, refreshMoney]);
 
   const isActive = (m: string) => pathname === m || (m !== "/" && pathname.startsWith(m));
+  /** « Annonce » et « Profil » mènent tous deux à /profile : l'onglet les sépare. */
+  const onAdsTab = pathname.startsWith("/profile") && searchStr.includes("tab=promo");
 
-  // ---------- Les 3 sections ----------
-  const buyItems: NavItem[] = [
+  // ---------- Les 5 entrées, point final ----------
+  const navItems: NavItem[] = [
     { to: "/", label: "Accueil", icon: IconHome, match: "/" },
-    { to: "/browse", label: "Parcourir le stock", icon: IconGrid, match: "/browse" },
     { to: "/dropshipping", label: "Dropshipping", icon: IconStock, match: "/dropshipping" },
-    {
-      to: user ? "/favorites" : "/auth",
-      label: "Favoris",
-      icon: IconHeart,
-      match: "/favorites",
-      count: info?.favorites || undefined,
-      authRedirect: user ? undefined : { redirect: "/favorites", mode: "signup" },
-    },
-  ];
-
-  const sellItems: NavItem[] = [
-    {
-      to: user ? "/dashboard" : "/auth",
-      label: "Mon stock",
-      icon: IconBox,
-      match: "/dashboard",
-      count: info?.products || undefined,
-      authRedirect: user ? undefined : { redirect: "/dashboard", mode: "signup" },
-    },
+    // La vraie action (bouton orange) est rendue à part, entre les deux.
     {
       to: user ? "/profile" : "/auth",
-      label: "Portefeuille & pub",
-      icon: IconCoins,
-      match: "__wallet__",
+      label: "Annonce",
+      icon: IconFlame,
+      match: "__ads__",
       count: activeBoosts || undefined,
       search: user ? { tab: "promo" } : undefined,
       authRedirect: user ? undefined : { redirect: "/profile", mode: "signup" },
     },
-  ];
-
-  const accountItems: NavItem[] = [
     {
       to: user ? "/profile" : "/auth",
       label: "Profil",
@@ -175,36 +152,20 @@ export function AppSidebar() {
     },
   ];
 
-  // ---------- Checklist de démarrage (disparaît quand tout est fait) ----------
-  const steps = [
-    { label: "Photo de profil", done: !!info?.avatarUrl, to: "/profile", search: undefined },
-    { label: "Numéro WhatsApp", done: !!info?.hasWhatsapp, to: "/profile/edit", search: undefined },
-    { label: "Publier un produit", done: (info?.products ?? 0) > 0, to: "/dashboard/new", search: undefined },
-    {
-      label: "Obtenir le badge vérifié",
-      done: !!info?.verified,
-      to: "/profile",
-      search: undefined,
-    },
-  ];
-  const doneCount = steps.filter((s) => s.done).length;
-  const progress = Math.round((doneCount / steps.length) * 100);
-  const showChecklist = !!user && !!info && doneCount < steps.length;
-
   const initials = (info?.shopName || user?.email || "S").trim().slice(0, 2).toUpperCase();
 
   return (
     <Sidebar
       collapsible="none"
       className={[
-        // no-scrollbar : la barre de défilement disparaît. Le contenu est
-        // compacté pour tenir à l'écran sans avoir à défiler.
-        "hidden md:flex md:sticky md:top-0 md:self-start md:!h-svh md:overflow-y-auto no-scrollbar",
+        // Pas de défilement interne : h-svh + overflow caché, et le contenu est
+        // court (5 entrées). Le menu reste donc parfaitement stable.
+        "hidden md:flex md:sticky md:top-0 md:self-start md:!h-svh md:overflow-hidden",
         "border-r border-border bg-background transition-[width] duration-200 ease-linear",
         collapsed ? "md:w-[4.75rem]" : "",
       ].join(" ")}
     >
-      {/* ============ En-tête : marque + compte (compact) ============ */}
+      {/* ============ En-tête : marque + boutique ============ */}
       <SidebarHeader className="border-b border-border/60 px-3 py-2.5">
         <Link
           to="/"
@@ -273,8 +234,9 @@ export function AppSidebar() {
         )}
       </SidebarHeader>
 
-      <SidebarContent className="px-2 py-2">
-        {/* ============ Mon argent : compact, une information et deux actions ============ */}
+      {/* `no-scrollbar` : même sur un écran très bas, aucune barre ne s'affiche. */}
+      <SidebarContent className="no-scrollbar gap-0 px-2 py-2">
+        {/* ============ Mon argent (vendeurs uniquement) ============ */}
         {user && wallet && isSeller && !collapsed && (
           <div className="mb-3 rounded-2xl border border-border bg-muted/40 px-3 py-2.5">
             <div className="flex items-baseline justify-between gap-2">
@@ -319,144 +281,56 @@ export function AppSidebar() {
           </div>
         )}
 
-        {/* ============ ACHETER ============ */}
-        <SidebarGroup className="p-0">
-          {!collapsed && (
-            <SidebarGroupLabel className="px-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              Acheter
-            </SidebarGroupLabel>
-          )}
-          <SidebarGroupContent className="mt-1">
-            <SidebarMenu className="gap-1">
-              {buyItems.map((it) => (
-                <NavRow key={it.label} item={it} active={isActive(it.match)} collapsed={collapsed} />
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* ============ Les 5 entrées (aucun titre de section : moins de bruit) ============ */}
+        <SidebarMenu className="gap-1">
+          <SidebarMenuItem>
+            <NavRow item={navItems[0]} active={isActive(navItems[0].match)} collapsed={collapsed} />
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <NavRow item={navItems[1]} active={isActive(navItems[1].match)} collapsed={collapsed} />
+          </SidebarMenuItem>
 
-        {/* ============ VENDRE ============ */}
-        <SidebarGroup className="mt-3 p-0">
-          {!collapsed && (
-            <SidebarGroupLabel className="px-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              Vendre
-            </SidebarGroupLabel>
-          )}
-          <SidebarGroupContent className="mt-1">
-            <SidebarMenu className="gap-1">
-              {/* Publier : la vraie action, en plein orange (l'orange est réservé aux actions) */}
-              <SidebarMenuItem>
-                <Link
-                  to={user ? "/dashboard/new" : "/auth"}
-                  search={(user ? undefined : { redirect: "/dashboard/new", mode: "signup" }) as never}
-                  title="Publier un produit"
-                  className={`flex h-10 items-center gap-3 rounded-xl bg-volt font-bold text-volt-foreground shadow-sm shadow-volt/30 transition hover:brightness-110 ${
-                    collapsed ? "justify-center px-0" : "px-3"
-                  }`}
-                >
-                  <IconSell className="h-[18px] w-[18px] shrink-0" />
-                  {!collapsed && <span className="truncate text-sm">Publier un produit</span>}
-                </Link>
-              </SidebarMenuItem>
-              {sellItems.map((it) => (
-                <NavRow
-                  key={it.label}
-                  item={it}
-                  active={isActive(it.match) || (it.match === "__wallet__" && isActive("/profile"))}
-                  collapsed={collapsed}
-                />
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* ============ COMPTE ============ */}
-        <SidebarGroup className="mt-3 p-0">
-          {!collapsed && (
-            <SidebarGroupLabel className="px-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              Compte
-            </SidebarGroupLabel>
-          )}
-          <SidebarGroupContent className="mt-1">
-            <SidebarMenu className="gap-1">
-              {accountItems.map((it) => (
-                <NavRow key={it.label} item={it} active={isActive(it.match)} collapsed={collapsed} />
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* ============ Checklist de démarrage : une seule ligne, dépliable ============ */}
-        {showChecklist && !collapsed && (
-          <div className="mt-auto pt-3">
-            <button
-              type="button"
-              onClick={() => setCheckOpen((v) => !v)}
-              className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left text-[11px] text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          {/* Publier : l'action principale, en orange */}
+          <SidebarMenuItem>
+            <Link
+              to={user ? "/dashboard/new" : "/auth"}
+              search={(user ? undefined : { redirect: "/dashboard/new", mode: "signup" }) as never}
+              title="Publier un produit"
+              className={`flex h-10 items-center gap-3 rounded-xl bg-volt font-bold text-volt-foreground shadow-sm shadow-volt/30 transition hover:brightness-110 ${
+                collapsed ? "justify-center px-0" : "px-3"
+              }`}
             >
-              <span className="relative grid h-4 w-4 shrink-0 place-items-center">
-                <svg viewBox="0 0 36 36" className="h-4 w-4 -rotate-90">
-                  <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeOpacity="0.2" strokeWidth="6" />
-                  <circle
-                    cx="18"
-                    cy="18"
-                    r="15"
-                    fill="none"
-                    stroke="var(--volt)"
-                    strokeWidth="6"
-                    strokeLinecap="round"
-                    strokeDasharray={`${(progress / 100) * 94.2} 94.2`}
-                  />
-                </svg>
-              </span>
-              <span className="min-w-0 flex-1 truncate">Complétez votre boutique</span>
-              <span className="shrink-0 font-bold text-volt">{doneCount}/{steps.length}</span>
-            </button>
+              <IconSell className="h-[18px] w-[18px] shrink-0" />
+              {!collapsed && <span className="truncate text-sm">Publier un produit</span>}
+            </Link>
+          </SidebarMenuItem>
 
-            {checkOpen && (
-              <ul className="mt-1.5 space-y-1.5 px-2 pb-1">
-                {steps.map((s) => (
-                  <li key={s.label}>
-                    {s.done ? (
-                      <span className="flex items-center gap-2 text-[11px] text-muted-foreground line-through">
-                        <IconCheck className="h-3.5 w-3.5 shrink-0 text-success" /> {s.label}
-                      </span>
-                    ) : (
-                      <Link
-                        to={s.to as never}
-                        className="flex items-center gap-2 text-[11px] font-medium hover:text-volt"
-                      >
-                        <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-muted-foreground/50" />
-                        {s.label}
-                      </Link>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+          <SidebarMenuItem>
+            <NavRow item={navItems[2]} active={onAdsTab} collapsed={collapsed} />
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <NavRow
+              item={navItems[3]}
+              active={isActive("/profile") && !onAdsTab}
+              collapsed={collapsed}
+            />
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarContent>
 
-      {/* ============ Pied : admin, réduire, support ============ */}
+      {/* ============ Pied : admin, réduire, aide ============ */}
       <SidebarFooter className="border-t border-border/60 px-3 py-2">
         {/* L'admin est un contexte à part : discret, en bas, sans titre de section. */}
-        {isAdmin && !collapsed && (
-          <Link
-            to="/admin"
-            className="mb-1 flex items-center gap-2 rounded-xl px-2 py-1.5 text-[11px] font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          >
-            <IconAdmin className="h-4 w-4 shrink-0" />
-            <span className="truncate">Administration</span>
-          </Link>
-        )}
-        {isAdmin && collapsed && (
+        {isAdmin && (
           <Link
             to="/admin"
             title="Administration"
-            className="mb-1 flex justify-center rounded-xl py-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            className={`mb-1 flex items-center gap-2 rounded-xl py-1.5 text-[11px] font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground ${
+              collapsed ? "justify-center px-0" : "px-2"
+            }`}
           >
-            <IconAdmin className="h-4 w-4" />
+            <IconAdmin className="h-4 w-4 shrink-0" />
+            {!collapsed && <span className="truncate">Administration</span>}
           </Link>
         )}
 
@@ -544,39 +418,37 @@ export function AppSidebar() {
 /** Une ligne de navigation, avec compteur optionnel et état actif allégé. */
 function NavRow({ item, active, collapsed }: { item: NavItem; active: boolean; collapsed: boolean }) {
   const Icon = item.icon;
+  const to = item.authRedirect && !item.search ? "/auth" : item.to;
+  const search = item.authRedirect
+    ? { redirect: item.authRedirect.redirect, mode: item.authRedirect.mode }
+    : item.search;
+
   return (
-    <SidebarMenuItem>
-      <SidebarMenuButton
-        asChild
-        isActive={active}
-        tooltip={collapsed ? item.label : undefined}
-        className={[
-          "relative h-10 rounded-xl text-sm font-medium transition-all",
-          collapsed ? "justify-center px-0" : "px-3",
-          active
-            ? "bg-muted font-semibold text-foreground before:absolute before:left-0 before:top-1/2 before:h-6 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-volt"
-            : "text-foreground/80 hover:bg-muted hover:text-foreground",
-        ].join(" ")}
-      >
-        <Link
-          to={item.to as never}
-          search={item.search as never}
-          title={item.label}
-          className="flex items-center gap-3"
-        >
-          <Icon className="h-[18px] w-[18px] shrink-0" />
-          {!collapsed && (
-            <>
-              <span className="min-w-0 flex-1 truncate">{item.label}</span>
-              {typeof item.count === "number" && (
-                <span className="shrink-0 rounded-full bg-muted-foreground/15 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                  {item.count}
-                </span>
-              )}
-            </>
-          )}
-        </Link>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+    <SidebarMenuButton
+      asChild
+      isActive={active}
+      tooltip={collapsed ? item.label : undefined}
+      className={[
+        "relative h-10 rounded-xl text-sm font-medium transition-all",
+        collapsed ? "justify-center px-0" : "px-3",
+        active
+          ? "bg-muted font-semibold text-foreground before:absolute before:left-0 before:top-1/2 before:h-6 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-volt"
+          : "text-foreground/80 hover:bg-muted hover:text-foreground",
+      ].join(" ")}
+    >
+      <Link to={to as never} search={search as never} title={item.label} className="flex items-center gap-3">
+        <Icon className="h-[18px] w-[18px] shrink-0" />
+        {!collapsed && (
+          <>
+            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+            {typeof item.count === "number" && (
+              <span className="shrink-0 rounded-full bg-muted-foreground/15 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                {item.count}
+              </span>
+            )}
+          </>
+        )}
+      </Link>
+    </SidebarMenuButton>
   );
 }

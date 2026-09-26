@@ -1,8 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import { AdminButton } from "@/components/AdminButton";
+import { IconHeart } from "@/components/icons";
+import { useAuth } from "@/hooks/useAuth";
 import logoUrl from "@/assets/stockme-logo.png";
 
 export function Header() {
+  const { user } = useAuth();
   return (
     /* Fond OPAQUE (et non translucide + flou) : sur iOS, `backdrop-filter` sur
        une barre `sticky` fait scintiller / découper la barre pendant le
@@ -20,6 +23,16 @@ export function Header() {
           </span>
         </Link>
         <div className="flex-1" />
+        {/* Favoris : plus dans la barre du bas, donc ici (un seul appui). */}
+        <Link
+          to={user ? "/favorites" : "/auth"}
+          search={(user ? undefined : { redirect: "/favorites", mode: "signup" }) as never}
+          aria-label="Mes favoris"
+          title="Mes favoris"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
+        >
+          <IconHeart className="h-5 w-5" />
+        </Link>
         <AdminButton />
       </div>
     </header>

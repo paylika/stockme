@@ -1,17 +1,22 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { IconHome, IconHeart, IconSell, IconUser, IconStock } from "@/components/icons";
+import { IconFlame, IconHome, IconSell, IconStock, IconUser } from "@/components/icons";
 import { Lock, MessageCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMobileAction } from "@/lib/mobile-action";
 
 export function MobileNav() {
   const { user } = useAuth();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
+  // « Annonce » et « Profil » mènent tous deux à /profile : l'onglet les sépare,
+  // sinon les deux s'allumeraient en même temps.
+  const onAdsTab = pathname.startsWith("/profile") && (search as { tab?: string })?.tab === "promo";
   // Sur une fiche produit, le bouton central devient l'action d'achat :
   // la navigation reste entièrement visible (on ne masque plus la barre).
   const action = useMobileAction();
 
-  // Same 5 icons whether logged in or not.
+  // Même navigation que sur ordinateur, au mot près :
+  // Accueil · Dropshipping · Publier · Annonce · Profil.
+  // (Les favoris sont accessibles par le cœur en haut de l'écran.)
   // Unauthenticated taps go through /auth with a redirect back.
   const items = [
     { to: "/", label: "Accueil", icon: IconHome, public: true },
@@ -25,11 +30,11 @@ export function MobileNav() {
       activeMatch: "/dashboard/new",
     },
     {
-      to: user ? "/favorites" : "/auth",
-      label: "Favoris",
-      icon: IconHeart,
-      search: user ? undefined : { redirect: "/favorites", mode: "signup" },
-      activeMatch: "/favorites",
+      to: user ? "/profile" : "/auth",
+      label: "Annonce",
+      icon: IconFlame,
+      search: user ? { tab: "promo" } : { redirect: "/profile", mode: "signup" },
+      activeMatch: "/profile",
     },
     {
       to: user ? "/profile" : "/auth",
@@ -50,9 +55,13 @@ export function MobileNav() {
           {items.map((it, idx) => {
             const Icon = it.icon;
             const matchPath = (it as any).activeMatch ?? it.to;
+            const label = (it as any).label;
             const active =
-              pathname === matchPath ||
-              (matchPath !== "/" && pathname.startsWith(matchPath));
+              label === "Annonce"
+                ? onAdsTab
+                : label === "Profil"
+                  ? pathname.startsWith("/profile") && !onAdsTab
+                  : pathname === matchPath || (matchPath !== "/" && pathname.startsWith(matchPath));
             if ((it as any).primary) {
               // Action d'achat prioritaire sur une fiche produit
               if (action) {

@@ -407,6 +407,13 @@ function ProfilePage() {
               <Mail className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">{user?.email}</span>
             </span>
+            {/* Les favoris ont quitté le menu (trop chargé) : ils vivent ici. */}
+            <Link
+              to="/favorites"
+              className="inline-flex items-center gap-1.5 font-semibold text-foreground underline underline-offset-2 hover:text-primary"
+            >
+              <Heart className="h-3.5 w-3.5" /> Mes favoris
+            </Link>
           </div>
 
           {/* ===== À propos (lecture seule) ===== */}
