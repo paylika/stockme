@@ -418,7 +418,12 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
           </p>
         </div>
 
-        <Button variant="volt" className="h-12 w-full text-sm font-bold" disabled={busy || methods.length === 0} onClick={pay}>
+        <Button
+          variant="volt"
+          className="h-auto min-h-12 w-full whitespace-normal px-3 py-2 text-sm font-bold leading-tight"
+          disabled={busy || methods.length === 0}
+          onClick={pay}
+        >
           {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
           {busy
             ? "Ouverture du paiement…"

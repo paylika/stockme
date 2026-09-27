@@ -347,16 +347,36 @@ export function AppSidebar() {
                 ? `Vendeur Pro : ${formatFCFA(PRO_MONTHLY_BOOST_CREDIT)} de mise en avant chaque mois + stats + publications illimitées.`
                 : `Vérifié = badge et priorité. Pro = badge + ${formatFCFA(PRO_MONTHLY_BOOST_CREDIT)} de pub par mois.`}
             </p>
+            {/* Deux lignes par bouton (nom puis prix) : le menu ne fait que
+                240 px de large, un libellé sur une seule ligne dépassait. */}
             <div className="mt-2 grid gap-1.5">
               <Link to="/tarifs" className="block">
-                <Button variant="volt" className="h-8 w-full text-[11px] font-bold">
-                  <IconFlame className="h-3.5 w-3.5" /> Être Vendeur Pro — {formatFCFA(planById("pro")?.price ?? 2900)}/mois
+                <Button
+                  variant="volt"
+                  className="h-auto min-h-9 w-full whitespace-normal px-2.5 py-1.5 text-left leading-tight"
+                >
+                  <IconFlame className="h-3.5 w-3.5" />
+                  <span className="flex min-w-0 flex-col">
+                    <span className="text-[11px] font-bold">Être Vendeur Pro</span>
+                    <span className="text-[10px] font-semibold opacity-90">
+                      {formatFCFA(planById("pro")?.price ?? 2900)} / mois
+                    </span>
+                  </span>
                 </Button>
               </Link>
               {!info?.verified && (
                 <Link to="/tarifs" className="block">
-                  <Button variant="outline" className="h-8 w-full text-[11px] font-semibold">
-                    <IconBadge className="h-3.5 w-3.5 text-primary" /> Être vérifié — {formatFCFA(VERIFIED_BADGE_PRICE_FCFA)}/an
+                  <Button
+                    variant="outline"
+                    className="h-auto min-h-9 w-full whitespace-normal px-2.5 py-1.5 text-left leading-tight"
+                  >
+                    <IconBadge className="h-3.5 w-3.5 text-primary" />
+                    <span className="flex min-w-0 flex-col">
+                      <span className="text-[11px] font-semibold">Être vérifié</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {formatFCFA(VERIFIED_BADGE_PRICE_FCFA)} / an
+                      </span>
+                    </span>
                   </Button>
                 </Link>
               )}

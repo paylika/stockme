@@ -1,6 +1,12 @@
 -- ############################################################################
 -- StockMe — OFFRE « VENDEUR PRO » — À COLLER DANS SUPABASE (SQL Editor)
 --
+-- ⚠️ MISE À JOUR : le crédit mensuel est passé à 2 000 F (au lieu de 3 000 F)
+--    et la mise en avant Pro démarre à 800 F/jour (au lieu de 1 000 F).
+--    → Pour la version à jour, utilisez `supabase/VITESSE.sql` (BLOC 2 et 3).
+--    Ce fichier reste utile pour la RÉPARATION DU BADGE (partie 3 du BLOC 1).
+--
+--
 -- Collez les 2 BLOCS l'un après l'autre (pas tout d'un coup : c'est ce qui
 -- provoque les erreurs « syntax error at or near DECLARE » quand le texte
 -- arrive tronqué).

@@ -255,7 +255,7 @@ export function BoostDialog({
           {alreadyRunning ? (
             <Button
               variant="volt"
-              className="h-12 w-full text-sm font-bold"
+              className="h-auto min-h-12 w-full whitespace-normal px-3 py-2 text-sm font-bold leading-tight"
               disabled={validDays < 1}
               onClick={() => recharge(needed)}
             >
@@ -263,21 +263,21 @@ export function BoostDialog({
               {validDays > 1 ? "s" : ""} de plus
             </Button>
           ) : covers ? (
-            <Button variant="volt" className="h-12 w-full text-sm font-bold" disabled={busy} onClick={start}>
+            <Button variant="volt" className="h-auto min-h-12 w-full whitespace-normal px-3 py-2 text-sm font-bold leading-tight" disabled={busy} onClick={start}>
               {busy ? "Activation…" : `Activer — ${validDays} jour${validDays > 1 ? "s" : ""} (${formatFCFA(needed)})`}
             </Button>
           ) : canStart ? (
             <>
-              <Button variant="volt" className="h-12 w-full text-sm font-bold" onClick={() => recharge(needed)}>
+              <Button variant="volt" className="h-auto min-h-12 w-full whitespace-normal px-3 py-2 text-sm font-bold leading-tight" onClick={() => recharge(needed)}>
                 <Wallet className="mr-1.5 h-4 w-4" /> Payer {formatFCFA(needed)} — {validDays} jour
                 {validDays > 1 ? "s" : ""}
               </Button>
-              <Button variant="outline" className="h-11 w-full" disabled={busy} onClick={start}>
+              <Button variant="outline" className="h-auto min-h-11 w-full whitespace-normal px-3 py-2 leading-tight" disabled={busy} onClick={start}>
                 Démarrer avec mon solde (≈ {daysWithBalance} jour{daysWithBalance > 1 ? "s" : ""})
               </Button>
             </>
           ) : (
-            <Button variant="volt" className="h-12 w-full text-sm font-bold" onClick={() => recharge(needed)}>
+            <Button variant="volt" className="h-auto min-h-12 w-full whitespace-normal px-3 py-2 text-sm font-bold leading-tight" onClick={() => recharge(needed)}>
               <Wallet className="mr-1.5 h-4 w-4" /> Payer {formatFCFA(needed)} — {validDays} jour
               {validDays > 1 ? "s" : ""}
             </Button>

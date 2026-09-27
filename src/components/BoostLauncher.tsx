@@ -358,7 +358,7 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
               {campaign?.days_served} jour{(campaign?.days_served ?? 0) > 1 ? "s" : ""} payé
               {(campaign?.days_served ?? 0) > 1 ? "s" : ""}).
             </p>
-            <Button variant="volt" className="h-12 w-full text-sm font-bold" disabled={validDays < 1} onClick={pay}>
+            <Button variant="volt" className="h-auto min-h-12 w-full whitespace-normal px-3 py-2 text-sm font-bold leading-tight" disabled={validDays < 1} onClick={pay}>
               <Wallet className="mr-1.5 h-4 w-4" /> Ajouter {validDays} jour{validDays > 1 ? "s" : ""} —{" "}
               {formatFCFA(needed)}
             </Button>
@@ -367,14 +367,14 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
             </p>
           </>
         ) : covers ? (
-          <Button variant="volt" className="h-12 w-full text-sm font-bold" disabled={busy || !selected} onClick={activate}>
+          <Button variant="volt" className="h-auto min-h-12 w-full whitespace-normal px-3 py-2 text-sm font-bold leading-tight" disabled={busy || !selected} onClick={activate}>
             {busy
               ? "Activation…"
               : `${campaign ? "Relancer" : "Activer"} — ${validDays} jour${validDays > 1 ? "s" : ""} (${formatFCFA(needed)})`}
           </Button>
         ) : (
           <>
-            <Button variant="volt" className="h-12 w-full text-sm font-bold" disabled={validDays < 1 || !selected} onClick={pay}>
+            <Button variant="volt" className="h-auto min-h-12 w-full whitespace-normal px-3 py-2 text-sm font-bold leading-tight" disabled={validDays < 1 || !selected} onClick={pay}>
               <Wallet className="mr-1.5 h-4 w-4" /> Payer {formatFCFA(needed)} — {validDays} jour
               {validDays > 1 ? "s" : ""}
             </Button>
@@ -384,7 +384,7 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
               conservé : la mise en avant démarre d'un seul appui.
             </p>
             {canStart && (
-              <Button variant="outline" className="h-11 w-full" disabled={busy || !selected} onClick={activate}>
+              <Button variant="outline" className="h-auto min-h-11 w-full whitespace-normal px-3 py-2 leading-tight" disabled={busy || !selected} onClick={activate}>
                 Démarrer tout de suite avec mon solde (≈ {daysWithBalance} jour
                 {daysWithBalance > 1 ? "s" : ""})
               </Button>

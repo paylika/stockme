@@ -857,20 +857,27 @@ function ProfilePage() {
                           </span>
                         </li>
                       </ul>
-                      <div className="mt-3 flex flex-wrap gap-2">
+                      <div className="mt-3 grid gap-2 sm:flex sm:flex-wrap">
+                        {/* Pleine largeur sur mobile, libellé sur 2 lignes : le
+                            texte ne doit JAMAIS sortir du bouton. */}
                         <Button
                           variant="volt"
-                          className="h-11"
+                          className="h-auto min-h-11 w-full whitespace-normal px-3 py-2 text-left leading-tight sm:w-auto"
                           onClick={() => {
                             setUpgradePlan("pro");
                             setUpgradeOpen(true);
                           }}
                         >
-                          <Rocket className="mr-1.5 h-4 w-4" /> Passer Vendeur Pro —{" "}
-                          {formatFCFA(planById("pro")?.price ?? 2900)}/mois
+                          <Rocket className="h-4 w-4 shrink-0" />
+                          <span className="flex min-w-0 flex-col">
+                            <span className="text-sm font-bold">Passer Vendeur Pro</span>
+                            <span className="text-[11px] font-semibold opacity-90">
+                              {formatFCFA(planById("pro")?.price ?? 2900)} / mois
+                            </span>
+                          </span>
                         </Button>
-                        <Link to="/tarifs">
-                          <Button variant="outline" className="h-11">
+                        <Link to="/tarifs" className="block">
+                          <Button variant="outline" className="h-11 w-full sm:w-auto">
                             Voir ce que ça change
                           </Button>
                         </Link>
