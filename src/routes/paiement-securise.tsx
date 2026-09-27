@@ -136,8 +136,7 @@ function SecurePaymentPage() {
             </a>
           </div>
           <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-            Un seul compte sert aux deux côtés : l'acheteur paie et suit sa commande, le vendeur encaisse après
-            livraison.
+            L'acheteur paie et suit sa commande dans l'application, le vendeur y encaisse après livraison.
           </p>
         </section>
 
