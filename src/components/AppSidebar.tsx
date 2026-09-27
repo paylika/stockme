@@ -26,6 +26,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useSidebarInfo } from "@/hooks/useSidebarInfo";
+import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { useWallet } from "@/hooks/useWallet";
 import { useSellerMoney } from "@/components/SellerMoneyProvider";
 import {
@@ -39,7 +40,6 @@ import { isAdminEmail, VERIFIED_BADGE_PRICE_FCFA } from "@/lib/constants";
 import { PRO_MONTHLY_BOOST_CREDIT, planById } from "@/lib/pricing";
 import { VerifiedMark } from "@/components/VerifiedBadge";
 import { formatFCFA } from "@/lib/format";
-import { countMatchingRequests } from "@/lib/buying-requests";
 import logoUrl from "@/assets/stockme-logo.jpg";
 
 const COLLAPSE_KEY = "stockme:sidebar:collapsed";
@@ -75,6 +75,12 @@ export function AppSidebar() {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const { info, refresh } = useSidebarInfo(!!user);
+  /**
+   * VITESSE : le compteur de demandes et le solde viennent du paquet unique
+   * `seller_dashboard` (chargé une seule fois pour tout le site) au lieu de
+   * deux appels séparés à chaque page.
+   */
+  const { data: dashboard, refresh: refreshDashboard } = useSellerDashboard(!!user);
   const money = useSellerMoney();
   // Le portefeuille ne se charge QUE s'il n'est pas déjà fourni par la racine :
   // sans ce garde-fou, chaque page déclenchait DEUX appels à `wallet_overview`.
@@ -133,32 +139,8 @@ export function AppSidebar() {
 
   // Demandes d'achat qui correspondent à mes catégories / ma ville : c'est le
   // compteur qui fait revenir un fournisseur sur le site (de l'argent à prendre).
-  // Recalculé au maximum une fois par minute : c'est une requête en moins à
-  // chaque clic de navigation.
-  const [requests, setRequests] = useState(0);
-  useEffect(() => {
-    if (!user) return;
-    let last = 0;
-    try {
-      last = Number(sessionStorage.getItem("stockme:requests-count-at") ?? "0");
-    } catch {
-      last = 0;
-    }
-    if (Date.now() - last < 60_000) return;
-    let cancel = false;
-    countMatchingRequests().then((n) => {
-      if (cancel) return;
-      setRequests(n);
-      try {
-        sessionStorage.setItem("stockme:requests-count-at", String(Date.now()));
-      } catch {
-        /* stockage indisponible : on recalculera, sans gravité */
-      }
-    });
-    return () => {
-      cancel = true;
-    };
-  }, [user]);
+  // Il arrive dans le paquet unique : aucun appel dédié.
+  const requests = dashboard?.requests ?? 0;
 
   // ---------- Les 5 entrées, point final ----------
   const navItems: NavItem[] = [

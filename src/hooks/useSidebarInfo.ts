@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/stockme-client";
+import { useCallback } from "react";
+import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 
 /**
  * Informations du vendeur affichées dans le sidebar (ordinateur) :
@@ -24,75 +24,47 @@ export type SidebarInfo = {
   items: { id: string; name: string; image: string | null }[];
 };
 
+/**
+ * RÉÉCRIT POUR LA VITESSE : plus aucune requête propre. Les informations du
+ * menu viennent du paquet unique déjà chargé (`seller_dashboard`), donc
+ * ouvrir une page ne coûte PLUS RIEN au menu latéral.
+ */
 export function useSidebarInfo(enabled: boolean) {
-  const [info, setInfo] = useState<SidebarInfo | null>(null);
+  const { data, refresh: reload } = useSellerDashboard(enabled);
 
   const refresh = useCallback(async () => {
-    if (!enabled) {
-      setInfo(null);
-      return;
-    }
-    const { data: session } = await supabase.auth.getSession();
-    const uid = session.session?.user?.id;
-    if (!uid) {
-      setInfo(null);
-      return;
-    }
+    await reload();
+  }, [reload]);
 
-    // Deux requêtes au lieu de trois : le compteur de favoris n'est plus affiché
-    // dans le menu (les favoris ont leur propre page), il ne servait plus à rien.
-    const [profRes, prodRes] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("shop_name,full_name,avatar_url,verified,verified_until,banner_url,whatsapp,plan")
-        .eq("id", uid)
-        .maybeSingle(),
-      supabase
-        .from("products")
-        // `count: "exact"` renvoie le TOTAL (même avec la limite de 8 lignes).
-        .select("id,name,images", { count: "exact" })
-        .eq("owner_id", uid)
-        .eq("published", true)
-        .order("created_at", { ascending: false })
-        .limit(8),
-    ]);
+  const p = data?.profile ?? null;
+  if (!enabled || !p) return { info: null, refresh };
 
-    const p = profRes.data as {
-      shop_name: string | null;
-      full_name: string | null;
-      avatar_url: string | null;
-      verified: boolean | null;
-      verified_until: string | null;
-      banner_url: string | null;
-      whatsapp: string | null;
-      plan: string | null;
-    } | null;
+  const verifiedUntil = p.verified_until ?? null;
+  const verified = !!p.verified && (!verifiedUntil || new Date(verifiedUntil) > new Date());
+  // Pro seulement tant que l'abonnement court : la date d'échéance est
+  // repoussée de 30 jours à chaque paiement.
+  const isPro = p.plan === "pro" && (!verifiedUntil || new Date(verifiedUntil) > new Date());
 
-    const verifiedUntil = p?.verified_until ?? null;
-    const verified = !!p?.verified && (!verifiedUntil || new Date(verifiedUntil) > new Date());
-    // Pro seulement tant que l'abonnement court : la date d'échéance est
-    // repoussée de 30 jours à chaque paiement.
-    const isPro = p?.plan === "pro" && (!verifiedUntil || new Date(verifiedUntil) > new Date());
+  // Les produits arrivent déjà du même paquet (du plus récent au plus ancien).
+  const online = (data?.products ?? []).filter((prod) => prod.published);
 
-    const rows = (prodRes.data as { id: string; name: string; images: string[] | null }[] | null) ?? [];
-
-    setInfo({
-      shopName: p?.shop_name?.trim() || p?.full_name?.trim() || "Ma boutique",
-      avatarUrl: p?.avatar_url ?? null,
+  return {
+    info: {
+      shopName: p.shop_name?.trim() || p.full_name?.trim() || "Ma boutique",
+      avatarUrl: p.avatar_url ?? null,
       verified,
       lifetime: verified && !verifiedUntil,
       verifiedUntil,
       isPro,
-      products: prodRes.count ?? rows.length,
-      hasWhatsapp: !!(p?.whatsapp && p.whatsapp.trim()),
-      hasBanner: !!(p?.banner_url && p.banner_url.trim()),
-      items: rows.map((r) => ({ id: r.id, name: r.name, image: r.images?.[0] ?? null })),
-    });
-  }, [enabled]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  return { info, refresh };
+      products: online.length,
+      hasWhatsapp: !!(p.whatsapp && p.whatsapp.trim()),
+      hasBanner: !!(p.banner_url && p.banner_url.trim()),
+      items: online.slice(0, 8).map((prod) => ({
+        id: prod.id,
+        name: prod.name,
+        image: prod.images?.[0] ?? null,
+      })),
+    } satisfies SidebarInfo,
+    refresh,
+  };
 }

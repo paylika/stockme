@@ -316,7 +316,9 @@ function PricingPage() {
                 <div className="mt-3 rounded-xl bg-muted/50 px-3 py-2 text-xs">
                   <span className="inline-flex items-center gap-1.5 font-semibold">
                     <Rocket className="h-3.5 w-3.5 text-volt" /> Mise en avant : {formatFCFA(plan.boostPerDay)} / jour
-                    <span className="font-normal text-muted-foreground">· dégressif jusqu'à 800 F</span>
+                    <span className="font-normal text-muted-foreground">
+                      · dégressif jusqu'à {formatFCFA(plan.boostPerDay <= 800 ? 600 : 800)} F
+                    </span>
                   </span>
                 </div>
 
@@ -405,9 +407,9 @@ function PricingPage() {
             de répéter les mêmes lignes dans un tableau. */}
         <div className="mt-3 rounded-2xl border border-border bg-muted/40 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
           <strong className="text-foreground">Identique pour tout le monde :</strong> {FREE_PRODUCTS} produits publiés
-          offerts, {MAX_PHOTOS_PER_PRODUCT} photos par produit, et la mise en avant à{" "}
-          {formatFCFA(BOOST_DAY_PRICE)} par jour. Au-delà de {FREE_PRODUCTS} produits, chaque publication coûte{" "}
-          {formatFCFA(EXTRA_PUBLICATION_PRICE)}, prélevés sur votre solde.
+          offerts, {MAX_PHOTOS_PER_PRODUCT} photos par produit, et {formatFCFA(EXTRA_PUBLICATION_PRICE)} par publication
+          au-delà de {FREE_PRODUCTS} (prélevés sur votre solde). La mise en avant, elle, démarre à{" "}
+          {formatFCFA(BOOST_DAY_PRICE)}/jour — et à {formatFCFA(800)}/jour pour un Vendeur Pro.
         </div>
 
         <div className="mt-4 overflow-x-auto rounded-2xl border border-border bg-card">
@@ -416,24 +418,33 @@ function PricingPage() {
               <tr>
                 <th className="px-4 py-3 text-left">Avantage</th>
                 <th className="px-4 py-3 text-center">Gratuit</th>
-                <th className="px-4 py-3 text-center">{PRO_AVAILABLE ? "Vérifié / PRO" : "Fournisseur vérifié"}</th>
+                <th className="px-4 py-3 text-center">Vérifié</th>
+                {PRO_AVAILABLE && <th className="px-4 py-3 text-center">Vendeur Pro</th>}
               </tr>
             </thead>
             <tbody className="text-[13px]">
               {[
-                ["Badge « Fournisseur vérifié »", "—", "Sur toutes vos annonces"],
-                ["Priorité dans la recherche", "—", "Oui"],
-                ["Recherche par image", "—", "Vos produits remontent d'abord"],
-                ["Mise en avant offerte", "—", `${formatFCFA(VERIFICATION_BONUS_FCFA)} offerts`],
-                ["Statistiques (vues, clics, contacts)", "De base", "Avancées"],
-                ["Assistance", "Standard", "Prioritaire WhatsApp"],
-              ].map(([label, free, pro]) => (
+                ["Badge « Fournisseur vérifié »", "—", "Sur toutes vos annonces", "Inclus"],
+                ["Prix de la mise en avant", `${formatFCFA(1000)} / jour`, `${formatFCFA(1000)} / jour`, `dès ${formatFCFA(800)} / jour (jusqu'à ${formatFCFA(600)})`],
+                ["Crédit de mise en avant chaque mois", "—", "—", `${formatFCFA(PRO_MONTHLY_BOOST_CREDIT)} offerts`],
+                ["Publications", `${FREE_PRODUCTS} offertes, puis ${formatFCFA(EXTRA_PUBLICATION_PRICE)}`, `${FREE_PRODUCTS} offertes, puis ${formatFCFA(EXTRA_PUBLICATION_PRICE)}`, "Illimitées"],
+                ["Statistiques par produit (coût par contact)", "—", "—", "Oui"],
+                ["Priorité dans la recherche", "—", "Oui", "Oui"],
+                ["Mise en avant offerte à l'activation", "—", `${formatFCFA(VERIFICATION_BONUS_FCFA)} offerts`, `${formatFCFA(VERIFICATION_BONUS_FCFA)} offerts`],
+                ["Assistance", "Standard", "Prioritaire WhatsApp", "Prioritaire WhatsApp"],
+              ].map(([label, free, verifie, pro]) => (
                 <tr key={label} className="border-t border-border">
                   <td className="px-4 py-3 font-medium">{label}</td>
-                  <td className="px-4 py-3 text-center text-muted-foreground">
-                    {free === "—" ? <X className="mx-auto h-4 w-4 text-muted-foreground/60" /> : free}
-                  </td>
-                  <td className="px-4 py-3 text-center font-semibold text-foreground">{pro}</td>
+                  {[free, verifie, ...(PRO_AVAILABLE ? [pro] : [])].map((cell, i) => (
+                    <td
+                      key={i}
+                      className={`px-4 py-3 text-center ${
+                        i === (PRO_AVAILABLE ? 2 : 1) ? "font-semibold text-foreground" : "text-muted-foreground"
+                      }`}
+                    >
+                      {cell === "—" ? <X className="mx-auto h-4 w-4 text-muted-foreground/60" /> : cell}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>

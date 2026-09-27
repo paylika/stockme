@@ -581,6 +581,17 @@ export type Database = {
         }
         Returns: Record<string, unknown>
       }
+      seller_dashboard: {
+        Args: Record<string, never>
+        Returns: {
+          ok: boolean
+          profile: Record<string, unknown> | null
+          products: Record<string, unknown>[]
+          stats: Record<string, unknown> | null
+          wallet: Record<string, unknown> | null
+          requests: number
+        }
+      }
       wallet_overview: {
         Args: Record<string, never>
         Returns: {

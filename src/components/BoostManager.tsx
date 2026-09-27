@@ -5,6 +5,7 @@ import { formatFCFA } from "@/lib/format";
 import type { BoostRow, WalletData } from "@/hooks/useWallet";
 import { toggleBoostStatus } from "@/components/SellerMoneyProvider";
 import { boostDaysFor } from "@/lib/pricing";
+import { useIsPro } from "@/hooks/useSellerDashboard";
 import { thumb } from "@/lib/img";
 import { Ban, Eye, MessageCircle, Pause, Play, Plus, Rocket, Wallet } from "lucide-react";
 
@@ -41,6 +42,8 @@ export function BoostManager({ wallet, loading, onRecharge, onExtend, onChanged 
 
   const dailySpend = running.reduce((s, b) => s + b.daily_budget_fcfa, 0);
   const daysLeft = dailySpend > 0 ? Math.floor(balance / dailySpend) : 0;
+  /** Vendeur Pro : la journée coûte moins cher (800/700/600 au lieu de 1000/900/800). */
+  const isPro = useIsPro();
 
   const act = async (id: string, next: "active" | "paused" | "ended") => {
     setBusyId(id);
@@ -94,8 +97,8 @@ export function BoostManager({ wallet, loading, onRecharge, onExtend, onChanged 
               live
               extra={
                 <span className="font-semibold text-success">
-                  ≈ {boostDaysFor(balance)} jour{boostDaysFor(balance) > 1 ? "s" : ""} restant
-                  {boostDaysFor(balance) > 1 ? "s" : ""}
+                  ≈ {boostDaysFor(balance, isPro)} jour{boostDaysFor(balance, isPro) > 1 ? "s" : ""} restant
+                  {boostDaysFor(balance, isPro) > 1 ? "s" : ""}
                 </span>
               }
               onAct={act}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
+import { useIsPro } from "@/hooks/useSellerDashboard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatFCFA } from "@/lib/format";
@@ -42,16 +43,16 @@ type Props = {
 };
 
 /** Montants des 3 formules : 7 000 / 15 000 / 30 000 F. */
-const PACK_AMOUNTS = BOOST_PACKS.map((p) => boostPriceFor(p.days));
+const packAmounts = (isPro: boolean) => BOOST_PACKS.map((p) => boostPriceFor(p.days, isPro));
 
 /**
  * Lancer une mise en avant SANS quitter la page Sponsorisation :
  *   ① le produit — ② la durée — ③ payer ou activer.
  *
- * Le prix est le même pour tout le monde (1 000 F par jour) : la durée EST le
- * montant (7 jours = 7 000 F, 30 jours = 30 000 F), il n'y a donc rien à
- * comprendre. Si le solde ne suffit pas, on paie exactement ce qu'il faut et le
- * choix (produit + durée) est mémorisé pour le retour du paiement.
+ * La durée EST le montant (7 jours = 7 jours payés, quel que soit le tarif du
+ * jour). Un Vendeur Pro paie 800 F/jour au lieu de 1 000 F, et 600 F sur les
+ * longues durées. Si le solde ne suffit pas, on paie exactement ce qu'il faut et
+ * le choix (produit + durée) est mémorisé pour le retour du paiement.
  */
 export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -118,14 +119,16 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
 
   const wanted = customDays ? Math.floor(Number(customDays)) : days;
   const validDays = Number.isFinite(wanted) && wanted >= BOOST_MIN_DAYS ? Math.min(wanted, BOOST_MAX_DAYS) : 0;
-  /** Tarif dégressif : 1 000 F/jour jusqu'à 10 jours, puis 900, puis 800. */
-  const dayPrice = boostDayPrice(validDays);
-  const needed = boostPriceFor(validDays);
-  const saving = boostSavingsFor(validDays);
+  /** Tarif dégressif : 1 000 F/jour jusqu'à 10 jours, puis 900, puis 800.
+   *  Vendeur Pro : 800 / 700 / 600. */
+  const isPro = useIsPro();
+  const dayPrice = boostDayPrice(validDays, isPro);
+  const needed = boostPriceFor(validDays, isPro);
+  const saving = boostSavingsFor(validDays, isPro);
   const missing = Math.max(0, needed - balance);
   const canStart = balance >= dayPrice;
   const covers = validDays > 0 && balance >= needed;
-  const daysWithBalance = boostDaysFor(balance);
+  const daysWithBalance = boostDaysFor(balance, isPro);
 
   const activate = async () => {
     if (!selected) return;
@@ -134,7 +137,7 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
       p_product_id: selected.id,
       // On transmet le TARIF DU JOUR de la durée choisie : c'est lui qui est
       // débité chaque jour, donc la remise s'applique pour de vrai.
-      p_daily_budget: boostDayPrice(validDays),
+      p_daily_budget: boostDayPrice(validDays, isPro),
     });
     setBusy(false);
     if (error) return toast.error(error.message);
@@ -157,7 +160,7 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
   const pay = () => {
     if (!selected) return;
     saveBoostIntent({ productId: selected.id, productName: selected.name, days: validDays });
-    onTopUp(needed, PACK_AMOUNTS);
+    onTopUp(needed, packAmounts(isPro));
   };
 
   if (products !== null && live.length === 0) {
@@ -295,8 +298,8 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
             <div className="mt-3 grid grid-cols-3 gap-2">
               {BOOST_PACKS.map((p) => {
                 const active = !customDays && days === p.days;
-                const packPrice = boostPriceFor(p.days);
-                const packSaving = boostSavingsFor(p.days);
+                const packPrice = boostPriceFor(p.days, isPro);
+                const packSaving = boostSavingsFor(p.days, isPro);
                 return (
                   <button
                     key={p.days}

@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/stockme-client";
+import { useIsPro } from "@/hooks/useSellerDashboard";
 import { formatFCFA } from "@/lib/format";
 import {
   BOOST_DEFAULT_DAYS,
@@ -80,17 +81,19 @@ export function BoostDialog({
   const wanted = customDays ? Math.floor(Number(customDays)) : days;
   const validDays = Number.isFinite(wanted) && wanted >= BOOST_MIN_DAYS ? Math.min(wanted, BOOST_MAX_DAYS) : 0;
   /**
-   * Tarif DÉGRESSIF : 1 000 F/jour (1 à 10 jours), 900 F (11 à 20), 800 F (21+).
-   * C'est ce tarif du jour qui est transmis à la base : elle débite exactement
-   * ce montant chaque jour, donc la remise s'applique réellement.
+   * Tarif DÉGRESSIF — 1 000 F/jour (1 à 10 jours), 900 F (11 à 20), 800 F (21+),
+   * et 800 / 700 / 600 F pour un Vendeur Pro. C'est ce tarif du jour qui est
+   * transmis à la base : elle débite exactement ce montant chaque jour, donc la
+   * remise s'applique réellement.
    */
-  const dayPrice = boostDayPrice(validDays);
-  const needed = boostPriceFor(validDays);
-  const saving = boostSavingsFor(validDays);
+  const isPro = useIsPro();
+  const dayPrice = boostDayPrice(validDays, isPro);
+  const needed = boostPriceFor(validDays, isPro);
+  const saving = boostSavingsFor(validDays, isPro);
   const missing = Math.max(0, needed - balance);
   const canStart = balance >= dayPrice;
   const covers = validDays > 0 && balance >= needed;
-  const daysWithBalance = boostDaysFor(balance);
+  const daysWithBalance = boostDaysFor(balance, isPro);
   const alreadyRunning = existing?.status === "active";
 
   const selectDays = (v: number) => {
@@ -102,7 +105,7 @@ export function BoostDialog({
     setBusy(true);
     const { data, error } = await supabase.rpc("boost_start", {
       p_product_id: productId,
-      p_daily_budget: boostDayPrice(validDays),
+      p_daily_budget: boostDayPrice(validDays, isPro),
     });
     setBusy(false);
 
@@ -128,7 +131,7 @@ export function BoostDialog({
   const recharge = (amount: number) => {
     saveBoostIntent({ productId, productName, days: validDays });
     onOpenChange(false);
-    onTopUpRequested(amount, BOOST_PACKS.map((p) => boostPriceFor(p.days)));
+    onTopUpRequested(amount, BOOST_PACKS.map((p) => boostPriceFor(p.days, isPro)));
   };
 
   // Durées proposées + durée libre : le tarif du jour baisse avec la durée.
@@ -139,8 +142,8 @@ export function BoostDialog({
         <div className="grid grid-cols-3 gap-2">
           {BOOST_PACKS.map((p) => {
             const active = !customDays && days === p.days;
-            const packPrice = boostPriceFor(p.days);
-            const packSaving = boostSavingsFor(p.days);
+            const packPrice = boostPriceFor(p.days, isPro);
+            const packSaving = boostSavingsFor(p.days, isPro);
             return (
               <button
                 key={p.days}

@@ -45,30 +45,20 @@ type Props = {
  * Les campagnes vivent dans l'onglet Sponsorisation, les chiffres dans Stat.
  */
 export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChanged, plan, proUntil, onPro }: Props) {
-  // Réparation automatique : une campagne active et financée dont l'annonce
-  // n'est plus servie est remise en service (aucun débit : la journée est payée).
-  useEffect(() => {
-    let cancel = false;
-    (async () => {
-      const { data } = await supabase.rpc("boost_self_heal");
-      if (cancel) return;
-      const repaired = (data as { repaired?: number } | null)?.repaired ?? 0;
-      if (repaired > 0) onChanged?.();
-    })();
-    return () => {
-      cancel = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // NOTE VITESSE : la réparation automatique des campagnes (boost_self_heal)
+  // est désormais faite par la base DANS le paquet unique `seller_dashboard`.
+  // Plus aucun appel supplémentaire ici.
 
   if (loading) return <div className="h-40 rounded-2xl shimmer bg-muted" />;
   if (!wallet) return null;
 
   const balance = wallet.balance_fcfa ?? 0;
+  // Un Vendeur Pro paie la mise en avant 800 F/jour (au lieu de 1 000 F).
+  const isPro = plan === "pro";
   const running = wallet.boosts.filter((b) => b.status === "active");
   const dailySpend = running.reduce((s, b) => s + b.daily_budget_fcfa, 0);
   const daysLeft = dailySpend > 0 ? Math.floor(balance / dailySpend) : 0;
-  const daysAvailable = boostDaysFor(balance);
+  const daysAvailable = boostDaysFor(balance, isPro);
 
   const presets = [1000, 3000, 7000, 13500, 24000];
 
@@ -131,8 +121,9 @@ export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChang
                 Vendeur Pro — {formatFCFA(planById("pro")?.price ?? 2900)}/mois
               </p>
               <p className="mt-1 text-xs leading-relaxed">
-                <strong>{formatFCFA(PRO_MONTHLY_BOOST_CREDIT)} de mise en avant versés sur ce solde chaque mois</strong>{" "}
-                — soit plus que le prix de l'abonnement. Vous récupérez donc l'argent en jours de mise en avant.
+                <strong>{formatFCFA(PRO_MONTHLY_BOOST_CREDIT)} de mise en avant versés sur ce solde chaque mois</strong>, et
+                la journée de mise en avant à {formatFCFA(800)} au lieu de {formatFCFA(BOOST_DAY_PRICE)} —{" "}
+                {formatFCFA(600)} sur les longues durées.
               </p>
               <ul className="mt-2 space-y-1 text-[11px] text-muted-foreground">
                 <li className="flex items-start gap-1.5">
@@ -145,6 +136,10 @@ export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChang
                 <li className="flex items-start gap-1.5">
                   <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-volt" />
                   <span>Badge « Fournisseur vérifié » et priorité dans la recherche inclus</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-volt" />
+                  <span>Statistiques détaillées (par produit et coût par contact)</span>
                 </li>
                 <li className="flex items-start gap-1.5">
                   <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-volt" />
@@ -166,9 +161,10 @@ export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChang
           <li className="flex items-start gap-2">
             <Rocket className="mt-0.5 h-4 w-4 shrink-0 text-volt" />
             <span>
-              <strong className="text-foreground">Mise en avant d'un produit</strong> — {formatFCFA(BOOST_DAY_PRICE)}{" "}
-              le jour. Plus vous prenez de jours, moins la journée coûte : contenus {formatFCFA(900)} dès 11 jours et{" "}
-              {formatFCFA(800)} dès 21 jours. Débitée automatiquement chaque jour, en pause quand vous voulez.
+              <strong className="text-foreground">Mise en avant d'un produit</strong> — {formatFCFA(isPro ? 800 : BOOST_DAY_PRICE)}{" "}
+              le jour{isPro ? " (tarif Vendeur Pro)" : ""}. Plus vous prenez de jours, moins la journée coûte : ensuite{" "}
+              {formatFCFA(isPro ? 700 : 900)} dès 11 jours et {formatFCFA(isPro ? 600 : 800)} dès 21 jours. Débitée
+              automatiquement chaque jour, en pause quand vous voulez.
             </span>
           </li>
           <li className="flex items-start gap-2">
@@ -204,13 +200,13 @@ export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChang
             <button
               key={d}
               type="button"
-              onClick={() => onRecharge(boostPriceFor(d), presets)}
+              onClick={() => onRecharge(boostPriceFor(d, isPro), presets)}
               className="rounded-xl border border-border bg-background px-2 py-2.5 text-center transition hover:border-volt hover:bg-volt/5"
             >
               <span className="block text-sm font-bold">{d} jour{d > 1 ? "s" : ""}</span>
-              <span className="block text-xs font-semibold text-foreground">{formatFCFA(boostPriceFor(d))}</span>
+              <span className="block text-xs font-semibold text-foreground">{formatFCFA(boostPriceFor(d, isPro))}</span>
               <span className="block text-[10px] text-muted-foreground">
-                {boostSavingsFor(d) > 0 ? `économisez ${formatFCFA(boostSavingsFor(d))}` : "prix normal"}
+                {boostSavingsFor(d, isPro) > 0 ? `économisez ${formatFCFA(boostSavingsFor(d, isPro))}` : "prix normal"}
               </span>
             </button>
           ))}

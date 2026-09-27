@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/stockme-client";
+import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 
 export type WalletTx = {
   amount_fcfa: number;
@@ -46,33 +45,18 @@ export type WalletData = {
 
 /**
  * Solde, mouvements et campagnes de boost du vendeur.
- * Ne s'exécute que si le vendeur est connecté ; renvoie null en cas d'échec
- * (l'interface masque alors simplement la carte).
+ *
+ * Depuis la refonte « vitesse », le portefeuille arrive DANS le paquet unique
+ * de l'espace vendeur (`seller_dashboard`) : plus aucun appel supplémentaire,
+ * et le solde est toujours cohérent avec le profil et les statistiques.
+ * `refresh()` recharge ce paquet entier.
  */
 export function useWallet(enabled = true) {
-  const [data, setData] = useState<WalletData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, refresh } = useSellerDashboard(enabled);
 
-  const refresh = useCallback(async () => {
-    if (!enabled) {
-      setData(null);
-      setLoading(false);
-      return;
-    }
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData.session?.user) {
-      setData(null);
-      setLoading(false);
-      return;
-    }
-    const { data: overview, error } = await supabase.rpc("wallet_overview");
-    setData(error ? null : ((overview as WalletData | null) ?? null));
-    setLoading(false);
-  }, [enabled]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  return { wallet: data, loading, refresh };
+  return {
+    wallet: enabled ? (data?.wallet ?? null) : null,
+    loading: enabled ? loading : false,
+    refresh,
+  };
 }

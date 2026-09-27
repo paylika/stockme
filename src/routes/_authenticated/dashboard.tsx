@@ -208,7 +208,8 @@ function Dashboard() {
                 <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
                   <strong className="text-foreground">Publications illimitées</strong> +{" "}
                   <strong className="text-foreground">{formatFCFA(PRO_MONTHLY_BOOST_CREDIT)} de mise en avant versés
-                  chaque mois</strong> sur votre solde (soit plus que l'abonnement) + badge vérifié inclus.
+                  chaque mois</strong> sur votre solde + la journée de pub à {formatFCFA(800)} au lieu de{" "}
+                  {formatFCFA(1000)} + badge vérifié inclus.
                 </p>
                 <Link to="/tarifs" className="mt-2 inline-block">
                   <Button variant="volt" className="h-10">
@@ -220,8 +221,8 @@ function Dashboard() {
           </div>
         )}
 
-        {/* Offre Pro même en dessous de la limite : elle est plus rentable que
-            d'acheter 3 jours de mise en avant dans le mois. */}
+        {/* Offre Pro même en dessous de la limite : elle donne le badge, les
+            stats, les publications illimitées et la mise en avant moins chère. */}
         {items !== null && publishedCount > 0 && publishedCount < FREE_PRODUCTS && (
           <Link
             to="/tarifs"
@@ -232,12 +233,13 @@ function Dashboard() {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-bold">
-                Vendeur Pro — {formatFCFA(2900)}/mois : {formatFCFA(PRO_MONTHLY_BOOST_CREDIT)} de mise en avant offerts
-                chaque mois
+                Vendeur Pro — {formatFCFA(2900)}/mois : la journée de mise en avant à {formatFCFA(800)} au lieu de{" "}
+                {formatFCFA(1000)}
               </span>
               <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
-                3 jours de mise en avant coûtent {formatFCFA(3000)} : avec Vendeur Pro vous les avez chaque mois, plus
-                les <strong className="text-foreground">publications illimitées</strong> et le badge vérifié.
+                Plus {formatFCFA(PRO_MONTHLY_BOOST_CREDIT)} de mise en avant offerts chaque mois, les{" "}
+                <strong className="text-foreground">publications illimitées</strong>, le badge vérifié et les
+                statistiques détaillées par produit.
               </span>
             </span>
             <span className="shrink-0 text-xs font-bold text-volt">Découvrir →</span>

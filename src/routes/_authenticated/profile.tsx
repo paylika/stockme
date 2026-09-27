@@ -21,6 +21,7 @@ import { usePaymentsStatus } from "@/lib/features";
 import { PRO_MONTHLY_BOOST_CREDIT, isProActive, planById, planOf, type PlanId } from "@/lib/pricing";
 import { useAuth } from "@/hooks/useAuth";
 import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
+import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { requireUserId } from "@/lib/current-user";
 import { formatFCFA } from "@/lib/format";
 import {
@@ -124,10 +125,17 @@ function ProfilePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { tab: tabParam } = Route.useSearch();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [products, setProducts] = useState<Product[] | null>(null);
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
+  /**
+   * VITESSE : le profil, les produits et les statistiques viennent du paquet
+   * unique `seller_dashboard` (voir useSellerDashboard). Cette page ne fait
+   * donc PLUS AUCUNE requête de chargement : elle lit ce qui est déjà en
+   * mémoire, et `load()` ne sert plus qu'à rafraîchir après une action.
+   */
+  const { data: dashboard, loading: dashLoading, refresh: refreshDashboard } = useSellerDashboard(!!user);
+  const profile = (dashboard?.profile ?? null) as Profile | null;
+  const products = (dashboard?.products ?? null) as Product[] | null;
+  const stats = (dashboard?.stats ?? null) as Stats | null;
+  const loading = dashLoading && !dashboard;
   // L'onglet est piloté par l'adresse (?tab=promo) : le sidebar peut donc ouvrir
   // directement la Sponsorisation, et un lien partagé garde le bon onglet.
   const tab: TabId = tabParam ?? "produits";
@@ -198,28 +206,10 @@ function ProfilePage() {
     }
   };
 
+  /** Rafraîchit tout l'espace vendeur en UN appel (profil, produits, stats, solde). */
   const load = async () => {
-    const { data: u } = await supabase.auth.getUser();
-    if (!u.user) return;
-    const [{ data: prof }, { data: prods }] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", u.user.id).maybeSingle(),
-      supabase
-        .from("products")
-        .select("id,name,price_fcfa,promo_price_fcfa,quantity,moq,category,images,published,sold_out,dropshipping")
-        .eq("owner_id", u.user.id)
-        .order("created_at", { ascending: false }),
-    ]);
-    setProfile((prof as Profile | null) ?? null);
-    setProducts((prods as Product[] | null) ?? []);
-    supabase.rpc("get_seller_stats", { p_seller_id: u.user.id }).then(({ data }) =>
-      setStats((data as Stats | null) ?? null),
-    );
-    setLoading(false);
+    await refreshDashboard();
   };
-
-  useEffect(() => {
-    load();
-  }, []);
 
   // Un boost vient d'être lancé depuis le sidebar (ou la carte produit) :
   // on recharge les chiffres de la page pour rester cohérent.
