@@ -7,7 +7,7 @@ import { MobileFooter } from "@/components/MobileFooter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusSwitch } from "@/components/StatusSwitch";
-import { VerifiedBadge, VerifiedBadgeGold } from "@/components/VerifiedBadge";
+import { ProChip, VerifiedBadge, VerifiedBadgeGold, VerifiedMark } from "@/components/VerifiedBadge";
 import { BoostButton, useSellerMoney } from "@/components/SellerMoneyProvider";
 import { BoostLauncher } from "@/components/BoostLauncher";
 import { BoostManager } from "@/components/BoostManager";
@@ -18,7 +18,7 @@ import { ShopBanner } from "@/components/ShopBanner";
 import { UpgradeDialog } from "@/components/UpgradeDialog";
 import { VerifiedPaymentDialog } from "@/components/VerifiedPaymentDialog";
 import { usePaymentsStatus } from "@/lib/features";
-import { planById, planOf, type PlanId } from "@/lib/pricing";
+import { PRO_MONTHLY_BOOST_CREDIT, isProActive, planById, planOf, type PlanId } from "@/lib/pricing";
 import { useAuth } from "@/hooks/useAuth";
 import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
@@ -37,6 +37,7 @@ import {
   ExternalLink,
   Gift,
   Heart,
+  Lock,
   LogOut,
   Mail,
   MapPin,
@@ -277,6 +278,12 @@ function ProfilePage() {
   const isVerified = !!profile?.verified && (!profile.verified_until || new Date(profile.verified_until) > new Date());
   const isLifetime = isVerified && !profile?.verified_until;
   /**
+   * PRO actif = abonnement payé (échéance non dépassée). C'est lui qui ouvre
+   * les statistiques détaillées et les publications illimitées. Un compte
+   * simplement VÉRIFIÉ n'y a pas accès — c'est une raison de passer Pro.
+   */
+  const isPro = isProActive(profile);
+  /**
    * Filtre local de MES produits : nom, catégorie ou ville.
    * Un vendeur avec 30 produits ne doit pas faire défiler 10 écrans pour
    * retrouver un article — il tape deux lettres et le voilà.
@@ -389,9 +396,16 @@ function ProfilePage() {
                 />
               </div>
 
-              {/* Nom + badge, alignés sur la même ligne que l'avatar */}
+              {/* Nom + badge, alignés sur la même ligne que l'avatar.
+                  Le sceau (rosace + coche) est collé au nom : il se voit sur
+                  TOUS les écrans, mobile compris — un badge caché ne rassure
+                  personne. */}
               <div className="min-w-0 flex-1 pb-0.5">
-                <h1 className="truncate font-display text-xl font-bold tracking-tight sm:text-2xl">{displayName}</h1>
+                <div className="flex items-center gap-1.5">
+                  <h1 className="truncate font-display text-xl font-bold tracking-tight sm:text-2xl">{displayName}</h1>
+                  {isVerified && <VerifiedMark size={19} tone={isLifetime ? "gold" : "blue"} />}
+                  {isPro && <ProChip />}
+                </div>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   {isVerified ? (
                     isLifetime ? (
@@ -402,6 +416,11 @@ function ProfilePage() {
                   ) : (
                     <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                       <ShieldQuestion className="h-3 w-3" /> Non vérifiée
+                    </span>
+                  )}
+                  {isPro && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-volt/15 px-2 py-0.5 text-[11px] font-bold text-foreground">
+                      <Rocket className="h-3 w-3 text-volt" /> Vendeur Pro actif
                     </span>
                   )}
                 </div>
@@ -600,6 +619,7 @@ function ProfilePage() {
                   }`}
                 >
                   <span className="truncate">{TAB_LABELS[id]}</span>
+                  {id === "stats" && !isPro && <Lock className="h-3 w-3 shrink-0 opacity-60" />}
                   {count !== null && count > 0 && (
                     <span
                       className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] ${
@@ -795,14 +815,68 @@ function ProfilePage() {
           </>
         )}
 
-        {/* ---------- Statistiques : refonte totale (chiffres, trafic, annonces) ---------- */}
+        {/* ---------- Statistiques : RÉSERVÉ AUX VENDEURS PRO ----------
+            Le vendeur vérifié (badge seul) voit ce qu'il gagnerait : une
+            explication courte et un seul bouton. Pas de mur muet. */}
         {tab === "stats" && (
           <div className="mt-5">
-            <AdStats
-              wallet={money?.wallet ?? null}
-              loading={money?.loading ?? false}
-              sellerStats={stats}
-            />
+            {isPro ? (
+              <AdStats wallet={money?.wallet ?? null} loading={money?.loading ?? false} sellerStats={stats} />
+            ) : (
+              <div className="overflow-hidden rounded-2xl border border-volt/50 bg-volt/10">
+                <div className="p-4 sm:p-5">
+                  <div className="flex items-start gap-3">
+                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-volt text-volt-foreground">
+                      <Lock className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold">Les statistiques sont réservées aux Vendeurs Pro</p>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                        Vous voyez aujourd'hui vos vues, vos contacts et vos favoris. Avec Vendeur Pro vous voyez{" "}
+                        <strong className="text-foreground">quel produit rapporte</strong>, la tendance des 14 derniers
+                        jours et <strong className="text-foreground">le coût réel d'un contact</strong> — pour arrêter
+                        de payer une mise en avant qui ne rapporte rien.
+                      </p>
+                      <ul className="mt-2 space-y-1 text-[11px]">
+                        <li className="flex items-start gap-1.5">
+                          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-volt" />
+                          <span>Statistiques par produit : vues, clics, taux de contact, coût par contact</span>
+                        </li>
+                        <li className="flex items-start gap-1.5">
+                          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-volt" />
+                          <span>Tendance sur 14 jours et pays des acheteurs qui vous écrivent</span>
+                        </li>
+                        <li className="flex items-start gap-1.5">
+                          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-volt" />
+                          <span>
+                            {formatFCFA(PRO_MONTHLY_BOOST_CREDIT)} de mise en avant versés chaque mois + publications
+                            illimitées
+                          </span>
+                        </li>
+                      </ul>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button
+                          variant="volt"
+                          className="h-11"
+                          onClick={() => {
+                            setUpgradePlan("pro");
+                            setUpgradeOpen(true);
+                          }}
+                        >
+                          <Rocket className="mr-1.5 h-4 w-4" /> Passer Vendeur Pro —{" "}
+                          {formatFCFA(planById("pro")?.price ?? 2900)}/mois
+                        </Button>
+                        <Link to="/tarifs">
+                          <Button variant="outline" className="h-11">
+                            Voir ce que ça change
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
         {/* ---------- Sponsorisation : mes annonces (créer, piloter) ---------- */}

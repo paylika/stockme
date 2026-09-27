@@ -35,7 +35,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { isAdminEmail } from "@/lib/constants";
+import { isAdminEmail, VERIFIED_BADGE_PRICE_FCFA } from "@/lib/constants";
+import { PRO_MONTHLY_BOOST_CREDIT, planById } from "@/lib/pricing";
+import { VerifiedMark } from "@/components/VerifiedBadge";
 import { formatFCFA } from "@/lib/format";
 import { countMatchingRequests } from "@/lib/buying-requests";
 import logoUrl from "@/assets/stockme-logo.jpg";
@@ -230,13 +232,25 @@ export function AppSidebar() {
                   </Link>
                   <span
                     className={`mt-0.5 inline-flex items-center gap-1 rounded-full border px-1.5 py-px text-[9px] font-bold uppercase tracking-wide ${
-                      info?.verified
-                        ? "border-primary/25 bg-primary/10 text-primary"
-                        : "border-border bg-muted text-muted-foreground"
+                      info?.isPro
+                        ? "border-volt/50 bg-volt/15 text-foreground"
+                        : info?.verified
+                          ? "border-primary/25 bg-primary/10 text-primary"
+                          : "border-border bg-muted text-muted-foreground"
                     }`}
                   >
-                    {info?.verified && <IconBadge className="h-2.5 w-2.5" />}
-                    {info?.verified ? (info.lifetime ? "Vérifié à vie" : "Vérifié") : "Compte gratuit"}
+                    {info?.isPro ? (
+                      <VerifiedMark size={11} />
+                    ) : (
+                      info?.verified && <IconBadge className="h-2.5 w-2.5" />
+                    )}
+                    {info?.isPro
+                      ? "Vendeur Pro"
+                      : info?.verified
+                        ? info.lifetime
+                          ? "Vérifié à vie"
+                          : "Vérifié"
+                        : "Compte gratuit"}
                   </span>
                 </div>
               )}
@@ -339,6 +353,34 @@ export function AppSidebar() {
             <NavRow item={navItems[3]} active={isActive("/profile")} collapsed={collapsed} />
           </SidebarMenuItem>
         </SidebarMenu>
+
+        {/* ============ Monter en offre : 2 chemins, 2 boutons ============
+            Placé APRÈS la navigation : si l'écran est court, c'est cette carte
+            qui est rognée, jamais le menu. */}
+        {user && !info?.isPro && !collapsed && (
+          <div className="mt-3 shrink-0 rounded-2xl border border-volt/50 bg-volt/10 px-3 py-2.5">
+            <p className="text-[11px] font-bold">Développer ma boutique</p>
+            <p className="mt-0.5 text-[10.5px] leading-snug text-muted-foreground">
+              {info?.verified
+                ? `Vendeur Pro : ${formatFCFA(PRO_MONTHLY_BOOST_CREDIT)} de mise en avant chaque mois + stats + publications illimitées.`
+                : `Vérifié = badge et priorité. Pro = badge + ${formatFCFA(PRO_MONTHLY_BOOST_CREDIT)} de pub par mois.`}
+            </p>
+            <div className="mt-2 grid gap-1.5">
+              <Link to="/tarifs" className="block">
+                <Button variant="volt" className="h-8 w-full text-[11px] font-bold">
+                  <IconFlame className="h-3.5 w-3.5" /> Être Vendeur Pro — {formatFCFA(planById("pro")?.price ?? 2900)}/mois
+                </Button>
+              </Link>
+              {!info?.verified && (
+                <Link to="/tarifs" className="block">
+                  <Button variant="outline" className="h-8 w-full text-[11px] font-semibold">
+                    <IconBadge className="h-3.5 w-3.5 text-primary" /> Être vérifié — {formatFCFA(VERIFIED_BADGE_PRICE_FCFA)}/an
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
       </SidebarContent>
 
       {/* ============ Pied : admin, réduire, aide ============ */}

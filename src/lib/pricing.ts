@@ -288,6 +288,24 @@ export const planById = (id: PlanId | string): Plan | null =>
   PAID_PLANS.find((p) => p.id === id) ?? null;
 
 /**
+ * Le vendeur est-il PRO **aujourd'hui** ?
+ *
+ * Un abonnement Pro donne le badge ET les avantages TANT QU'IL EST PAYÉ :
+ * `verified_until` est repoussé de 30 jours à chaque échéance. Une fois la date
+ * passée, le compte redevient automatiquement « vérifié » (s'il garde un badge
+ * annuel) ou « gratuit » — jamais Pro.
+ */
+export const isProActive = (profile: {
+  plan?: string | null;
+  verified?: boolean | null;
+  verified_until?: string | null;
+} | null | undefined): boolean => {
+  if (profile?.plan !== "pro") return false;
+  const until = profile.verified_until;
+  return !until || new Date(until) > new Date();
+};
+
+/**
  * Offre réelle du vendeur.
  *
  * ⚠️ Important : un compte vérifié MANUELLEMENT par l'admin (ou dont la
@@ -299,10 +317,12 @@ export const planOf = (profile: {
   verified?: boolean | null;
   verified_until?: string | null;
 } | null | undefined): PlanId => {
+  // Pro seulement tant que l'abonnement court (date d'échéance dépassée = fini).
+  if (isProActive(profile)) return "pro";
+
   const stillVerified =
     !!profile?.verified && (!profile.verified_until || new Date(profile.verified_until) > new Date());
 
-  if (profile?.plan === "pro") return "pro";
   if (stillVerified) return profile?.plan === "pro_annuel" ? "pro_annuel" : "verifie";
   return "gratuit";
 };

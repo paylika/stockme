@@ -15,6 +15,8 @@ export type SidebarInfo = {
   /** Badge obtenu à vie (vérification manuelle par l'admin) */
   lifetime: boolean;
   verifiedUntil: string | null;
+  /** Abonnement Vendeur Pro payé et en cours (échéance non dépassée). */
+  isPro: boolean;
   products: number;
   hasWhatsapp: boolean;
   hasBanner: boolean;
@@ -42,7 +44,7 @@ export function useSidebarInfo(enabled: boolean) {
     const [profRes, prodRes] = await Promise.all([
       supabase
         .from("profiles")
-        .select("shop_name,full_name,avatar_url,verified,verified_until,banner_url,whatsapp")
+        .select("shop_name,full_name,avatar_url,verified,verified_until,banner_url,whatsapp,plan")
         .eq("id", uid)
         .maybeSingle(),
       supabase
@@ -63,10 +65,14 @@ export function useSidebarInfo(enabled: boolean) {
       verified_until: string | null;
       banner_url: string | null;
       whatsapp: string | null;
+      plan: string | null;
     } | null;
 
     const verifiedUntil = p?.verified_until ?? null;
     const verified = !!p?.verified && (!verifiedUntil || new Date(verifiedUntil) > new Date());
+    // Pro seulement tant que l'abonnement court : la date d'échéance est
+    // repoussée de 30 jours à chaque paiement.
+    const isPro = p?.plan === "pro" && (!verifiedUntil || new Date(verifiedUntil) > new Date());
 
     const rows = (prodRes.data as { id: string; name: string; images: string[] | null }[] | null) ?? [];
 
@@ -76,6 +82,7 @@ export function useSidebarInfo(enabled: boolean) {
       verified,
       lifetime: verified && !verifiedUntil,
       verifiedUntil,
+      isPro,
       products: prodRes.count ?? rows.length,
       hasWhatsapp: !!(p?.whatsapp && p.whatsapp.trim()),
       hasBanner: !!(p?.banner_url && p.banner_url.trim()),

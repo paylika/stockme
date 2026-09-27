@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { Header } from "@/components/Header";
@@ -9,9 +9,10 @@ import { UpgradeDialog } from "@/components/UpgradeDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { usePaymentsStatus } from "@/lib/features";
 import { buildSeoHead, SITE_URL } from "@/lib/seo";
-import { ALL_PLANS, PACK_TOTAL, PRO_AVAILABLE, SATISFACTION_GUARANTEE, VERIFICATION_BONUS_FCFA, FREE_PRODUCTS, EXTRA_PUBLICATION_PRICE, MAX_PHOTOS_PER_PRODUCT, BOOST_DAY_PRICE, planById } from "@/lib/pricing";
+import { ALL_PLANS, PACK_TOTAL, PRO_AVAILABLE, SATISFACTION_GUARANTEE, VERIFICATION_BONUS_FCFA, PRO_MONTHLY_BOOST_CREDIT, FREE_PRODUCTS, EXTRA_PUBLICATION_PRICE, MAX_PHOTOS_PER_PRODUCT, BOOST_DAY_PRICE, planById } from "@/lib/pricing";
 import { formatFCFA } from "@/lib/format";
 import { BadgeCheck, Check, Minus, Rocket, ShieldCheck, Sparkles, TrendingUp, X } from "lucide-react";
+import { VERIFIED_BADGE_PRICE_FCFA } from "@/lib/constants";
 
 export const Route = createFileRoute("/tarifs")({
   head: () => {
@@ -30,10 +31,12 @@ export const Route = createFileRoute("/tarifs")({
 
 function PricingPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const payments = usePaymentsStatus();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [suggested, setSuggested] = useState<"verifie" | "pro">("pro");
   const [isVerified, setIsVerified] = useState(false);
+  const [isPro, setIsPro] = useState(false);
   // Nom de la boutique / du contact : part dans le message WhatsApp du badge
   // (le badge est activé à la main après réception de la capture de paiement).
   const [shopName, setShopName] = useState<string | null>(null);
@@ -49,7 +52,7 @@ function PricingPage() {
       if (!uid) return;
       const { data } = await supabase
         .from("profiles")
-        .select("verified,verified_until,shop_name,full_name")
+        .select("verified,verified_until,shop_name,full_name,plan")
         .eq("id", uid)
         .maybeSingle();
       const p = data as {
@@ -57,9 +60,12 @@ function PricingPage() {
         verified_until: string | null;
         shop_name: string | null;
         full_name: string | null;
+        plan: string | null;
       } | null;
       if (!cancel) {
-        setIsVerified(!!p?.verified && (!p.verified_until || new Date(p.verified_until) > new Date()));
+        const active = !p?.verified_until || new Date(p.verified_until) > new Date();
+        setIsVerified(!!p?.verified && active);
+        setIsPro(p?.plan === "pro" && active);
         setShopName(p?.shop_name ?? null);
         setContactName(p?.full_name ?? null);
       }
@@ -69,8 +75,15 @@ function PricingPage() {
     };
   }, [user?.id]);
 
+  /**
+   * Les 2 chemins possibles, depuis n'importe où sur la page.
+   * Visiteur non connecté → on l'envoie créer son compte en le ramenant ici.
+   */
   const openUpgrade = (plan: "verifie" | "pro") => {
-    if (!user) return;
+    if (!user) {
+      navigate({ to: "/auth", search: { mode: "signup", redirect: "/tarifs" } as never });
+      return;
+    }
     setSuggested(plan);
     setUpgradeOpen(true);
   };
@@ -100,6 +113,32 @@ function PricingPage() {
           <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
             Deux choses seulement sont payantes : la <strong className="text-foreground">confiance</strong> (le badge) et
             la <strong className="text-foreground">visibilité</strong> (la mise en avant).
+          </p>
+
+          {/* LES 2 CHEMINS, tout de suite : on ne fait pas chercher le visiteur. */}
+          <div className="mx-auto mt-6 grid max-w-lg gap-2 sm:grid-cols-2">
+            <Button
+              variant="volt"
+              className="h-12 text-sm font-bold"
+              onClick={() => openUpgrade("pro")}
+              disabled={isPro}
+            >
+              <Rocket className="mr-1.5 h-4 w-4" />
+              {isPro ? "Vendeur Pro actif ✓" : `Être Vendeur Pro — ${formatFCFA(planById("pro")?.price ?? 2900)}/mois`}
+            </Button>
+            <Button
+              variant="outline"
+              className="h-12 text-sm font-bold"
+              onClick={() => openUpgrade("verifie")}
+              disabled={isVerified}
+            >
+              <BadgeCheck className="mr-1.5 h-4 w-4 text-primary" />
+              {isVerified ? "Badge déjà actif ✓" : `Être vérifié — ${formatFCFA(VERIFIED_BADGE_PRICE_FCFA)}/an`}
+            </Button>
+          </div>
+          <p className="mx-auto mt-2 max-w-lg text-[11px] text-muted-foreground">
+            Vendeur Pro inclut le badge vérifié, les statistiques détaillées par produit, les publications illimitées et{" "}
+            {formatFCFA(PRO_MONTHLY_BOOST_CREDIT)} de mise en avant versés chaque mois.
           </p>
         </div>
       </section>
@@ -185,7 +224,7 @@ function PricingPage() {
           {PRO_AVAILABLE ? (
             <div className="border-t border-volt/25 bg-volt/5 px-5 py-3 text-xs text-muted-foreground sm:px-7">
               <strong className="text-foreground">Envie d'aller plus loin tout de suite ?</strong> Le pack badge 1 an +
-              PRO coûte {formatFCFA(PACK_TOTAL)} le premier mois, puis {formatFCFA(2500)}/mois. Votre badge reste acquis
+              PRO coûte {formatFCFA(PACK_TOTAL)} le premier mois, puis {formatFCFA(planById("pro")?.price ?? 2900)}/mois. Votre badge reste acquis
               même si vous arrêtez PRO ensuite.
             </div>
           ) : (

@@ -103,7 +103,7 @@ function PaymentReturn() {
   // la 2e étape (PRO mensuel). Tant que PRO est masqué, cette étape disparaît :
   // le vendeur repart simplement avec son badge actif.
   const proPlan = planById("pro");
-  const proMonthly = proPlan?.price ?? 2500;
+  const proMonthly = proPlan?.price ?? 2900;
   const packStep2 = PRO_AVAILABLE && paid && intent?.metadata?.next_step === "pro";
   /** Paiement d'un badge / abonnement : on annonce le badge + le bonus offert. */
   const isBadgePayment = intent?.purpose === "subscription";

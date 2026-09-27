@@ -9,7 +9,7 @@ import { formatFCFA, productInquiryMessage, whatsappLink } from "@/lib/format";
 import { useAuth } from "@/hooks/useAuth";
 import { IntensityGauge, computeIntensity } from "@/components/IntensityGauge";
 import { JsonLd } from "@/components/JsonLd";
-import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { ProChip, VerifiedBadge, VerifiedMark } from "@/components/VerifiedBadge";
 import { BackLink } from "@/components/BackLink";
 import { ProductReviews } from "@/components/ProductReviews";
 import { SecurePaymentBlock } from "@/components/SecurePayment";
@@ -44,6 +44,7 @@ type PublicSeller = {
   products_count: number;
   is_verified?: boolean;
   verified_until?: string | null;
+  plan?: string | null;
 };
 type Similar = {
   id: string; name: string; price_fcfa: number; promo_price_fcfa: number | null;
@@ -613,13 +614,16 @@ function ProductPage() {
                     <Link
                       to="/vendeur/$id"
                       params={{ id: product.owner_id }}
-                      className="block truncate font-semibold hover:text-primary"
+                      className="flex items-center gap-1.5 font-semibold hover:text-primary"
                       title="Voir tous ses produits"
                     >
-                      {profile?.shop_name || profile?.full_name || "Vendeur"}
+                      <span className="truncate">{profile?.shop_name || profile?.full_name || "Vendeur"}</span>
+                      {/* Sceau visible aussi sur mobile (le badge complet reste en dessous) */}
+                      {seller?.is_verified && <VerifiedMark size={14} />}
                     </Link>
                     <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                       {seller?.is_verified && <VerifiedBadge compact />}
+                      {seller?.plan === "pro" && seller?.is_verified && <ProChip />}
                       {profile?.city && (
                         <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                           <MapPin className="h-3 w-3" /> {profile.city}

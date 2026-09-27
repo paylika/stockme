@@ -1,6 +1,7 @@
 import { formatFCFA } from "@/lib/format";
 import type { WalletData } from "@/hooks/useWallet";
 import { thumb } from "@/lib/img";
+import { ProChip } from "@/components/VerifiedBadge";
 import { ChevronDown, Eye, Heart, MessageCircle, MousePointerClick, Percent, Rocket, TrendingUp, Wallet } from "lucide-react";
 
 export type TrendPoint = { day: string; value: number };
@@ -55,6 +56,14 @@ export function AdStats({
 
   return (
     <div className="space-y-4">
+      {/* Rappel discret : ces chiffres sont un avantage Vendeur Pro. */}
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-volt/40 bg-volt/10 px-3.5 py-2.5">
+        <ProChip />
+        <p className="min-w-0 flex-1 text-[11px] leading-snug text-muted-foreground">
+          Statistiques détaillées réservées aux Vendeurs Pro — vous voyez ce qui rapporte, produit par produit.
+        </p>
+      </div>
+
       {/* ---------- 1. Les 4 chiffres qui comptent ---------- */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Big label="Vues de mes fiches" value={shopViews.toLocaleString("fr-FR")} icon={Eye} />

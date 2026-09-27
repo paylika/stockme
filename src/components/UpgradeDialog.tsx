@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatFCFA } from "@/lib/format";
-import { PAID_PLANS, PACK_TOTAL, PRO_AVAILABLE, VERIFICATION_BONUS_FCFA, type Plan, type PlanId } from "@/lib/pricing";
+import { PAID_PLANS, PACK_TOTAL, PRO_AVAILABLE, VERIFICATION_BONUS_FCFA, planById, type Plan, type PlanId } from "@/lib/pricing";
 import { METHOD_LABELS, goToCheckout, type PayMethod } from "@/lib/pay-client";
 import { VerifiedPaymentDialog } from "@/components/VerifiedPaymentDialog";
 import stripeLogo from "@/assets/stripe-logo.svg";
@@ -386,8 +386,9 @@ export function UpgradeDialog({ open, onOpenChange, methods, isVerified, default
           </p>
           {pack ? (
             <p className="text-muted-foreground">
-              Étape 1 : badge sécurisé 12 mois. L'activation de <strong className="text-foreground">PRO (2 500 F/mois,
-              prélevés automatiquement)</strong> vous sera proposée juste après le paiement.
+              Étape 1 : badge sécurisé 12 mois. L'activation de <strong className="text-foreground">PRO (
+              {formatFCFA(planById("pro")?.price ?? 2900)}/mois, prélevés automatiquement)</strong> vous sera proposée juste
+              après le paiement.
             </p>
           ) : monthlyAfter ? (
             <p className="text-muted-foreground">

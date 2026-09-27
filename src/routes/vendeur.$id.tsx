@@ -8,16 +8,20 @@ import { ProductCard, type ListingProduct } from "@/components/ProductCard";
 import { BackLink } from "@/components/BackLink";
 import { Button } from "@/components/ui/button";
 import { JsonLd } from "@/components/JsonLd";
-import { VerifiedBadge, VerifiedBadgeGold } from "@/components/VerifiedBadge";
+import { ProChip, VerifiedBadge, VerifiedBadgeGold, VerifiedMark } from "@/components/VerifiedBadge";
 import { ShopBanner } from "@/components/ShopBanner";
+import { UpgradeDialog } from "@/components/UpgradeDialog";
+import { useAuth } from "@/hooks/useAuth";
+import { usePaymentsStatus } from "@/lib/features";
 import { buildSeoHead, breadcrumbLd, SITE_URL } from "@/lib/seo";
 import { COUNTRY_FLAGS, countryOfCity } from "@/lib/constants";
-import { sellerInquiryMessage, whatsappLink } from "@/lib/format";
+import { formatFCFA, sellerInquiryMessage, whatsappLink } from "@/lib/format";
+import { PRO_MONTHLY_BOOST_CREDIT } from "@/lib/pricing";
 import { IMG, thumb } from "@/lib/img";
 import { securePaymentProposal } from "@/lib/xaalispay";
 import { SecurePaymentBlock } from "@/components/SecurePayment";
 import { toast } from "sonner";
-import { Copy, Eye, Heart, MapPin, MessageCircle, Package, Phone, Share2, Store } from "lucide-react";
+import { BadgeCheck, Copy, Eye, Heart, MapPin, MessageCircle, Package, Phone, Rocket, Share2, Store } from "lucide-react";
 
 const formatCount = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n));
 
@@ -102,6 +106,17 @@ function SellerPage() {
   const seller = Route.useLoaderData()?.seller ?? null;
   const [stats, setStats] = useState<SellerStats>(null);
   const [products, setProducts] = useState<ListingProduct[] | null>(null);
+  const { user } = useAuth();
+  const payments = usePaymentsStatus();
+
+  // Le PROPRIÉTAIRE de la boutique voit ici les 2 façons de monter en offre :
+  // être vérifié (le badge) ou devenir Vendeur Pro. C'est l'endroit le plus
+  // naturel : il regarde sa propre vitrine.
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeFocus, setUpgradeFocus] = useState<"verifie" | "pro">("pro");
+  const isOwner = !!user && user.id === id;
+  const shopVerified = !!seller?.is_verified;
+  const shopPro = seller?.plan === "pro" && shopVerified;
 
   useEffect(() => {
     let cancel = false;
@@ -204,13 +219,18 @@ function SellerPage() {
                   </div>
 
                   <div className="min-w-0 flex-1 pb-1">
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <h1 className="truncate font-display text-xl font-bold tracking-tight sm:text-2xl">
                         {displayName}
                       </h1>
-                      {seller?.is_verified && (seller.verified_until ? <VerifiedBadge /> : <VerifiedBadgeGold />)}
+                      {/* Le sceau collé au nom : visible sur mobile aussi. */}
+                      {shopVerified && <VerifiedMark size={19} />}
+                      {shopPro && <ProChip />}
                     </div>
-                    <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                      {shopVerified && (seller?.verified_until ? <VerifiedBadge /> : <VerifiedBadgeGold />)}
+                    </div>
+                    <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                       {seller?.city && (
                         <span className="inline-flex items-center gap-1">
                           <MapPin className="h-3 w-3" /> {COUNTRY_FLAGS[country ?? ""] ?? ""} {seller.city}
@@ -262,8 +282,45 @@ function SellerPage() {
                   </button>
                 </div>
 
-                {/* Contact : une ligne claire */}
-                {sellerContact && (
+                {/* ===== MA BOUTIQUE : les 2 façons de monter ===== */}
+                {isOwner && !shopPro && (
+                  <div className="mt-4 rounded-2xl border border-volt/50 bg-volt/10 px-3.5 py-3">
+                    <p className="text-sm font-bold">Développer ma boutique</p>
+                    <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+                      {shopVerified
+                        ? `Vous êtes vérifié. Vendeur Pro ajoute ${formatFCFA(PRO_MONTHLY_BOOST_CREDIT)} de mise en avant versés chaque mois, les statistiques par produit et les publications illimitées.`
+                        : `Le badge vérifié rassure les acheteurs. Vendeur Pro ajoute ${formatFCFA(PRO_MONTHLY_BOOST_CREDIT)} de pub par mois, les stats par produit et les publications illimitées.`}
+                    </p>
+                    <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
+                      <Button
+                        variant="volt"
+                        className="h-11 w-full text-xs font-bold sm:text-sm"
+                        onClick={() => {
+                          setUpgradeFocus("pro");
+                          setUpgradeOpen(true);
+                        }}
+                      >
+                        <Rocket className="mr-1.5 h-4 w-4" /> Être Vendeur Pro
+                      </Button>
+                      {!shopVerified && (
+                        <Button
+                          variant="outline"
+                          className="h-11 w-full text-xs font-bold sm:text-sm"
+                          onClick={() => {
+                            setUpgradeFocus("verifie");
+                            setUpgradeOpen(true);
+                          }}
+                        >
+                          <BadgeCheck className="mr-1.5 h-4 w-4 text-primary" /> Être vérifié
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Contact : une ligne claire. Chez soi, le numéro n'a rien à
+                    faire là (c'est le sien) — on ne l'affiche qu'aux visiteurs. */}
+                {sellerContact && !isOwner && (
                   <div className="mt-4 rounded-2xl border border-volt/40 bg-volt/10 px-3 py-2.5">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-volt text-volt-foreground">
@@ -377,6 +434,17 @@ function SellerPage() {
 
       <MobileFooter />
       <MobileNav />
+
+      {/* Fenêtre d'achat (vérifié / Vendeur Pro) ouverte depuis MA boutique */}
+      <UpgradeDialog
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        methods={payments.methods}
+        isVerified={shopVerified}
+        focus={upgradeFocus}
+        shopName={seller?.shop_name}
+        contactName={seller?.full_name}
+      />
     </div>
   );
 }
