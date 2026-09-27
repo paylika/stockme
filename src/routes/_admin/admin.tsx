@@ -213,6 +213,8 @@ function AdminDashboard() {
    * supprimer en un appui, à l'endroit où on voit l'annonce.
    */
   const [busyProduct, setBusyProduct] = useState<string | null>(null);
+  /** Confirmation en deux appuis : `confirm()` peut être bloqué par le navigateur. */
+  const [confirmProduct, setConfirmProduct] = useState<string | null>(null);
 
   const patchProduct = async (p: Product, patch: { published?: boolean }, message: string) => {
     setBusyProduct(p.id);
@@ -227,10 +229,10 @@ function AdminDashboard() {
   };
 
   const deleteProduct = async (p: Product) => {
-    if (!confirm(`Supprimer définitivement « ${p.name} » ?\n\nCette action est irréversible.`)) return;
     setBusyProduct(p.id);
     const { error } = await supabase.rpc("admin_delete_product", { p_id: p.id });
     setBusyProduct(null);
+    setConfirmProduct(null);
     if (error) {
       toast.error(error.message);
       return;
@@ -531,14 +533,34 @@ function AdminDashboard() {
                             {p.published ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                             {p.published ? "Masquer" : "Publier"}
                           </button>
-                          <button
-                            type="button"
-                            disabled={busyProduct === p.id}
-                            onClick={() => deleteProduct(p)}
-                            className="inline-flex h-7 items-center gap-1 rounded-full border border-destructive/40 px-2 text-[10px] font-semibold text-destructive disabled:opacity-50"
-                          >
-                            <Trash2 className="h-3 w-3" /> Supprimer
-                          </button>
+                          {confirmProduct === p.id ? (
+                            <>
+                              <button
+                                type="button"
+                                disabled={busyProduct === p.id}
+                                onClick={() => deleteProduct(p)}
+                                className="inline-flex h-7 items-center rounded-full bg-destructive px-2 text-[10px] font-bold text-destructive-foreground disabled:opacity-50"
+                              >
+                                Oui, supprimer
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setConfirmProduct(null)}
+                                className="inline-flex h-7 items-center rounded-full border border-border px-2 text-[10px] font-medium"
+                              >
+                                Annuler
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={busyProduct === p.id}
+                              onClick={() => setConfirmProduct(p.id)}
+                              className="inline-flex h-7 items-center gap-1 rounded-full border border-destructive/40 px-2 text-[10px] font-semibold text-destructive disabled:opacity-50"
+                            >
+                              <Trash2 className="h-3 w-3" /> Supprimer
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -572,15 +594,26 @@ function AdminDashboard() {
                       >
                         {p.published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
-                      <button
-                        type="button"
-                        disabled={busyProduct === p.id}
-                        onClick={() => deleteProduct(p)}
-                        className="grid h-8 w-8 place-items-center rounded-md border border-border text-muted-foreground hover:border-destructive/50 hover:text-destructive disabled:opacity-50"
-                        title="Supprimer définitivement"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {confirmProduct === p.id ? (
+                        <button
+                          type="button"
+                          disabled={busyProduct === p.id}
+                          onClick={() => deleteProduct(p)}
+                          className="rounded-md bg-destructive px-2 py-1.5 text-[10px] font-bold text-destructive-foreground disabled:opacity-50"
+                        >
+                          Confirmer
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={busyProduct === p.id}
+                          onClick={() => setConfirmProduct(p.id)}
+                          className="grid h-8 w-8 place-items-center rounded-md border border-border text-muted-foreground hover:border-destructive/50 hover:text-destructive disabled:opacity-50"
+                          title="Supprimer définitivement"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { Button } from "@/components/ui/button";
 import { formatFCFA } from "@/lib/format";
+import { explainDbError } from "@/lib/db-errors";
 import { toast } from "sonner";
 import { Eye, EyeOff, Loader2, Package, Sparkles, Trash2 } from "lucide-react";
 
@@ -29,6 +30,15 @@ export const Route = createFileRoute("/_admin/products")({
 function AdminProductsPage() {
   const [products, setProducts] = useState<AdminProduct[] | null>(null);
   const [owners, setOwners] = useState<Record<string, string>>({});
+  /** Produit en cours d'action (publier / supprimer) : évite les doubles clics. */
+  const [busyId, setBusyId] = useState<string | null>(null);
+  /**
+   * CONFIRMATION SANS FENÊTRE DU NAVIGATEUR.
+   * `confirm()` peut être bloqué (Chrome le désactive après quelques fenêtres) :
+   * il renvoie alors `false` sans rien afficher, et le bouton semblait « ne rien
+   * faire ». Ici : premier appui = « Confirmer ? », second appui = suppression.
+   */
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   /** Suivi de l'enrichissement IA du catalogue (mots-clés de recherche). */
   const [aiTotal, setAiTotal] = useState(0);
   const [aiDone, setAiDone] = useState(0);
@@ -119,18 +129,35 @@ function AdminProductsPage() {
     load();
   }, []);
 
+  /**
+   * POURQUOI CES APPELS PASSENT PAR LES FONCTIONS SQL (et non par la table) :
+   *
+   * Un administrateur n'est PAS le propriétaire du produit. Quand on écrivait
+   * directement dans la table (`from("products").update(...)`), la sécurité de
+   * la base (RLS) refusait… **en silence** : 0 ligne modifiée, AUCUNE erreur
+   * renvoyée. D'où l'impression que « le bouton ne fait rien ».
+   *
+   * Les fonctions `admin_update_product` / `admin_delete_product` sont écrites
+   * pour les administrateurs (SECURITY DEFINER) : elles agissent vraiment.
+   */
   const toggle = async (p: AdminProduct, field: "published" | "sold_out", value: boolean) => {
-    const payload = field === "published" ? { published: value } : { sold_out: value };
-    const { error } = await supabase.from("products").update(payload).eq("id", p.id);
-    if (error) return toast.error(error.message);
-    toast.success(field === "published" ? (value ? "Produit publié" : "Produit dépublié") : value ? "Marqué épuisé" : "Disponible");
+    const patch = field === "published" ? { published: value } : { sold_out: value };
+    setBusyId(p.id);
+    const { error } = await supabase.rpc("admin_update_product", { p_id: p.id, p_patch: patch });
+    setBusyId(null);
+    if (error) return toast.error(explainDbError(error.message, "20260718000000_admin_products_full_access.sql"));
+    toast.success(
+      field === "published" ? (value ? "Produit publié" : "Produit dépublié") : value ? "Marqué épuisé" : "Disponible",
+    );
     load();
   };
 
   const remove = async (p: AdminProduct) => {
-    if (!confirm(`Supprimer « ${p.name} » ?`)) return;
-    const { error } = await supabase.from("products").delete().eq("id", p.id);
-    if (error) return toast.error(error.message);
+    setBusyId(p.id);
+    const { error } = await supabase.rpc("admin_delete_product", { p_id: p.id });
+    setBusyId(null);
+    setConfirmId(null);
+    if (error) return toast.error(explainDbError(error.message, "20260718000000_admin_products_full_access.sql"));
     toast.success("Produit supprimé");
     load();
   };
@@ -265,27 +292,56 @@ function AdminProductsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => toggle(p, "published", !p.published)}
-                        className="grid h-8 w-8 place-items-center rounded-md border border-border hover:bg-accent"
-                        title={p.published ? "Dépublier" : "Publier"}
-                      >
-                        {p.published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                      <button
-                        onClick={() => toggle(p, "sold_out", !p.sold_out)}
-                        className="grid h-8 w-8 place-items-center rounded-md border border-border hover:bg-accent"
-                        title={p.sold_out ? "Remettre en stock" : "Marquer épuisé"}
-                      >
-                        <Package className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => remove(p)}
-                        className="grid h-8 w-8 place-items-center rounded-md border border-border text-muted-foreground hover:border-destructive/50 hover:text-destructive"
-                        title="Supprimer"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {confirmId === p.id ? (
+                        <>
+                          <span className="mr-1 text-[11px] font-semibold text-destructive">Supprimer ?</span>
+                          <button
+                            type="button"
+                            disabled={busyId === p.id}
+                            onClick={() => remove(p)}
+                            className="rounded-md bg-destructive px-2.5 py-1.5 text-[11px] font-bold text-destructive-foreground disabled:opacity-50"
+                          >
+                            Oui, supprimer
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmId(null)}
+                            className="rounded-md border border-border px-2.5 py-1.5 text-[11px] font-medium"
+                          >
+                            Annuler
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            disabled={busyId === p.id}
+                            onClick={() => toggle(p, "published", !p.published)}
+                            className="grid h-8 w-8 place-items-center rounded-md border border-border hover:bg-accent disabled:opacity-50"
+                            title={p.published ? "Dépublier" : "Publier"}
+                          >
+                            {p.published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busyId === p.id}
+                            onClick={() => toggle(p, "sold_out", !p.sold_out)}
+                            className="grid h-8 w-8 place-items-center rounded-md border border-border hover:bg-accent disabled:opacity-50"
+                            title={p.sold_out ? "Remettre en stock" : "Marquer épuisé"}
+                          >
+                            <Package className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busyId === p.id}
+                            onClick={() => setConfirmId(p.id)}
+                            className="grid h-8 w-8 place-items-center rounded-md border border-border text-muted-foreground hover:border-destructive/50 hover:text-destructive disabled:opacity-50"
+                            title="Supprimer définitivement"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
