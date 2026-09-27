@@ -202,6 +202,7 @@ export async function recoverSession(): Promise<Session | null> {
     if (definitive) {
       // Le serveur a vraiment refusé le jeton : la session est morte.
       clearBackup();
+      if (snapshot.session) emit({ session: null, user: null, ready: true });
       return null;
     }
 
@@ -212,6 +213,23 @@ export async function recoverSession(): Promise<Session | null> {
   });
 
   return recovery;
+}
+
+/**
+ * CONCLURE « DÉCONNECTÉ » — mais seulement après avoir essayé de récupérer.
+ *
+ * C'est le point le plus délicat de tout ce fichier. Au démarrage, supabase-js
+ * annonce « aucune session » (INITIAL_SESSION) avant que nous ayons pu
+ * restaurer celle conservée dans le navigateur. Si on l'écoutait sans réfléchir,
+ * l'application se croirait déconnectée pendant une seconde et renverrait
+ * l'utilisateur vers la page de connexion — alors que sa session était là.
+ * On attend donc la fin de la tentative de récupération avant de trancher.
+ */
+function announceNoSession(): void {
+  void recoverSession().then((recovered) => {
+    if (recovered) emit({ session: recovered, user: recovered.user, ready: true });
+    else emit({ session: null, user: null, ready: true });
+  });
 }
 
 /**
@@ -293,15 +311,16 @@ function start(): void {
         // On sort du rappel avant de retoucher à l'authentification : appeler
         // setSession/refreshSession pendant que supabase-js tient son verrou
         // interne peut bloquer l'application.
-        setTimeout(() => {
-          void recoverSession().then((recovered) => {
-            if (recovered) emit({ session: recovered, user: recovered.user, ready: true });
-            else emit({ session: null, user: null, ready: true });
-          });
-        }, 0);
+        setTimeout(announceNoSession, 0);
         return;
 
       case "INITIAL_SESSION":
+        // Au premier chargement, supabase-js annonce souvent « rien » avant
+        // qu'on ait restauré la session du navigateur : on ne tranche pas ici.
+        if (!session && !snapshot.session) {
+          setTimeout(announceNoSession, 0);
+          return;
+        }
         emit({ session: session ?? null, user: session?.user ?? null, ready: true });
         return;
 
