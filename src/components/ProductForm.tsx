@@ -18,7 +18,16 @@ import { MAX_PHOTOS, MAX_PHOTO_SIZE } from "@/lib/image-upload";
 import { formatFCFA } from "@/lib/format";
 import { normalizeTiers, validateTiers, type PriceTier } from "@/lib/price-tiers";
 
-export type FormImage = { url?: string; file?: File; preview: string };
+export type FormImage = {
+  /** Adresse publique de la photo une fois ARRIVÉE sur le serveur. */
+  url?: string;
+  file?: File;
+  preview: string;
+  /** État de l'envoi, affiché sur la vignette. */
+  status?: "uploading" | "done" | "error";
+  /** Message clair quand l'envoi a échoué (réseau, format, droits…). */
+  reason?: string;
+};
 
 export type ProductFormValues = {
   name: string;
@@ -38,6 +47,9 @@ export type ProductFormValues = {
   /** Paliers de prix par quantité (facultatif) : plus on prend, moins c'est cher. */
   price_tiers: PriceTier[] | null;
   existingImages: string[];
+  /** Photos nouvelles déjà envoyées pendant la saisie (cas normal). */
+  uploadedUrls: string[];
+  /** Photos encore en échec, à retenter au moment de publier. */
   newFiles: File[];
 };
 
@@ -111,6 +123,11 @@ type Props = {
   maxPhotos?: number;
   /** Numéro WhatsApp du compte : pré-rempli pour ne pas le retaper à chaque produit. */
   defaultWhatsapp?: string | null;
+  /**
+   * Envoi d'une photo vers le stockage, DÈS qu'elle est choisie.
+   * Fourni par la page (elle seule connaît l'identifiant du vendeur).
+   */
+  uploadFile?: (file: File) => Promise<string>;
 };
 
 export function ProductForm({
@@ -121,6 +138,7 @@ export function ProductForm({
   defaultWhatsapp,
   onCancel,
   maxPhotos = MAX_PHOTOS,
+  uploadFile,
 }: Props) {
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -227,8 +245,47 @@ export function ProductForm({
     if (arr.length === 0) return;
     // Aperçu via object URL : beaucoup plus léger en mémoire que les data URL
     // (5 photos de 15 Mo en base64 faisaient planter l'onglet sur mobile).
+    //
+    // L'ENVOI COMMENCE ICI, tout de suite (voir l'effet plus bas) : le vendeur
+    // remplit tranquillement sa fiche pendant que les photos montent. Le jour
+    // où il appuie sur « Publier », tout est déjà arrivé — la publication ne
+    // peut donc plus être bloquée par le réseau au dernier moment.
     const added: FormImage[] = arr.map((f) => ({ file: f, preview: URL.createObjectURL(f) }));
     setImages((prev) => [...prev, ...added]);
+  };
+
+  /* ------------------------------------------------------------------ *
+   * ENVOI EN ARRIÈRE-PLAN DES PHOTOS
+   *
+   * Le vendeur n'attend plus à la fin : chaque photo part dès qu'elle est
+   * choisie, une par une (jamais toutes en même temps : sur un réseau mobile
+   * faible, les envois simultanés se gênent et échouent tous ensemble).
+   * ------------------------------------------------------------------ */
+  const uploadingRef = useRef(false);
+  useEffect(() => {
+    if (!uploadFile || uploadingRef.current) return;
+    const next = images.find((img) => img.file && !img.url && img.status !== "uploading" && img.status !== "error");
+    if (!next?.file) return;
+
+    uploadingRef.current = true;
+    const target = next;
+    setImages((prev) => prev.map((img) => (img === target ? { ...img, status: "uploading" } : img)));
+
+    (async () => {
+      try {
+        const url = await uploadFile(target.file as File);
+        setImages((prev) => prev.map((img) => (img === target ? { ...img, url, status: "done" } : img)));
+      } catch (e) {
+        const reason = e instanceof Error ? e.message : "Envoi impossible.";
+        setImages((prev) => prev.map((img) => (img === target ? { ...img, status: "error", reason } : img)));
+      } finally {
+        uploadingRef.current = false;
+      }
+    })();
+  }, [images, uploadFile]);
+
+  const retryImage = (i: number) => {
+    setImages((prev) => prev.map((img, j) => (j === i ? { ...img, status: undefined, reason: undefined } : img)));
   };
 
   const removeImage = (i: number) => {
@@ -258,12 +315,27 @@ export function ProductForm({
       toast.error(message);
     };
     setFormError("");
+    // Les photos s'envoient en arrière-plan : si le vendeur appuie sur Publier
+    // avant la fin, on ATTEND quelques secondes au lieu de renvoyer les fichiers
+    // (ce qui doublerait les envois et ferait échouer les deux).
+    if (imagesRef.current.some((i) => i.status === "uploading")) {
+      setFormError("Un instant : vos photos finissent de s'envoyer…");
+      const start = Date.now();
+      while (Date.now() - start < 25_000 && imagesRef.current.some((i) => i.status === "uploading")) {
+        await new Promise((r) => setTimeout(r, 700));
+      }
+      setFormError("");
+    }
+    const currentImages = imagesRef.current;
     const trimmedName = name.trim();
     const trimmedDescription = description.trim();
     const normalizedWhatsapp = cleanPhone(whatsapp);
-    const existingImages = images.filter((i) => i.url).map((i) => i.url!);
-    const newFiles = images.filter((i) => i.file).map((i) => i.file!);
-    const totalImages = existingImages.length + newFiles.length;
+    const existingImages = currentImages.filter((i) => i.url && !i.file).map((i) => i.url!);
+    /** Photos nouvelles déjà arrivées sur le serveur (envoi fait pendant la saisie). */
+    const uploadedUrls = currentImages.filter((i) => i.url && i.file).map((i) => i.url!);
+    /** Photos pas encore arrivées : on retente une dernière fois à la publication. */
+    const newFiles = currentImages.filter((i) => i.file && !i.url).map((i) => i.file!);
+    const totalImages = existingImages.length + uploadedUrls.length + newFiles.length;
 
     if (trimmedName.length < 2) return stop("Nom du produit requis");
     // COHÉRENCE DU CATALOGUE : un nom de produit est un NOM, pas une adresse.
@@ -325,6 +397,10 @@ export function ProductForm({
             : Math.round(weightUnit === "kg" ? Number(weightValue) * 1000 : Number(weightValue)),
         price_tiers: cleanTiers.length > 0 ? cleanTiers : null,
         existingImages,
+        // Photos DÉJÀ arrivées (envoyées pendant la saisie) : c'est le cas normal.
+        uploadedUrls,
+        // Photos encore en échec : la page leur donne une DERNIÈRE chance au
+        // moment de publier (nouveau réseau, nouvelle tentative).
         newFiles,
       });
     } catch (err) {
@@ -386,6 +462,32 @@ export function ProductForm({
               <span className="absolute bottom-1 left-1 rounded-full bg-background/85 px-1.5 text-[10px] font-bold">
                 {i + 1}
               </span>
+
+              {/* ÉTAT DE L'ENVOI, photo par photo : le vendeur sait exactement où
+                  il en est, au lieu de découvrir un échec à la fin. */}
+              {img.status === "uploading" && (
+                <span className="absolute inset-0 grid place-items-center bg-foreground/45">
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                </span>
+              )}
+              {img.status === "done" && (
+                <span className="absolute inset-x-1 top-8 rounded-md bg-success/90 px-1 py-0.5 text-center text-[9px] font-bold text-background">
+                  Envoyée
+                </span>
+              )}
+              {img.status === "error" && (
+                <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-destructive/80 p-1 text-center">
+                  <span className="text-[9px] font-bold leading-tight text-background">Échec de l'envoi</span>
+                  <button
+                    type="button"
+                    onClick={() => retryImage(i)}
+                    className="rounded-full bg-background px-2 py-0.5 text-[9px] font-bold text-destructive"
+                  >
+                    Réessayer
+                  </button>
+                </span>
+              )}
+
               <button
                 type="button"
                 aria-label={`Retirer la photo ${i + 1}`}

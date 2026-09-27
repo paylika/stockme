@@ -7,7 +7,7 @@ import { MobileFooter } from "@/components/MobileFooter";
 import { ProductForm, ProductFormValues } from "@/components/ProductForm";
 import { PhotoFailurePanel } from "@/components/PhotoFailurePanel";
 import { Button } from "@/components/ui/button";
-import { uploadImagesResilient, MAX_PHOTOS, FREE_MAX_PHOTOS, type UploadFailure } from "@/lib/image-upload";
+import { uploadImagesResilient, uploadProductImage, MAX_PHOTOS, FREE_MAX_PHOTOS, type UploadFailure } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
 import { trackPublishProduct } from "@/lib/meta-pixel";
 import { FREE_PRODUCTS, EXTRA_PUBLICATION_PRICE, PRO_AVAILABLE, PRO_MONTHLY_BOOST_CREDIT } from "@/lib/pricing";
@@ -73,23 +73,21 @@ function NewProduct() {
   const submit = async (values: ProductFormValues) => {
     const userId = await requireUserId("Reconnectez-vous pour publier le produit.");
 
-    const { urls, failures } = await uploadImagesResilient(values.newFiles, userId, setUploadingStatus);
-
-    // Une fiche SANS PHOTO ne s'affiche jamais correctement pour l'acheteur
-    // (carte vide dans le catalogue). On ne publie donc pas tant qu'au moins
-    // une photo n'est pas arrivée : le formulaire reste rempli et le vendeur
-    // peut relancer l'envoi d'un seul clic sur « Publier ».
-    if (urls.length === 0) {
-      setUploadingStatus("");
-      const why = failures[0]?.reason ? ` (${failures[0].reason})` : "";
-      toast.error(
-        `Aucune photo n'a pu être envoyée${why}. Vérifiez votre connexion, puis appuyez de nouveau sur Publier — votre produit n'a pas été publié.`,
-        { duration: 10000 },
-      );
-      return;
+    /**
+     * VITESSE ET FIABILITÉ : les photos ont déjà été envoyées pendant que le
+     * vendeur remplissait sa fiche (voir ProductForm). Ici on ne traite que
+     * celles qui ont échoué : on leur donne une DERNIÈRE chance, souvent
+     * réussie parce que le réseau a changé entre-temps.
+     */
+    let lateUrls: string[] = [];
+    let failures: UploadFailure[] = [];
+    if (values.newFiles.length > 0) {
+      const res = await uploadImagesResilient(values.newFiles, userId, setUploadingStatus);
+      lateUrls = res.urls;
+      failures = res.failures;
     }
 
-    setUploadingStatus("Publication du produit...");
+    const urls = [...values.uploadedUrls, ...lateUrls];
 
     const payload = {
       owner_id: userId,
@@ -112,6 +110,48 @@ function NewProduct() {
       weight_grams: values.weight_grams,
       price_tiers: values.price_tiers,
     };
+
+    // GARANTIE : même sans aucune photo, on n'abandonne JAMAIS le vendeur.
+    // Sa fiche est enregistrée en BROUILLON (invisible du catalogue) : il ne
+    // retape ni le nom, ni le prix, ni les paliers. Il renvoie les photos
+    // ci-dessous, et la fiche part en ligne automatiquement dès qu'une photo
+    // est arrivée. Sans cette sécurité, un réseau faible faisait tout perdre.
+    if (urls.length === 0) {
+      setUploadingStatus("Enregistrement de votre fiche...");
+      const { data: draft, error: draftError } = await supabase
+        .from("products")
+        .insert({ ...payload, images: [], published: false })
+        .select("id")
+        .single();
+
+      setUploadingStatus("");
+
+      if (draftError || !draft?.id) {
+        const why = failures[0]?.reason ? ` (${failures[0].reason})` : "";
+        toast.error(
+          `Aucune photo n'a pu être envoyée${why}, et l'enregistrement a échoué. Vos informations restent dans le formulaire : appuyez de nouveau sur Publier.`,
+          { duration: 12000 },
+        );
+        return;
+      }
+
+      setPending({
+        productId: draft.id as string,
+        urls: [],
+        files: values.newFiles,
+        failures,
+      });
+      toast.warning(
+        "Aucune photo n'a pu être envoyée : votre fiche est ENREGISTRÉE (pas encore en ligne). Renvoyez les photos ci-dessous — elle sera publiée automatiquement.",
+        { duration: 15000 },
+      );
+      return;
+    }
+
+    // Certaines photos manquent mais au moins une est arrivée : on publie (la
+    // fiche est vendable). Le panneau « renvoyer les photos » en bas de page
+    // s'occupe du reste juste après.
+    setUploadingStatus("Publication du produit...");
 
     let insertError: string | null = null;
     let productId: string | null = null;
@@ -198,8 +238,26 @@ function NewProduct() {
       const allImages = [...pending.urls, ...urls];
 
       if (urls.length > 0) {
-        const { error } = await supabase.from("products").update({ images: allImages }).eq("id", pending.productId);
+        /**
+         * Dès qu'une photo arrive, on remet la fiche EN LIGNE si elle était en
+         * brouillon : le vendeur n'a rien d'autre à faire. (Le garde-fou de la
+         * base exige au moins une photo : c'est donc le bon moment.)
+         */
+        const wasDraft = pending.urls.length === 0;
+        const { error } = await supabase
+          .from("products")
+          .update(wasDraft ? { images: allImages, published: true } : { images: allImages })
+          .eq("id", pending.productId);
         if (error) throw new Error(error.message);
+
+        if (wasDraft) {
+          toast.success("Photos envoyées : votre produit est EN LIGNE !");
+          /* Pixel Meta : la publication a bien eu lieu. */
+          trackPublishProduct("Produit publié après reprise");
+          setPending(null);
+          navigate({ to: "/dashboard" });
+          return;
+        }
       }
 
       if (failures.length === 0) {
@@ -345,6 +403,12 @@ function NewProduct() {
               maxPhotos={maxPhotos}
               defaultWhatsapp={accountWhatsapp}
               onCancel={() => navigate({ to: "/dashboard" })}
+              /* ENVOI IMMÉDIAT : chaque photo part dès qu'elle est choisie,
+                 pendant que le vendeur remplit le reste de la fiche. */
+              uploadFile={async (file) => {
+                const userId = await requireUserId("Reconnectez-vous pour envoyer les photos.");
+                return uploadProductImage(file, userId);
+              }}
             />
           </div>
         )}

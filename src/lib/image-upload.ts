@@ -7,17 +7,26 @@ export const FREE_MAX_PHOTOS = 10;
 /** Taille maximale du fichier CHOISI par l'utilisateur (il est compressé avant envoi). */
 export const MAX_PHOTO_SIZE = 15 * 1024 * 1024;
 /** Taille maximale réellement ENVOYÉE au serveur (garantie par la compression). */
-export const MAX_UPLOAD_SIZE = 2.5 * 1024 * 1024;
+export const MAX_UPLOAD_SIZE = 1.2 * 1024 * 1024;
 
-const MAX_DIMENSION = 1280;
 /**
- * Poids visé après compression. On est passé de 500 Ko à 340 Ko : les photos
- * pèsent un tiers de moins pour une différence invisible à l'écran (et elles
- * sont de toute façon servies en WebP redimensionné dans l'application).
+ * RÉGLAGE DÉCISIF POUR L'AFRIQUE DE L'OUEST.
+ *
+ * Avant : 1280 px / ~340 Ko visés. Sur un réseau mobile faible (2G/3G, zone
+ * blanche), un envoi de 340 Ko peut échouer — et un vendeur qui ne peut pas
+ * publier est un vendeur perdu.
+ *
+ * Maintenant : 1080 px / ~170 Ko visés. À l'écran, c'est IDENTIQUE (les photos
+ * sont de toute façon affichées en 800 px maximum et servies en WebP
+ * redimensionné). Mais l'envoi est DEUX FOIS plus léger, donc deux fois plus
+ * susceptible d'aboutir du premier coup.
  */
-const TARGET_BYTES = 340 * 1024;
-const QUALITIES = [0.82, 0.7, 0.58];
-const ATTEMPTS = 4;
+const MAX_DIMENSION = 1080;
+const TARGET_BYTES = 170 * 1024;
+const QUALITIES = [0.8, 0.68, 0.55, 0.45];
+/** Tentatives d'envoi : avec des pauses plus longues, le temps que le réseau revienne. */
+const ATTEMPTS = 5;
+const RETRY_WAITS_MS = [1200, 2500, 5000, 9000];
 
 /** Erreur "propre" : le message est compréhensible par le vendeur tel quel. */
 export class ImageError extends Error {}
@@ -201,6 +210,9 @@ export async function compressImage(file: File): Promise<Blob> {
 
 function classifyUploadError(err: unknown, size: number): string {
   const msg = err instanceof Error ? err.message : String(err ?? "");
+  // Hors ligne : on le dit clairement, au lieu de parler de « réseau ».
+  if (typeof navigator !== "undefined" && navigator.onLine === false)
+    return "Vous êtes hors ligne : vos informations sont conservées, réactivez vos données puis réessayez.";
   if (/row-level security|violates row-level|not authorized|unauthorized|403/i.test(msg))
     return "Accès au stockage refusé : reconnectez-vous puis réessayez.";
   if (/exceeded the maximum allowed size|payload too large|too large|413/i.test(msg))
@@ -214,6 +226,56 @@ function classifyUploadError(err: unknown, size: number): string {
   return msg || "Envoi impossible.";
 }
 
+/**
+ * Envoi d'un fichier avec plusieurs tentatives, en respectant le retour du
+ * réseau : si le téléphone est hors ligne, on attend qu'il le redevienne au
+ * lieu de brûler les tentatives pour rien.
+ */
+async function uploadWithRetries(path: string, blob: Blob, onStatus?: (s: string) => void): Promise<void> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+    // Hors ligne : on attend le retour du réseau (30 s maximum) avant d'essayer.
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      onStatus?.("En attente du réseau...");
+      await waitForOnline(30_000);
+    }
+    try {
+      await uploadBlob(path, blob);
+      return;
+    } catch (e) {
+      lastError = e;
+      if (attempt < ATTEMPTS) await sleep(RETRY_WAITS_MS[attempt - 1] ?? 9000);
+    }
+  }
+  throw new ImageError(classifyUploadError(lastError, blob.size));
+}
+
+/** Attend le retour de la connexion (résout tout de suite si on est en ligne). */
+function waitForOnline(maxMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") return resolve();
+    if (navigator.onLine) return resolve();
+    const done = () => {
+      window.removeEventListener("online", done);
+      resolve();
+    };
+    window.addEventListener("online", done, { once: true });
+    setTimeout(done, maxMs);
+  });
+}
+
+/** Compression puis envoi d'une photo. Renvoie l'URL publique. */
+export async function uploadProductImage(file: File, userId: string): Promise<string> {
+  const blob = await compressImage(file);
+  const base = safeFileName(file.name).replace(/\.[^.]+$/, "") || "produit";
+  const ext = blob.type === "image/jpeg" ? "jpg" : extensionOf(file.name) || "jpg";
+  const path = `${userId}/${uid()}-${base}.${ext}`;
+
+  await uploadWithRetries(path, blob);
+  const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+  return data.publicUrl;
+}
+
 async function uploadBlob(path: string, blob: Blob): Promise<void> {
   const { error } = await supabase.storage.from("product-images").upload(path, blob, {
     contentType: blob.type || "image/jpeg",
@@ -221,27 +283,6 @@ async function uploadBlob(path: string, blob: Blob): Promise<void> {
     upsert: false,
   });
   if (error) throw error;
-}
-
-/** Compresse puis envoie une photo, avec 4 tentatives. Renvoie l'URL publique. */
-export async function uploadProductImage(file: File, userId: string): Promise<string> {
-  const blob = await compressImage(file);
-  const base = safeFileName(file.name).replace(/\.[^.]+$/, "") || "produit";
-  const ext = blob.type === "image/jpeg" ? "jpg" : extensionOf(file.name) || "jpg";
-  const path = `${userId}/${uid()}-${base}.${ext}`;
-
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
-    try {
-      await uploadBlob(path, blob);
-      const { data } = supabase.storage.from("product-images").getPublicUrl(path);
-      return data.publicUrl;
-    } catch (e) {
-      lastError = e;
-      if (attempt < ATTEMPTS) await sleep(attempt * 900);
-    }
-  }
-  throw new ImageError(`${file.name} : ${classifyUploadError(lastError, blob.size)}`);
 }
 
 export type UploadFailure = { fileName: string; reason: string };
@@ -262,41 +303,24 @@ export async function uploadImagesResilient(
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     const label = `Photo ${i + 1}/${files.length}`;
-    try {
-      onStatus?.(`Préparation de la ${label.toLowerCase()}...`);
-      const blob = await compressImage(file);
-      onStatus?.(`Envoi ${label} (${formatBytes(blob.size)})...`);
-      const base = safeFileName(file.name).replace(/\.[^.]+$/, "") || "produit";
-      const ext = blob.type === "image/jpeg" ? "jpg" : extensionOf(file.name) || "jpg";
-      const path = `${userId}/${uid()}-${base}.${ext}`;
+      try {
+        onStatus?.(`Préparation de la ${label.toLowerCase()}...`);
+        const blob = await compressImage(file);
+        onStatus?.(`Envoi ${label} (${formatBytes(blob.size)})...`);
+        const base = safeFileName(file.name).replace(/\.[^.]+$/, "") || "produit";
+        const ext = blob.type === "image/jpeg" ? "jpg" : extensionOf(file.name) || "jpg";
+        const path = `${userId}/${uid()}-${base}.${ext}`;
 
-      let lastError: unknown;
-      let ok = false;
-      for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
-        try {
-          onStatus?.(attempt === 1 ? `Envoi ${label}...` : `Nouvelle tentative ${attempt}/${ATTEMPTS} — ${label}...`);
-          await uploadBlob(path, blob);
-          ok = true;
-          break;
-        } catch (e) {
-          lastError = e;
-          if (attempt < ATTEMPTS) await sleep(attempt * 900);
-        }
-      }
-
-      if (ok) {
+        await uploadWithRetries(path, blob, onStatus);
         const { data } = supabase.storage.from("product-images").getPublicUrl(path);
         urls.push(data.publicUrl);
-      } else {
-        failures.push({ fileName: file.name, reason: classifyUploadError(lastError, blob.size) });
+      } catch (e) {
+        failures.push({
+          fileName: file.name,
+          reason: e instanceof Error ? e.message : "Envoi impossible.",
+        });
       }
-    } catch (e) {
-      failures.push({
-        fileName: file.name,
-        reason: e instanceof Error ? e.message : "Préparation de la photo impossible.",
-      });
     }
-  }
 
   return { urls, failures };
 }
@@ -318,18 +342,9 @@ export async function uploadImage(file: File, userId: string, prefix = "img"): P
   const ext = blob.type === "image/jpeg" ? "jpg" : extensionOf(file.name) || "jpg";
   const path = `${userId}/${prefix}-${uid()}.${ext}`;
 
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
-    try {
-      await uploadBlob(path, blob);
-      const { data } = supabase.storage.from("product-images").getPublicUrl(path);
-      return data.publicUrl;
-    } catch (e) {
-      lastError = e;
-      if (attempt < ATTEMPTS) await sleep(attempt * 900);
-    }
-  }
-  throw new ImageError(classifyUploadError(lastError, blob.size));
+  await uploadWithRetries(path, blob);
+  const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+  return data.publicUrl;
 }
 
 /**
@@ -340,20 +355,9 @@ export async function uploadAvatar(file: File, userId: string, previousUrl?: str
   const blob = await compressImage(file);
   const path = `${userId}/avatar-${uid()}.jpg`;
 
-  let lastError: unknown;
-  let url: string | null = null;
-  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
-    try {
-      await uploadBlob(path, blob);
-      const { data } = supabase.storage.from("product-images").getPublicUrl(path);
-      url = data.publicUrl;
-      break;
-    } catch (e) {
-      lastError = e;
-      if (attempt < ATTEMPTS) await sleep(attempt * 900);
-    }
-  }
-  if (!url) throw new ImageError(classifyUploadError(lastError, blob.size));
+  await uploadWithRetries(path, blob);
+  const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+  const url = data.publicUrl;
 
   // Nettoyage de l'ancien avatar (best effort, jamais bloquant).
   const oldPath = previousUrl?.split("/product-images/")[1]?.split("?")[0];
