@@ -31,6 +31,8 @@ export type SellerProfileRow = {
   verified_until: string | null;
   banner_url: string | null;
   banner_position: number | null;
+  /** Compte suspendu par l'administration (annonces masquées). */
+  banned?: boolean | null;
 };
 
 export type SellerProductRow = {
@@ -117,7 +119,7 @@ const legacyDashboard = async (): Promise<SellerDashboard | null> => {
     supabase
       .from("profiles")
       .select(
-        "id,shop_name,full_name,avatar_url,city,bio,phone,whatsapp,role,plan,verified,verified_until,banner_url,banner_position",
+        "id,shop_name,full_name,avatar_url,city,bio,phone,whatsapp,role,plan,verified,verified_until,banner_url,banner_position,banned",
       )
       .eq("id", uid)
       .maybeSingle(),

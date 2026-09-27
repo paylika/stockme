@@ -68,6 +68,8 @@ export type Database = {
           promo_price_fcfa: number | null
           published: boolean
           quantity: number
+          /** Jeton unique du formulaire de publication : empêche les doublons. */
+          submission_token: string | null
           rating_avg: number | null
           rating_count: number
           revenue_fcfa: number | null
@@ -102,6 +104,8 @@ export type Database = {
           weight_grams?: number | null
           whatsapp?: string | null
           zone?: string | null
+          /** Jeton unique du formulaire de publication : empêche les doublons. */
+          submission_token?: string | null
         }
         Update: {
           category?: string
@@ -120,6 +124,7 @@ export type Database = {
           promo_price_fcfa?: number | null
           published?: boolean
           quantity?: number
+          submission_token?: string | null
           rating_avg?: number | null
           rating_count?: number
           revenue_fcfa?: number | null
@@ -578,6 +583,14 @@ export type Database = {
           p_subscription_ref: string
           p_amount?: number | null
           p_payload?: Record<string, unknown> | null
+        }
+        Returns: Record<string, unknown>
+      }
+      admin_set_user_banned: {
+        Args: {
+          p_user_id: string
+          p_banned: boolean
+          p_reason?: string | null
         }
         Returns: Record<string, unknown>
       }

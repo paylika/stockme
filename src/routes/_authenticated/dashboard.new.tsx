@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
@@ -52,6 +52,18 @@ function NewProduct() {
   /** La base a refusé la publication faute de solde : on propose le rechargement. */
   const [limitRefusal, setLimitRefusal] = useState<string | null>(null);
 
+  /* ============ ANTI-DOUBLON ============
+     1. `submittingRef` : un seul envoi à la fois (les appuis répétés sont ignorés).
+     2. `submissionToken` : un jeton unique pour CE formulaire, envoyé à la base
+        qui a un index UNIQUE dessus. Même si la requête était rejouée par le
+        réseau, une seule fiche peut exister. C'est la garantie définitive. */
+  const submittingRef = useRef(false);
+  const submissionToken = useRef(
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+  ).current;
+
   useEffect(() => {
     (async () => {
       const { data: s } = await supabase.auth.getSession();
@@ -70,7 +82,7 @@ function NewProduct() {
     })();
   }, []);
 
-  const submit = async (values: ProductFormValues) => {
+  const submitOnce = async (values: ProductFormValues) => {
     const userId = await requireUserId("Reconnectez-vous pour publier le produit.");
 
     /**
@@ -109,6 +121,8 @@ function NewProduct() {
       colors: values.colors,
       weight_grams: values.weight_grams,
       price_tiers: values.price_tiers,
+      /* Jeton anti-doublon : la base refuse deux fiches avec le même jeton. */
+      submission_token: submissionToken,
     };
 
     // GARANTIE : même sans aucune photo, on n'abandonne JAMAIS le vendeur.
@@ -156,6 +170,8 @@ function NewProduct() {
     let insertError: string | null = null;
     let productId: string | null = null;
     let priceTiersDropped = false;
+    let tokenDropped = false;
+    let alreadyThere = false;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         const { data, error } = await supabase.from("products").insert(payload).select("id").single();
@@ -165,6 +181,49 @@ function NewProduct() {
         break;
       } catch (err) {
         insertError = err instanceof Error ? err.message : "erreur réseau";
+
+        /**
+         * ANTI-DOUBLON (le bug des dizaines de publications identiques).
+         *
+         * Chaque formulaire porte un JETON unique, avec un index unique en base.
+         * Si le vendeur appuie 10 fois (ou si le réseau rejoue la requête), le
+         * premier insert passe et LES AUTRES SONT REFUSÉS par la base. Ici on
+         * comprend ce refus et on va chercher la fiche déjà créée : le vendeur
+         * voit « publié », jamais 10 copies.
+         */
+        if (/duplicate key|unique constraint|23505/i.test(insertError)) {
+          const { data: existing } = await supabase
+            .from("products")
+            .select("id,published")
+            .eq("submission_token", submissionToken)
+            .maybeSingle();
+          const found = existing as { id: string; published: boolean } | null;
+          if (found?.id) {
+            productId = found.id;
+            insertError = null;
+            // La fiche existait en brouillon (photos arrivées plus tard) :
+            // on la met en ligne maintenant, au lieu d'en créer une deuxième.
+            if (!found.published) {
+              await supabase
+                .from("products")
+                .update({ ...payload, submission_token: submissionToken })
+                .eq("id", found.id);
+            } else {
+              alreadyThere = true;
+            }
+            break;
+          }
+        }
+
+        // La colonne `submission_token` n'existe pas encore (SQL non collé) :
+        // on retire le jeton et on republie, sans bloquer le vendeur.
+        if (!tokenDropped && /submission_token/i.test(insertError) && "submission_token" in payload) {
+          delete (payload as { submission_token?: unknown }).submission_token;
+          tokenDropped = true;
+          attempt = 0;
+          continue;
+        }
+
         // La colonne `price_tiers` n'existe pas encore (SQL non collé) : on
         // retire les paliers et on republie immédiatement, sans bloquer le vendeur.
         if (!priceTiersDropped && /price_tiers/i.test(insertError) && "price_tiers" in payload) {
@@ -220,12 +279,32 @@ function NewProduct() {
 
     if (failures.length > 0) {
       toast.warning("Produit publié, mais des photos n'ont pas pu être envoyées.");
+    } else if (alreadyThere) {
+      toast.info("Ce produit était déjà publié — pas de doublon créé.");
     } else {
       toast.success("Produit publié !");
     }
     /* Pixel Meta : le vendeur vient de publier — c'est le vrai passage à l'acte. */
     trackPublishProduct(values.name, Number(values.price_fcfa) || undefined);
     navigate({ to: "/dashboard" });
+  };
+
+  /**
+   * VERROU ANTI-DOUBLON, niveau 1 : un seul envoi à la fois.
+   * Sur un téléphone lent, le vendeur appuie plusieurs fois sur « Publier »
+   * avant que le bouton ne se grise — sans ce verrou, chaque appui créait un
+   * produit. (Niveau 2 : le jeton unique en base, dans `submitOnce`.)
+   */
+  const submit = async (values: ProductFormValues) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    try {
+      await submitOnce(values);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Publication impossible.");
+    } finally {
+      submittingRef.current = false;
+    }
   };
 
   const retryPhotos = async () => {

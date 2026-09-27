@@ -15,7 +15,8 @@ import {
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { countryOfCity } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
-import { MessageCircle, Package, UserPlus, Users } from "lucide-react";
+import { Eye, EyeOff, MessageCircle, Package, Trash2, UserPlus, Users } from "lucide-react";
+import { toast } from "sonner";
 import {
   IconUsers,
   IconStock,
@@ -49,6 +50,7 @@ type Product = {
   owner_id: string;
   created_at: string;
   images: string[];
+  published: boolean;
 };
 
 type SellerStat = {
@@ -169,7 +171,7 @@ function AdminDashboard() {
         supabase.from("profiles").select("*").order("created_at", { ascending: false }),
         supabase
           .from("products")
-          .select("id,name,category,price_fcfa,promo_price_fcfa,quantity,moq,city,zone,owner_id,created_at,images")
+          .select("id,name,category,price_fcfa,promo_price_fcfa,quantity,moq,city,zone,owner_id,created_at,images,published")
           .order("created_at", { ascending: false }),
       ]);
       setProfiles((profs ?? []) as Profile[]);
@@ -201,6 +203,41 @@ function AdminDashboard() {
       setSelectedDetail((data as SellerDetail | null) ?? null);
     });
   }, [selectedSeller]);
+
+  /**
+   * ACTIONS DIRECTES SUR UN PRODUIT, depuis la page d'accueil admin.
+   *
+   * POURQUOI ICI : le tableau « Derniers produits » n'avait AUCUN bouton. Pour
+   * retirer une annonce douteuse, il fallait passer par Utilisateurs → déplier
+   * le vendeur → retrouver le produit. Maintenant : masquer / publier /
+   * supprimer en un appui, à l'endroit où on voit l'annonce.
+   */
+  const [busyProduct, setBusyProduct] = useState<string | null>(null);
+
+  const patchProduct = async (p: Product, patch: { published?: boolean }, message: string) => {
+    setBusyProduct(p.id);
+    const { error } = await supabase.rpc("admin_update_product", { p_id: p.id, p_patch: patch });
+    setBusyProduct(null);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setProducts((prev) => (prev ?? []).map((x) => (x.id === p.id ? { ...x, ...patch } : x)));
+    toast.success(message);
+  };
+
+  const deleteProduct = async (p: Product) => {
+    if (!confirm(`Supprimer définitivement « ${p.name} » ?\n\nCette action est irréversible.`)) return;
+    setBusyProduct(p.id);
+    const { error } = await supabase.rpc("admin_delete_product", { p_id: p.id });
+    setBusyProduct(null);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setProducts((prev) => (prev ?? []).filter((x) => x.id !== p.id));
+    toast.success("Produit supprimé");
+  };
 
   const loading = profiles === null || products === null || overview === null;
   const profs = profiles ?? [];
@@ -452,13 +489,14 @@ function AdminDashboard() {
               <th className="text-left px-4 py-3 hidden md:table-cell">Ville</th>
               <th className="text-left px-4 py-3 hidden lg:table-cell">Vendeur</th>
               <th className="text-left px-4 py-3 hidden md:table-cell">Publié le</th>
+              <th className="text-right px-4 py-3 hidden sm:table-cell">Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Chargement…</td></tr>
+              <tr><td colSpan={8} className="px-4 py-6 text-center text-muted-foreground">Chargement…</td></tr>
             ) : prods.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Aucun produit</td></tr>
+              <tr><td colSpan={8} className="px-4 py-6 text-center text-muted-foreground">Aucun produit</td></tr>
             ) : prods.slice(0, 12).map((p) => {
               const hasPromo = p.promo_price_fcfa && p.promo_price_fcfa < p.price_fcfa;
               return (
@@ -477,9 +515,32 @@ function AdminDashboard() {
                           <Package className="h-4 w-4" />
                         </span>
                       )}
-                      <Link to="/product/$id" params={{ id: p.id }} className="truncate hover:text-primary">
-                        {p.name}
-                      </Link>
+                      <div className="min-w-0">
+                        <Link to="/product/$id" params={{ id: p.id }} className="block truncate hover:text-primary">
+                          {p.name}
+                        </Link>
+                        {/* ACTIONS SUR MOBILE : dans la colonne du produit, donc
+                            toujours visibles sans faire défiler le tableau. */}
+                        <div className="mt-1.5 flex items-center gap-1.5 sm:hidden">
+                          <button
+                            type="button"
+                            disabled={busyProduct === p.id}
+                            onClick={() => patchProduct(p, { published: !p.published }, p.published ? "Annonce masquée" : "Annonce publiée")}
+                            className="inline-flex h-7 items-center gap-1 rounded-full border border-border px-2 text-[10px] font-semibold disabled:opacity-50"
+                          >
+                            {p.published ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                            {p.published ? "Masquer" : "Publier"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busyProduct === p.id}
+                            onClick={() => deleteProduct(p)}
+                            className="inline-flex h-7 items-center gap-1 rounded-full border border-destructive/40 px-2 text-[10px] font-semibold text-destructive disabled:opacity-50"
+                          >
+                            <Trash2 className="h-3 w-3" /> Supprimer
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground">{p.category}</td>
@@ -492,6 +553,35 @@ function AdminDashboard() {
                   <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground truncate max-w-[160px]">{ownerName.get(p.owner_id) || "—"}</td>
                   <td className="px-4 py-3 hidden md:table-cell text-muted-foreground text-xs whitespace-nowrap">
                     {new Date(p.created_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}
+                  </td>
+                  <td className="px-4 py-3 hidden sm:table-cell">
+                    <div className="flex items-center justify-end gap-1">
+                      <span
+                        className={`mr-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                          p.published ? "bg-volt/15 text-volt" : "bg-secondary text-muted-foreground"
+                        }`}
+                      >
+                        {p.published ? "En ligne" : "Masqué"}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={busyProduct === p.id}
+                        onClick={() => patchProduct(p, { published: !p.published }, p.published ? "Annonce masquée" : "Annonce publiée")}
+                        className="grid h-8 w-8 place-items-center rounded-md border border-border hover:bg-accent disabled:opacity-50"
+                        title={p.published ? "Masquer du catalogue" : "Publier"}
+                      >
+                        {p.published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyProduct === p.id}
+                        onClick={() => deleteProduct(p)}
+                        className="grid h-8 w-8 place-items-center rounded-md border border-border text-muted-foreground hover:border-destructive/50 hover:text-destructive disabled:opacity-50"
+                        title="Supprimer définitivement"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );

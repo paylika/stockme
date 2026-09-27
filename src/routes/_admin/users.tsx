@@ -20,6 +20,8 @@ import {
   ShieldCheck,
   ShieldOff,
   Trash2,
+  UserCheck,
+  UserX,
   Users as UsersIcon,
   Zap,
 } from "lucide-react";
@@ -32,6 +34,11 @@ type AdminUser = {
   whatsapp: string | null;
   city: string | null;
   role: string | null;
+  /** Abonnement en cours (pro / verifie / gratuit). */
+  plan?: string | null;
+  /** Compte suspendu par l'administration. */
+  banned?: boolean;
+  banned_reason?: string | null;
   created_at: string;
   is_admin: boolean;
 };
@@ -187,6 +194,55 @@ function AdminUsersPage() {
         ? `Badge accordé à ${u.email || u.full_name}${months ? ` (${months} mois)` : " (à vie)"}`
         : `Badge retiré à ${u.email || u.full_name}`,
     );
+    load();
+  };
+
+  /* ===== BANNIR / RÉACTIVER UN COMPTE =====
+     Ce que fait le bannissement, côté base (donc impossible à contourner) :
+       • toutes ses annonces sont MASQUÉES du catalogue ;
+       • ses publicités payées s'arrêtent ;
+       • ses mises en avant passent en pause (le solde restant lui reste) ;
+       • il ne peut plus publier de nouveau produit.
+     Rien n'est supprimé : on peut tout rétablir d'un clic. */
+  const [banBusyId, setBanBusyId] = useState<string | null>(null);
+
+  const setBanned = async (u: AdminUser, banned: boolean) => {
+    const who = u.email || u.full_name || u.id;
+    let reason: string | null = null;
+
+    if (banned) {
+      reason = prompt(
+        `Bannir « ${who} » ?\n\nMotif (pour vous, il n'est pas affiché au public) :`,
+        "Annonces non conformes",
+      );
+      if (reason === null) return; // annulé
+      if (
+        !confirm(
+          `Confirmer le bannissement de ${who} ?\n\nSes annonces seront masquées et ses publicités arrêtées. Rien n'est supprimé : vous pourrez le réactiver.`,
+        )
+      )
+        return;
+    } else if (!confirm(`Réactiver le compte de ${who} ?\n\nSes annonces resteront masquées : il devra les republier lui-même.`)) {
+      return;
+    }
+
+    setBanBusyId(u.id);
+    const { data, error } = await supabase.rpc("admin_set_user_banned", {
+      p_user_id: u.id,
+      p_banned: banned,
+      p_reason: reason,
+    });
+    setBanBusyId(null);
+    if (error) return toast.error(explainDbError(error.message, "20260821000000_ban_et_anti_doublon.sql"));
+
+    const res = data as { products_hidden?: number; ads_stopped?: number; boosts_paused?: number } | null;
+    if (banned) {
+      toast.success(
+        `Compte suspendu. ${res?.products_hidden ?? 0} annonce(s) masquée(s), ${res?.ads_stopped ?? 0} publicité(s) arrêtée(s).`,
+      );
+    } else {
+      toast.success("Compte réactivé — le vendeur peut publier de nouveau.");
+    }
     load();
   };
 
@@ -364,6 +420,31 @@ function AdminUsersPage() {
                           <ShieldCheck className="mr-1 h-3.5 w-3.5" /> Donner accès admin
                         </Button>
                       )}
+
+                      {/* BANNIR : jamais proposé pour un administrateur (on se
+                          bannirait soi-même par erreur). */}
+                      {!u.is_admin &&
+                        (u.banned ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setBanned(u, false)}
+                            disabled={banBusyId === u.id}
+                            className="text-success hover:border-success/50"
+                          >
+                            <UserCheck className="mr-1 h-3.5 w-3.5" /> Réactiver
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setBanned(u, true)}
+                            disabled={banBusyId === u.id}
+                            className="text-destructive hover:border-destructive/50"
+                          >
+                            <UserX className="mr-1 h-3.5 w-3.5" /> Bannir
+                          </Button>
+                        ))}
                     </div>
                   </td>
                 </tr>

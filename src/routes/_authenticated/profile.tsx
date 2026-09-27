@@ -26,6 +26,7 @@ import { requireUserId } from "@/lib/current-user";
 import { formatFCFA } from "@/lib/format";
 import {
   COUNTRY_FLAGS,
+  SERVICE_WHATSAPP,
   VERIFIED_BADGE_PRICE_FCFA,
   countryOfCity,
 } from "@/lib/constants";
@@ -69,6 +70,9 @@ type Profile = {
   banner_position?: number | null;
   verified: boolean;
   verified_until: string | null;
+  /** Compte suspendu par l'administration + motif. */
+  banned?: boolean | null;
+  banned_reason?: string | null;
 };
 
 type Product = {
@@ -605,6 +609,29 @@ function ProfilePage() {
 
       {/* ===== Espace vendeur : Produits · Statistiques · Sponsorisation ===== */}
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8">
+        {/* COMPTE SUSPENDU : le vendeur doit comprendre tout de suite pourquoi
+            ses annonces ont disparu, et comment en parler. */}
+        {dashboard?.profile?.banned && (
+          <div className="mb-4 rounded-2xl border-2 border-destructive/50 bg-destructive/10 p-4">
+            <p className="flex items-center gap-2 text-sm font-bold text-destructive">
+              <ShieldQuestion className="h-4 w-4 shrink-0" /> Votre compte est suspendu
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Vos annonces sont masquées du catalogue et vous ne pouvez plus publier pour le moment.
+              {profile?.banned_reason ? ` Motif indiqué : ${profile.banned_reason}.` : ""} Écrivez-nous sur WhatsApp pour
+              régler la situation — nous remettons tout en place immédiatement si c'est une erreur.
+            </p>
+            <a
+              href={`https://wa.me/${SERVICE_WHATSAPP}?text=${encodeURIComponent("Bonjour StockMe, mon compte est suspendu. Pouvez-vous m'expliquer ?")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex h-10 items-center gap-1.5 rounded-xl bg-volt px-3 text-xs font-bold text-volt-foreground"
+            >
+              <MessageCircle className="h-3.5 w-3.5" /> Écrire à StockMe
+            </a>
+          </div>
+        )}
+
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg sm:text-xl font-bold tracking-tight">Mon espace vendeur</h2>
           <Link to="/dashboard/new">
