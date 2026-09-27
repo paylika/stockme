@@ -1,52 +1,34 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { formatFCFA } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/stockme-client";
-import type { BoostRow, WalletData } from "@/hooks/useWallet";
-import { toggleBoostStatus } from "@/components/SellerMoneyProvider";
-import { BOOST_DAY_PRICE, BOOST_PACKS, boostDaysFor, boostPriceFor, boostSavingsFor } from "@/lib/pricing";
-import { thumb } from "@/lib/img";
-import {
-  ArrowDownLeft,
-  ChevronDown,
-  Eye,
-  Heart,
-  MessageCircle,
-  MousePointerClick,
-  Pause,
-  Percent,
-  Play,
-  Plus,
-  Rocket,
-  Wallet,
-} from "lucide-react";
+import type { PendingPayment, WalletData } from "@/hooks/useWallet";
+import { BOOST_DAY_PRICE, FREE_PRODUCTS, EXTRA_PUBLICATION_PRICE, VERIFICATION_BONUS_FCFA, boostDaysFor, boostPriceFor, boostSavingsFor } from "@/lib/pricing";
+import { ArrowDownLeft, ChevronDown, Clock, Gift, Plus, Rocket, Wallet } from "lucide-react";
 
 type Props = {
   wallet: WalletData | null;
   loading: boolean;
-  /** Ouvre le rechargement (montant et formules pré-remplis si fournis). */
+  /** Ouvre la fenêtre de rechargement (montant et formules pré-remplis si fournis). */
   onRecharge: (amount?: number, presets?: number[]) => void;
-  /** Rouvre la fenêtre de mise en avant d'un produit (prolonger / reprendre). */
-  onProlong: (product: { id: string; name: string }) => void;
+  onEditPending: (pending: PendingPayment) => void;
   onChanged?: () => void;
 };
 
-/** Montants des 3 formules : 7 000 / 15 000 / 30 000 F. */
-const PACK_AMOUNTS = BOOST_PACKS.map((p) => boostPriceFor(p.days));
-
 /**
- * Ce qui tourne et ce que ça rapporte.
+ * ONGLET PORTEFEUILLE — uniquement l'ARGENT.
  *
- * Les paiements abandonnés ne sont PAS ici : ils s'affichent dans la fenêtre de
- * paiement, au moment où le vendeur achète réellement (avant, ils occupaient la
- * page en permanence pour rien).
+ * POURQUOI CE DÉCOUPAGE : l'ancien onglet mélangeait solde, formule d'achat,
+ * campagnes en cours, résultats et mouvements. Résultat : personne n'y
+ * comprenait rien. Ici on ne gère que le carburant — combien j'ai, comment je
+ * recharge, ce que ça me permet d'acheter, et où est passé l'argent.
+ *
+ * Les campagnes vivent dans l'onglet Sponsorisation, les chiffres dans Stat.
  */
-export function WalletCard({ wallet, loading, onRecharge, onProlong, onChanged }: Props) {
-  const [busyId, setBusyId] = useState<string | null>(null);
-
-  // Réparation automatique : campagne active et financée mais annonce plus
-  // servie (annonce expirée, journée manquée) → on la remet en service.
+export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChanged }: Props) {
+  // Réparation automatique : une campagne active et financée dont l'annonce
+  // n'est plus servie est remise en service (aucun débit : la journée est payée).
   useEffect(() => {
     let cancel = false;
     (async () => {
@@ -65,41 +47,16 @@ export function WalletCard({ wallet, loading, onRecharge, onProlong, onChanged }
   if (!wallet) return null;
 
   const balance = wallet.balance_fcfa ?? 0;
-  const activeBoosts = wallet.boosts.filter((b) => b.status === "active");
-  /**
-   * Mises en avant ARRÊTÉES : le message le plus rentable qu'on puisse envoyer.
-   * Le vendeur a déjà payé, il a des résultats à montrer, et il suffit d'un
-   * appui pour repartir. On affiche donc ses chiffres juste à côté du bouton.
-   */
-  const stoppedBoosts = wallet.boosts.filter((b) => b.status !== "active" && (b.days_served ?? 0) > 0);
-  const dailySpend = activeBoosts.reduce((s, b) => s + b.daily_budget_fcfa, 0);
+  const running = wallet.boosts.filter((b) => b.status === "active");
+  const dailySpend = running.reduce((s, b) => s + b.daily_budget_fcfa, 0);
   const daysLeft = dailySpend > 0 ? Math.floor(balance / dailySpend) : 0;
   const daysAvailable = boostDaysFor(balance);
 
-  const onToggle = async (campaignId: string, next: "active" | "paused") => {
-    setBusyId(campaignId);
-    const ok = await toggleBoostStatus(campaignId, next);
-    setBusyId(null);
-    if (ok) onChanged?.();
-  };
-
-  const totals = wallet.boosts.reduce(
-    (acc, b) => {
-      acc.impressions += b.impressions ?? 0;
-      acc.clicks += b.clicks ?? 0;
-      acc.contacts += b.product_contacts ?? 0;
-      acc.spent += b.total_spent_fcfa ?? 0;
-      acc.views += b.product_views ?? 0;
-      return acc;
-    },
-    { impressions: 0, clicks: 0, contacts: 0, spent: 0, views: 0 },
-  );
-  const globalCtr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0;
-  const costPerContact = totals.contacts > 0 ? Math.round(totals.spent / totals.contacts) : null;
+  const presets = [1000, 3000, 7000, 13500, 24000];
 
   return (
     <div className="space-y-4">
-      {/* ---------- Mon solde ---------- */}
+      {/* ---------- 1. Le solde ---------- */}
       <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -107,207 +64,158 @@ export function WalletCard({ wallet, loading, onRecharge, onProlong, onChanged }
               <Wallet className="h-6 w-6" />
             </span>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Mon solde</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                Mon solde
+              </p>
               <p className="text-3xl font-bold tracking-tight">{formatFCFA(balance)}</p>
               <p className="text-[11px] text-muted-foreground">
                 {dailySpend > 0
                   ? `${formatFCFA(dailySpend)} engagés par jour · ≈ ${daysLeft} jour${daysLeft > 1 ? "s" : ""} de diffusion`
                   : daysAvailable > 0
-                    ? `de quoi tenir ${daysAvailable} jour${daysAvailable > 1 ? "s" : ""} de mise en avant`
-                    : `1 mise en avant coûte ${formatFCFA(BOOST_DAY_PRICE)} par jour`}
+                    ? `de quoi payer ${daysAvailable} jour${daysAvailable > 1 ? "s" : ""} de mise en avant`
+                    : "Rechargez pour mettre vos produits en avant"}
               </p>
             </div>
           </div>
-          <Button variant="volt" className="h-11" onClick={() => onRecharge(undefined, PACK_AMOUNTS)}>
+          <Button variant="volt" className="h-12 px-5" onClick={() => onRecharge(undefined, presets)}>
             <ArrowDownLeft className="mr-1.5 h-4 w-4" /> Recharger
           </Button>
         </div>
       </div>
 
-      {/* ---------- Continuer la diffusion (jamais un cul-de-sac) ---------- */}
-      {dailySpend > 0 && daysLeft <= 2 && (
-        <div className="rounded-2xl border border-volt/50 bg-volt/10 p-4">
-          <div className="flex items-start gap-3">
-            <Rocket className="mt-0.5 h-5 w-5 shrink-0 text-volt" />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold">
-                {daysLeft === 0
-                  ? "Votre mise en avant va s'arrêter aujourd'hui"
-                  : `Il reste ${daysLeft} jour${daysLeft > 1 ? "s" : ""} de diffusion`}
-              </p>
-              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                Choisissez la durée à ajouter — {formatFCFA(1000)} le jour, {formatFCFA(900)} dès 11 jours,{" "}
-                {formatFCFA(800)} dès 21 jours. Rien d'autre à faire ensuite : le produit reste en tête de l'accueil
-                tant qu'il reste du solde.
-              </p>
-            </div>
-          </div>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {BOOST_PACKS.map((p) => (
-              <button
-                key={p.days}
-                type="button"
-                onClick={() => onRecharge(boostPriceFor(p.days), PACK_AMOUNTS)}
-                className="rounded-xl border border-volt/50 bg-background px-1.5 py-2 text-center transition hover:bg-volt/15"
-              >
-                <span className="block text-sm font-bold">+{p.days} j</span>
-                <span className="block text-[11px] font-semibold text-foreground">
-                  {formatFCFA(boostPriceFor(p.days))}
-                </span>
-                <span className="block text-[10px] text-muted-foreground">
-                  {boostSavingsFor(p.days) > 0 ? `−${formatFCFA(boostSavingsFor(p.days))}` : p.label}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ---------- Relancer une mise en avant arrêtée (le message qui rapporte) ---------- */}
-      {stoppedBoosts.map((b) => (
-        <div key={b.id} className="rounded-2xl border border-volt/50 bg-volt/10 p-4">
-          <div className="flex items-start gap-3">
-            <Rocket className="mt-0.5 h-5 w-5 shrink-0 text-volt" />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold">
-                Votre mise en avant s'est arrêtée — « {b.product_name ?? "votre produit"} »
-              </p>
-              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                Pendant {b.days_served} jour{b.days_served > 1 ? "s" : ""}, votre produit a été vu{" "}
-                <strong className="text-foreground">{(b.impressions ?? 0).toLocaleString("fr-FR")} fois</strong>
-                {(b.product_contacts ?? 0) > 0 ? (
-                  <>
-                    {" "}
-                    et vous a rapporté{" "}
-                    <strong className="text-foreground">
-                      {b.product_contacts} contact{b.product_contacts > 1 ? "s" : ""}
-                    </strong>
-                  </>
-                ) : null}
-                . Relancez quand vous voulez : le produit repart en tête de l'accueil.
-              </p>
-            </div>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button variant="volt" className="h-10" onClick={() => onProlong({ id: b.product_id, name: b.product_name ?? "Produit" })}>
-              <Play className="mr-1.5 h-4 w-4" /> Relancer
-            </Button>
-            <Button
-              variant="outline"
-              className="h-10"
-              onClick={() => onRecharge(boostPriceFor(7), PACK_AMOUNTS)}
-            >
-              <Plus className="mr-1 h-4 w-4" /> Recharger 7 jours — {formatFCFA(boostPriceFor(7))}
-            </Button>
-          </div>
-        </div>
-      ))}
-
-      {/* ---------- Ce qui tourne en ce moment ---------- */}
-      <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-bold tracking-tight">
-            Mes produits en avant {activeBoosts.length > 0 ? `(${activeBoosts.length} en diffusion)` : ""}
-          </h3>
-          {dailySpend > 0 && (
-            <span className="text-[11px] text-muted-foreground">
-              ≈ {daysLeft} jour{daysLeft > 1 ? "s" : ""} restant{daysLeft > 1 ? "s" : ""}
+      {/* ---------- 2. Ce que le solde permet d'acheter (l'explication, au bon endroit) ---------- */}
+      <details open className="rounded-2xl border border-border bg-card p-4">
+        <summary className="cursor-pointer text-sm font-bold">À quoi sert mon solde ?</summary>
+        <ul className="mt-3 space-y-2 text-xs leading-relaxed text-muted-foreground">
+          <li className="flex items-start gap-2">
+            <Rocket className="mt-0.5 h-4 w-4 shrink-0 text-volt" />
+            <span>
+              <strong className="text-foreground">Mise en avant d'un produit</strong> — {formatFCFA(BOOST_DAY_PRICE)}{" "}
+              le jour. Plus vous prenez de jours, moins la journée coûte : contenus {formatFCFA(900)} dès 11 jours et{" "}
+              {formatFCFA(800)} dès 21 jours. Débitée automatiquement chaque jour, en pause quand vous voulez.
             </span>
-          )}
-        </div>
+          </li>
+          <li className="flex items-start gap-2">
+            <Plus className="mt-0.5 h-4 w-4 shrink-0 text-volt" />
+            <span>
+              <strong className="text-foreground">Publications au-delà de {FREE_PRODUCTS} produits</strong> —{" "}
+              {formatFCFA(EXTRA_PUBLICATION_PRICE)} par produit supplémentaire, prélevés au moment de la publication.
+            </span>
+          </li>
+          <li className="flex items-start gap-2">
+            <Gift className="mt-0.5 h-4 w-4 shrink-0 text-volt" />
+            <span>
+              <strong className="text-foreground">Vos cadeaux y arrivent aussi</strong> — les{" "}
+              {formatFCFA(VERIFICATION_BONUS_FCFA)} offerts à la vérification de votre boutique, et les{" "}
+              {formatFCFA(2000)} de la première vente protégée XaalisPay.
+            </span>
+          </li>
+        </ul>
+        <p className="mt-3 rounded-xl bg-muted/50 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+          Le solde ne s'expire jamais : ce que vous ne dépensez pas reste pour plus tard. Paiement par carte
+          (Visa/Mastercard) — crédité automatiquement dès la confirmation.
+        </p>
+      </details>
 
-        {wallet.boosts.length === 0 ? (
-          <div className="mt-3 rounded-xl border border-dashed border-border p-6 text-center">
-            <Rocket className="mx-auto h-6 w-6 text-muted-foreground" />
-            <p className="mt-2 text-sm font-medium">Aucune mise en avant pour l'instant</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Choisissez un produit dans la liste ci-dessus, puis la durée : il passe en tête de l'accueil.
-            </p>
-          </div>
-        ) : (
-          <div className="mt-3 space-y-3">
-            {wallet.boosts.map((b) => (
-              <BoostLine
-                key={b.id}
-                boost={b}
-                busy={busyId === b.id}
-                balance={balance}
-                onToggle={onToggle}
-                onProlong={() => onProlong({ id: b.product_id, name: b.product_name ?? "Produit" })}
-              />
-            ))}
-          </div>
-        )}
+      {/* ---------- 3. Les formules de recharge, avec la remise visible ---------- */}
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <h3 className="text-sm font-bold tracking-tight">Recharger par durée de mise en avant</h3>
+        <p className="mt-0.5 text-[11px] text-muted-foreground">
+          Choisissez la durée : le montant est calculé et crédité sur votre solde.
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {[1, 3, 7, 15, 30].map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => onRecharge(boostPriceFor(d), presets)}
+              className="rounded-xl border border-border bg-background px-2 py-2.5 text-center transition hover:border-volt hover:bg-volt/5"
+            >
+              <span className="block text-sm font-bold">{d} jour{d > 1 ? "s" : ""}</span>
+              <span className="block text-xs font-semibold text-foreground">{formatFCFA(boostPriceFor(d))}</span>
+              <span className="block text-[10px] text-muted-foreground">
+                {boostSavingsFor(d) > 0 ? `économisez ${formatFCFA(boostSavingsFor(d))}` : "prix normal"}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* ---------- Ce que ça rapporte ---------- */}
-      {wallet.boosts.length > 0 && (
-        <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
-          <h3 className="text-sm font-bold tracking-tight">Résultats de mes mises en avant</h3>
-
-          <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            <Kpi
-              label="Vues annonce"
-              value={totals.impressions.toLocaleString("fr-FR")}
-              icon={Eye}
-              hint="visiteurs uniques"
-            />
-            <Kpi label="Clics" value={totals.clicks.toLocaleString("fr-FR")} icon={MousePointerClick} />
-            <Kpi
-              label="Contacts reçus"
-              value={totals.contacts.toLocaleString("fr-FR")}
-              icon={MessageCircle}
-              tone={totals.contacts > 0 ? "success" : "muted"}
-              hint={costPerContact !== null ? `${formatFCFA(costPerContact)} par contact` : "aucun contact encore"}
-            />
-            <Kpi
-              label="Total dépensé"
-              value={formatFCFA(totals.spent)}
-              icon={Rocket}
-              hint={`${totals.views.toLocaleString("fr-FR")} visites de fiche`}
-            />
-          </div>
-
-          <details className="mt-3 rounded-xl bg-muted/50 px-3 py-2">
-            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[11px] font-semibold">
-              <ChevronDown className="h-3.5 w-3.5 shrink-0" /> Comprendre ces chiffres (et le taux de clic)
-            </summary>
-            <div className="mt-2 space-y-1.5 text-[11px] leading-relaxed text-muted-foreground">
-              <p>
-                <strong className="text-foreground">Vues annonce</strong> = visiteurs <em>uniques</em> qui ont vu votre
-                produit mis en avant (un même visiteur ne compte qu'une fois par jour).{" "}
-                <strong className="text-foreground">Fiche vue</strong> = ouvertures de votre fiche produit, mises en
-                avant comprises.
+      {/* ---------- 4. Paiement en attente ---------- */}
+      {wallet.pending.length > 0 && (
+        <div className="rounded-2xl border border-volt/40 bg-volt/10 p-4">
+          <div className="flex flex-wrap items-start gap-3">
+            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-volt" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold">
+                {wallet.pending.length === 1
+                  ? "Un paiement attend d'être finalisé"
+                  : `${wallet.pending.length} paiements attendent d'être finalisés`}
               </p>
-              <p>
-                <strong className="text-foreground">Taux de clic</strong> : {globalCtr.toFixed(1)} % — au-dessus de{" "}
-                <strong className="text-foreground">2 %</strong>, c'est bon. Si les contacts restent à 0 après 2-3 jours,
-                changez la <strong className="text-foreground">photo principale</strong> et le{" "}
-                <strong className="text-foreground">prix</strong> : ce sont les deux leviers qui font écrire les
-                acheteurs.
+              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                Vous n'avez pas terminé ce paiement. Reprenez-le plutôt que d'en créer un nouveau — le lien reste
+                valable 24 h.
               </p>
+
+              <ul className="mt-2 space-y-2">
+                {wallet.pending.map((p) => (
+                  <li key={p.id} className="rounded-xl border border-volt/30 bg-background/70 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold">
+                          {formatFCFA(p.amount_fcfa)}
+                          {p.purpose === "wallet_topup" && (
+                            <span className="ml-2 text-[11px] font-normal text-muted-foreground">rechargement</span>
+                          )}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {new Date(p.created_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}
+                          {p.method ? ` · ${p.method}` : ""}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {p.checkout_url ? (
+                          <a href={p.checkout_url}>
+                            <Button variant="volt" size="sm" className="h-9">
+                              Reprendre le paiement
+                            </Button>
+                          </a>
+                        ) : null}
+                        <Button variant="outline" size="sm" className="h-9" onClick={() => onEditPending(p)}>
+                          Modifier le montant
+                        </Button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </details>
+          </div>
         </div>
       )}
 
-      {/* ---------- Mouvements (repliés) ---------- */}
+      {/* ---------- 5. Mouvements ---------- */}
       {wallet.transactions.length > 0 && (
-        <details className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+        <details className="rounded-2xl border border-border bg-card p-4">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
-            <span className="text-sm font-bold tracking-tight">Mes derniers mouvements</span>
+            <span className="text-sm font-bold tracking-tight">Où est passé mon argent</span>
             <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
               {wallet.transactions.length} opération{wallet.transactions.length > 1 ? "s" : ""}
               <ChevronDown className="h-3.5 w-3.5" />
             </span>
           </summary>
           <ul className="mt-3 space-y-1.5">
-            {wallet.transactions.slice(0, 15).map((t, i) => (
+            {wallet.transactions.slice(0, 20).map((t, i) => (
               <li
                 key={i}
                 className="flex items-center justify-between gap-3 border-b border-border/60 pb-1.5 text-xs last:border-0"
               >
-                <span className="truncate text-muted-foreground">{t.label ?? t.kind}</span>
+                <span className="min-w-0 truncate text-muted-foreground">
+                  {t.label ?? t.kind}
+                  <span className="ml-2 text-[10px] opacity-70">
+                    {new Date(t.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}
+                  </span>
+                </span>
                 <span className={t.amount_fcfa >= 0 ? "shrink-0 font-semibold text-success" : "shrink-0 font-semibold"}>
                   {t.amount_fcfa >= 0 ? "+" : ""}
                   {t.amount_fcfa.toLocaleString("fr-FR")} F
@@ -317,155 +225,14 @@ export function WalletCard({ wallet, loading, onRecharge, onProlong, onChanged }
           </ul>
         </details>
       )}
-    </div>
-  );
-}
 
-/* ------------------------------------------------------------------ */
-
-function Kpi({
-  label,
-  value,
-  icon: Icon,
-  hint,
-  tone = "default",
-}: {
-  label: string;
-  value: string;
-  icon: React.ComponentType<{ className?: string }>;
-  hint?: string;
-  tone?: "default" | "success" | "muted";
-}) {
-  const valueTone =
-    tone === "success" ? "text-success" : tone === "muted" ? "text-muted-foreground" : "text-foreground";
-
-  return (
-    <div className="rounded-xl border border-border bg-background/60 px-3 py-2.5">
-      <div className="flex items-center gap-1.5 text-muted-foreground">
-        <Icon className="h-3.5 w-3.5 shrink-0" />
-        <span className="truncate text-[10px] font-semibold uppercase tracking-[0.12em]">{label}</span>
-      </div>
-      <p className={`mt-1 text-lg font-bold tracking-tight ${valueTone}`}>{value}</p>
-      {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
-    </div>
-  );
-}
-
-function MiniKpi({
-  label,
-  value,
-  icon: Icon,
-  highlight = false,
-}: {
-  label: string;
-  value: string;
-  icon: React.ComponentType<{ className?: string }>;
-  highlight?: boolean;
-}) {
-  return (
-    <div className="rounded-lg bg-muted/50 px-2 py-1.5 text-center">
-      <div className="flex items-center justify-center gap-1 text-muted-foreground">
-        <Icon className="h-3 w-3" />
-        <span className="text-[9px] font-semibold uppercase tracking-wide">{label}</span>
-      </div>
-      <p className={`mt-0.5 text-sm font-bold ${highlight ? "text-success" : ""}`}>{value}</p>
-    </div>
-  );
-}
-
-function BoostLine({
-  boost,
-  busy,
-  balance,
-  onToggle,
-  onProlong,
-}: {
-  boost: BoostRow;
-  busy: boolean;
-  balance: number;
-  onToggle: (campaignId: string, nextStatus: "active" | "paused") => void;
-  onProlong: () => void;
-}) {
-  const active = boost.status === "active";
-  const ctr = boost.impressions > 0 ? (boost.clicks / boost.impressions) * 100 : 0;
-  const daysPaid = boost.days_served;
-  const daysLeft = boostDaysFor(balance);
-
-  return (
-    <div className="rounded-xl border border-border p-3">
-      <div className="flex flex-wrap items-center gap-3">
-        {boost.images?.[0] ? (
-          <img
-            src={thumb(boost.images[0], 150)}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="h-14 w-14 shrink-0 rounded-lg object-cover"
-          />
-        ) : (
-          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
-            <Rocket className="h-5 w-5" />
-          </span>
-        )}
-
-        <div className="min-w-0 flex-1">
-          <Link
-            to="/product/$id"
-            params={{ id: boost.product_id }}
-            className="block truncate text-sm font-semibold hover:text-primary"
-          >
-            {boost.product_name ?? "Produit"}
-          </Link>
-          <p className="text-[11px] text-muted-foreground">
-            {formatFCFA(boost.daily_budget_fcfa)}/jour · payé {daysPaid} jour{daysPaid > 1 ? "s" : ""} ·{" "}
-            {boost.total_spent_fcfa.toLocaleString("fr-FR")} F dépensés
-          </p>
-          <span
-            className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-              active ? "bg-success/15 text-success" : "bg-secondary text-muted-foreground"
-            }`}
-          >
-            <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-success" : "bg-muted-foreground"}`} />
-            {active ? `En diffusion · ≈ ${daysLeft} j` : "En pause — rien n'est débité"}
-          </span>
-        </div>
-
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9"
-            disabled={busy}
-            onClick={() => onToggle(boost.id, active ? "paused" : "active")}
-          >
-            {active ? (
-              <>
-                <Pause className="mr-1 h-3.5 w-3.5" /> Pause
-              </>
-            ) : (
-              <>
-                <Play className="mr-1 h-3.5 w-3.5" /> Reprendre
-              </>
-            )}
-          </Button>
-          <Button variant="volt" size="sm" className="h-9" onClick={onProlong}>
-            <Plus className="mr-1 h-3.5 w-3.5" /> Ajouter des jours
-          </Button>
-        </div>
-      </div>
-
-      <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
-        <MiniKpi label="Vues" value={boost.impressions.toLocaleString("fr-FR")} icon={Eye} />
-        <MiniKpi label="Clics" value={boost.clicks.toLocaleString("fr-FR")} icon={MousePointerClick} />
-        <MiniKpi label="Taux" value={boost.impressions > 0 ? `${ctr.toFixed(1)} %` : "—"} icon={Percent} />
-        <MiniKpi label="Fiche vue" value={(boost.product_views ?? 0).toLocaleString("fr-FR")} icon={Heart} />
-        <MiniKpi
-          label="Contacts"
-          value={(boost.product_contacts ?? 0).toLocaleString("fr-FR")}
-          icon={MessageCircle}
-          highlight={(boost.product_contacts ?? 0) > 0}
-        />
-      </div>
+      <p className="text-center text-[11px] text-muted-foreground">
+        Une question sur un paiement ?{" "}
+        <Link to="/paiement-securise" className="underline underline-offset-2">
+          Payer en sécurité avec XaalisPay
+        </Link>{" "}
+        ou écrivez-nous sur WhatsApp.
+      </p>
     </div>
   );
 }

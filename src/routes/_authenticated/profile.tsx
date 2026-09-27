@@ -10,6 +10,8 @@ import { StatusSwitch } from "@/components/StatusSwitch";
 import { VerifiedBadge, VerifiedBadgeGold } from "@/components/VerifiedBadge";
 import { BoostButton, useSellerMoney } from "@/components/SellerMoneyProvider";
 import { BoostLauncher } from "@/components/BoostLauncher";
+import { BoostManager } from "@/components/BoostManager";
+import { AdStats } from "@/components/AdStats";
 import { WalletCard } from "@/components/WalletCard";
 import { ProfileEditDialog } from "@/components/ProfileEditDialog";
 import { ShopBanner } from "@/components/ShopBanner";
@@ -93,21 +95,28 @@ type Stats = {
 export const Route = createFileRoute("/_authenticated/profile")({
   // ?tab=promo permet d'ouvrir directement l'onglet Sponsorisation depuis le
   // sidebar (Portefeuille & pub) ou un lien externe.
-  validateSearch: (s: Record<string, unknown>): { tab?: "produits" | "stats" | "promo" } => {
+  validateSearch: (s: Record<string, unknown>): { tab?: "produits" | "stats" | "promo" | "wallet" } => {
     const t = typeof s.tab === "string" ? s.tab : undefined;
-    return { tab: t === "produits" || t === "stats" || t === "promo" ? t : undefined };
+    return { tab: t === "produits" || t === "stats" || t === "promo" || t === "wallet" ? t : undefined };
   },
   component: ProfilePage,
 });
 
-type TabId = "produits" | "stats" | "promo";
+type TabId = "produits" | "stats" | "promo" | "wallet";
 
-/** Libellés courts : les 3 onglets tiennent sur la largeur d'un téléphone. */
-const TAB_IDS: TabId[] = ["produits", "stats", "promo"];
+/**
+ * 4 ONGLETS, UN SUJET PAR ONGLET (avant, tout était mélangé dans « Sponsorisé ») :
+ *   Produits      → mes articles (avec la recherche)
+ *   Stats         → les résultats, produit par produit
+ *   Sponsorisé    → mes annonces : ce qui tourne, ce qui est en pause, les actions
+ *   Portefeuille  → l'argent : solde, recharge, mouvements, à quoi ça sert
+ */
+const TAB_IDS: TabId[] = ["produits", "stats", "promo", "wallet"];
 const TAB_LABELS: Record<TabId, string> = {
   produits: "Produits",
   stats: "Stats",
   promo: "Sponsorisé",
+  wallet: "Portefeuille",
 };
 
 function ProfilePage() {
@@ -135,6 +144,27 @@ function ProfilePage() {
   const [badgeOpen, setBadgeOpen] = useState(true);
   /** Recherche dans MES produits (le vendeur en a parfois 50 : défiler est long). */
   const [productQuery, setProductQuery] = useState("");
+  /** Barre d'onglets : sert de point d'ancrage au changement d'onglet. */
+  const tabsRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * CHANGEMENT D'ONGLET : on se replace au DÉBUT DU CONTENU DE L'ONGLET,
+   * jamais en haut de la page. Avant, le site remontait tout en haut (ou laissait
+   * une position incohérente) : à chaque changement d'onglet, il fallait
+   * redescendre à la main. Ici on ancre la barre d'onglets en haut de l'écran :
+   * l'utilisateur voit immédiatement le début de ce qu'il vient d'ouvrir.
+   */
+  const skipTabScroll = useRef(true);
+  useEffect(() => {
+    if (skipTabScroll.current) {
+      skipTabScroll.current = false;
+      return;
+    }
+    const el = tabsRef.current;
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + window.scrollY - 72; // 72 px = barre du haut
+    window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+  }, [tab]);
   // Achat du badge : Wave / Orange Money par WhatsApp, activation manuelle.
   const [badgePayOpen, setBadgePayOpen] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -544,30 +574,35 @@ function ProfilePage() {
         </div>
 
         {/* Onglets : indicateur coulissant, largeur égale, aucun débordement sur mobile */}
-        <div className="mt-4 rounded-2xl border border-border bg-muted/60 p-1">
-          <div className="relative grid grid-cols-3">
+        <div ref={tabsRef} className="mt-4 scroll-mt-20 rounded-2xl border border-border bg-muted/60 p-1">
+          <div className="relative grid grid-cols-4">
             <span
               aria-hidden
-              className="absolute inset-y-0 left-0 w-1/3 rounded-xl bg-volt shadow-sm transition-transform duration-300 ease-out"
+              className="absolute inset-y-0 left-0 w-1/4 rounded-xl bg-volt shadow-sm transition-transform duration-300 ease-out"
               style={{ transform: `translateX(${TAB_IDS.indexOf(tab) * 100}%)` }}
             />
             {TAB_IDS.map((id) => {
               const active = tab === id;
-              const count = id === "produits" ? products?.length ?? 0 : null;
+              const count =
+                id === "produits"
+                  ? products?.length ?? 0
+                  : id === "promo"
+                    ? (money?.wallet?.boosts ?? []).filter((b) => b.status === "active").length
+                    : null;
               return (
                 <button
                   key={id}
                   onClick={() => setTab(id)}
                   aria-selected={active}
                   role="tab"
-                  className={`relative z-10 flex items-center justify-center gap-1 rounded-xl px-2 py-2.5 text-[11px] font-semibold transition-colors sm:text-sm ${
+                  className={`relative z-10 flex items-center justify-center gap-1 rounded-xl px-1 py-2.5 text-[10px] font-semibold transition-colors sm:px-2 sm:text-sm ${
                     active ? "text-volt-foreground" : "text-muted-foreground"
                   }`}
                 >
-                  {TAB_LABELS[id]}
-                  {count !== null && (
+                  <span className="truncate">{TAB_LABELS[id]}</span>
+                  {count !== null && count > 0 && (
                     <span
-                      className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+                      className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] ${
                         active ? "bg-volt-foreground/20 text-volt-foreground" : "bg-muted-foreground/15"
                       }`}
                     >
@@ -606,14 +641,14 @@ function ProfilePage() {
             {/* RECHERCHE : avec 20, 50 ou 100 produits, faire défiler pour en
                 trouver un devient interminable. Le vendeur tape 2 lettres et
                 tombe directement dessus. */}
-            {(products?.length ?? 0) > 3 && (
+            {(products?.length ?? 0) > 0 && (
               <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     value={productQuery}
                     onChange={(e) => setProductQuery(e.target.value)}
-                    placeholder={`Rechercher parmi vos ${products?.length ?? 0} produits (nom, catégorie, ville…)`}
+                    placeholder="Rechercher dans mes produits (nom ou catégorie)"
                     className="h-11 pl-9"
                     inputMode="search"
                   />
@@ -760,9 +795,22 @@ function ProfilePage() {
           </>
         )}
 
-        {/* ---------- Statistiques ---------- */}
+        {/* ---------- Statistiques : mes annonces, produit par produit ---------- */}
         {tab === "stats" && (
           <div className="mt-5 space-y-4">
+            {/* Les chiffres de MES MISES EN AVANT, mis en avant eux aussi : c'est
+                la première question du vendeur (« est-ce que ça marche ? »). */}
+            <div>
+              <h3 className="text-sm font-bold tracking-tight">Mes annonces, produit par produit</h3>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Vues, clics, contacts et coût par contact pour chaque mise en avant.
+              </p>
+              <div className="mt-3">
+                <AdStats wallet={money?.wallet ?? null} loading={money?.loading ?? false} />
+              </div>
+            </div>
+
+            <h3 className="pt-2 text-sm font-bold tracking-tight">Toute ma boutique</h3>
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <StatCard label="Produits en ligne" value={online} icon={Package} />
               <StatCard label="Vues totales" value={stats?.total_views ?? 0} icon={Eye} />
@@ -824,8 +872,30 @@ function ProfilePage() {
           </div>
         )}
 
-        {/* ---------- Sponsorisation ---------- */}
+        {/* ---------- Sponsorisation : mes annonces (créer, piloter) ---------- */}
         {tab === "promo" && <SponsorshipPanel plan={planOf(profile)} products={products} />}
+
+        {/* ---------- Portefeuille : l'argent ---------- */}
+        {tab === "wallet" && (
+          <div className="mt-5">
+            {money ? (
+              <WalletCard
+                wallet={money.wallet}
+                loading={money.loading}
+                onRecharge={money.openTopUp}
+                onEditPending={(p) => money.resumePending(p)}
+                onChanged={money.refresh}
+              />
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-center">
+                <p className="text-sm font-semibold">Rechargement bientôt disponible</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Écrivez-nous sur WhatsApp : nous activons votre solde à la main.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Logout */}
         <div className="mt-8 border-t border-dashed border-border pt-6">
@@ -943,7 +1013,7 @@ function SponsorshipPanel({ plan, products }: { plan: PlanId; products: Product[
 
       {money ? (
         <>
-          {/* Le poste de pilotage : choisir le produit, la durée, payer. */}
+          {/* 1. Créer une mise en avant : produit → durée → lancer. */}
           <BoostLauncher
             products={products}
             balance={money.balance}
@@ -952,12 +1022,14 @@ function SponsorshipPanel({ plan, products }: { plan: PlanId; products: Product[
             onStarted={money.refresh}
           />
 
-          {/* Ce qui tourne déjà, et ce que ça rapporte. */}
-          <WalletCard
+          {/* 2. Piloter mes annonces : en diffusion, en pause, terminées —
+              comme un gestionnaire de publicités. Le solde et les chiffres
+              détaillés sont dans leurs propres onglets. */}
+          <BoostManager
             wallet={money.wallet}
             loading={money.loading}
             onRecharge={money.openTopUp}
-            onProlong={(p) => money.openBoost(p)}
+            onExtend={(p) => money.openBoost(p)}
             onChanged={money.refresh}
           />
         </>

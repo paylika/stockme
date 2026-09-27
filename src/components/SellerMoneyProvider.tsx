@@ -196,8 +196,15 @@ export function SellerMoneyProvider({
   );
 }
 
-/** Pause / reprise d'une campagne (utilisé par la carte « Mon solde »). */
-export async function toggleBoostStatus(campaignId: string, next: "active" | "paused"): Promise<boolean> {
+/**
+ * Gestion d'une campagne : pause, reprise, arrêt définitif.
+ * (« ended » retire l'annonce du catalogue : c'est le bouton Supprimer du
+ * gestionnaire d'annonces.)
+ */
+export async function toggleBoostStatus(
+  campaignId: string,
+  next: "active" | "paused" | "ended",
+): Promise<boolean> {
   const { data, error } = await supabase.rpc("boost_set_status", { p_campaign_id: campaignId, p_status: next });
   if (error) {
     toast.error(error.message);
@@ -205,9 +212,11 @@ export async function toggleBoostStatus(campaignId: string, next: "active" | "pa
   }
   const res = data as { ok?: boolean; reason?: string } | null;
   if (res?.ok === false && res.reason === "insufficient_balance") {
-    toast.error("Solde insuffisant pour reprendre ce boost.");
+    toast.error("Solde insuffisant pour reprendre : rechargez d'abord dans l'onglet Portefeuille.");
     return false;
   }
-  toast.success(next === "active" ? "Boost repris" : "Boost mis en pause");
+  toast.success(
+    next === "active" ? "Mise en avant reprise" : next === "paused" ? "Mise en avant en pause" : "Mise en avant arrêtée",
+  );
   return true;
 }
