@@ -117,23 +117,28 @@ function SecurePaymentPage() {
             ))}
           </ol>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            <a href={XAALISPAY.appStore} target="_blank" rel="noopener noreferrer">
-              <Button variant="volt" className="h-11 text-sm font-bold">
-                <Smartphone className="mr-1.5 h-4 w-4" /> Télécharger sur l'App Store
+          {/* Téléchargement : plein largeur sur téléphone, côte à côte sur ordinateur */}
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <a href={XAALISPAY.appStore} target="_blank" rel="noopener noreferrer" className="block sm:inline-block">
+              <Button variant="volt" className="h-12 w-full text-sm font-bold sm:w-auto">
+                <Smartphone className="mr-1.5 h-4 w-4" /> Télécharger sur App Store
               </Button>
             </a>
-            <a href={XAALISPAY.playStore} target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" className="h-11 text-sm font-bold">
+            <a href={XAALISPAY.playStore} target="_blank" rel="noopener noreferrer" className="block sm:inline-block">
+              <Button variant="outline" className="h-12 w-full text-sm font-bold sm:w-auto">
                 <Smartphone className="mr-1.5 h-4 w-4" /> Disponible sur Google Play
               </Button>
             </a>
-            <a href={XAALISPAY.site} target="_blank" rel="noopener noreferrer">
-              <Button variant="ghost" className="h-11 text-xs">
+            <a href={XAALISPAY.site} target="_blank" rel="noopener noreferrer" className="block sm:inline-block">
+              <Button variant="ghost" className="h-12 w-full text-xs sm:w-auto">
                 Voir le site de XaalisPay
               </Button>
             </a>
           </div>
+          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+            Un seul compte sert aux deux côtés : l'acheteur paie et suit sa commande, le vendeur encaisse après
+            livraison.
+          </p>
         </section>
 
         {/* ---------- Les deux côtés ---------- */}

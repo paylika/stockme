@@ -1,10 +1,13 @@
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { SERVICE_WHATSAPP } from "@/lib/constants";import {
+import { SERVICE_WHATSAPP } from "@/lib/constants";
+import {
   XAALISPAY,
   XAALISPAY_BENEFITS,
   XAALISPAY_OFFER,
   XAALISPAY_STEPS,
   claimMessage,
+  preferredStoreUrl,
 } from "@/lib/xaalispay";
 import { Button } from "@/components/ui/button";
 import { Check, ChevronDown, Gift, Lock, ShieldCheck, Smartphone, Store } from "lucide-react";
@@ -32,6 +35,15 @@ export function SecurePaymentBlock({
 }) {
   const buyer = variant === "buyer";
   const benefits = buyer ? XAALISPAY_BENEFITS.buyer : XAALISPAY_BENEFITS.seller;
+  /**
+   * Sur téléphone, on envoie directement vers le bon store (App Store ou
+   * Google Play) : l'acheteur ne doit pas chercher le lien de téléchargement.
+   * Sur ordinateur, on garde le site de présentation.
+   */
+  const [installUrl, setInstallUrl] = useState<string>(XAALISPAY.site);
+  useEffect(() => {
+    setInstallUrl(preferredStoreUrl());
+  }, []);
 
   return (
     <section className="mt-4 overflow-hidden rounded-2xl border border-cobalt/30 bg-cobalt/5">
@@ -75,7 +87,7 @@ export function SecurePaymentBlock({
             </Button>
           </a>
         ) : buyer ? (
-          <a href={XAALISPAY.site} target="_blank" rel="noopener noreferrer" className="block">
+          <a href={installUrl} target="_blank" rel="noopener noreferrer" className="block">
             <Button variant="volt" className="h-12 w-full text-sm font-bold">
               <Smartphone className="mr-1.5 h-4 w-4" /> Installer XaalisPay
             </Button>
@@ -109,7 +121,7 @@ export function SecurePaymentBlock({
           </Link>
           {buyer && (
             <a
-              href={XAALISPAY.site}
+              href={installUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground underline underline-offset-2"
@@ -119,7 +131,7 @@ export function SecurePaymentBlock({
           )}
           {!buyer && (
             <a
-              href={XAALISPAY.site}
+              href={installUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground underline underline-offset-2"

@@ -17,8 +17,13 @@
 export const XAALISPAY = {
   /** Site officiel (page de présentation). */
   site: "https://www.xaalispay.com",
-  appStore: "https://apps.apple.com/app/xaalispay",
-  playStore: "https://play.google.com/store/apps/details?id=com.xaalispay",
+  /**
+   * Liens de téléchargement RÉELS, repris tels quels depuis le site XaalisPay
+   * (vérifiés : les deux répondent). Le paquet Android s'appelle
+   * `com.xaalispay.seller` : c'est l'application que XaalisPay met en avant.
+   */
+  appStore: "https://apps.apple.com/sn/app/xaalispay/id6798891695?l=fr-FR",
+  playStore: "https://play.google.com/store/apps/details?id=com.xaalispay.seller",
   /** Frais de protection du séquestre, en FCFA (constatés sur leur démo). */
   protectionFee: 500,
   /** Délai de livraison garanti par le séquestre. */
@@ -30,7 +35,22 @@ export const XAALISPAY = {
   methods: ["Wave", "Orange Money", "Free Money"],
 } as const;
 
-/** Les 4 étapes, dans les mots du terrain (pas de jargon bancaire). */
+/**
+ * Quel lien ouvrir ? Sur un téléphone, on envoie DIRECTEMENT vers le bon store
+ * (l'utilisateur ne doit pas chercher le lien de téléchargement) ; sur
+ * ordinateur, vers le site de présentation.
+ */
+export function preferredStoreUrl(): string {
+  if (typeof navigator === "undefined") return XAALISPAY.site;
+  const ua = navigator.userAgent;
+  if (/android/i.test(ua)) return XAALISPAY.playStore;
+  if (/iphone|ipad|ipod|macintosh/i.test(ua)) return XAALISPAY.appStore;
+  return XAALISPAY.site;
+}
+
+/**
+ * Les 4 étapes, dans les mots du terrain (pas de jargon bancaire).
+ */
 export const XAALISPAY_STEPS = [
   {
     n: "1",
