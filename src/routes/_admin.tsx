@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate, Outlet, redirect, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { signOutSafely, ensureSession } from "@/lib/auth-session";
@@ -31,11 +31,54 @@ export const Route = createFileRoute("/_admin")({
 
 function AdminLayout() {
   const [adminEmail, setAdminEmail] = useState("");
+  /** "checking" tant qu'on ne sait pas ; évite d'afficher la console à un visiteur. */
+  const [status, setStatus] = useState<"checking" | "allowed" | "denied">("checking");
   const pathname = useRouterState({ select: (r) => r.location.pathname });
 
+  /**
+   * CONTRÔLE CÔTÉ NAVIGATEUR.
+   *
+   * `beforeLoad` ne s'exécute pas lors d'un chargement direct de page (le
+   * routeur réutilise la décision du serveur, qui ne voit pas la session).
+   * Sans ce contrôle, la console d'administration s'afficherait — vide — à
+   * n'importe qui ouvrant /admin dans un nouvel onglet. On vérifie donc ici,
+   * une fois la page vivante.
+   */
   useEffect(() => {
-    ensureSession().then((session) => setAdminEmail(session?.user?.email ?? ""));
+    let cancel = false;
+    (async () => {
+      const session = await ensureSession();
+      if (cancel) return;
+      if (!session?.user) {
+        setStatus("denied");
+        return;
+      }
+      setAdminEmail(session.user.email ?? "");
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      if (!cancel) setStatus(data ? "allowed" : "denied");
+    })();
+    return () => {
+      cancel = true;
+    };
   }, []);
+
+  if (status === "checking") {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="mx-auto max-w-5xl px-4 py-10">
+          <div className="h-8 w-56 rounded bg-muted shimmer" />
+          <p className="mt-4 text-xs text-muted-foreground">Vérification de vos droits…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "denied") return <Navigate to="/" replace />;
 
   return (
     <div className="min-h-screen bg-background">
