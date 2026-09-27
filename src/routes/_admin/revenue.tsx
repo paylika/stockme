@@ -100,7 +100,15 @@ function AdminRevenuePage() {
   const arr = arrFromMonthly + arrFromAnnual;
 
   const manualBadgeRevenue = d.badges_manual * BADGE;
-  const certifTotal = manualBadgeRevenue + d.badges_paid_online;
+  /**
+   * REVENU CERTIFICATION = badges validés À LA MAIN × 2 000 F.
+   *
+   * ⚠️ Les badges PAYÉS EN LIGNE ne sont PAS additionnés ici (décision du
+   * fondateur) : ces paiements ont dû être activés à la main, donc les compter
+   * une deuxième fois faussait le total. Ils restent affichés à titre
+   * d'information, sans jamais entrer dans un total.
+   */
+  const certifTotal = manualBadgeRevenue;
 
   const rechargeTotal = d.topups_collected + d.boosts_paid_online;
   const consumedTotal = d.boost_consumed + d.publication_consumed;
@@ -199,14 +207,14 @@ function AdminRevenuePage() {
             icon={Banknote}
             label="Revenu certification"
             value={formatFCFA(certifTotal)}
-            hint="badges manuels + badges payés en ligne"
+            hint="badges que vous avez validés vous-même (× 2 000 F)"
             tone="volt"
           />
           <Kpi
             icon={Wallet}
             label="Badges payés en ligne"
             value={String(d.badges_paid_count)}
-            hint={`${formatFCFA(d.badges_paid_online)} encaissés par carte`}
+            hint="information seule — activés à la main, NON comptés dans ce revenu"
             tone="muted"
           />
           <Kpi

@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { SERVICE_WHATSAPP } from "@/lib/constants";
 import {
   Command,
   CommandEmpty,
@@ -34,7 +36,7 @@ import {
 } from "@/lib/constants";
 import { toast } from "sonner";
 import { buildSeoHead } from "@/lib/seo";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, MessageCircle } from "lucide-react";
 import { IconCheck, IconChevronDown } from "@/components/icons";
 import logoUrl from "@/assets/stockme-logo.jpg";
 
@@ -110,6 +112,31 @@ function AuthPage() {
     if (error) return toast.error(error.message);
     toast.success("Connecté !");
     goAfterAuth();
+  };
+
+  /**
+   * MOT DE PASSE OUBLIÉ.
+   *
+   * On envoie un lien par email (le seul moyen sûr : personne ne peut changer
+   * le mot de passe d'un compte sans accès à sa boîte mail). Le lien ramène le
+   * vendeur sur /nouveau-mot-de-passe où il choisit son nouveau mot de passe.
+   *
+   * Réponse volontairement IDENTIQUE que l'adresse existe ou non : cela évite
+   * qu'un inconnu découvre quelles adresses sont inscrites sur StockMe.
+   */
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [fEmail, setFEmail] = useState("");
+  const [fSent, setFSent] = useState(false);
+
+  const sendResetLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(fEmail.trim(), {
+      redirectTo: `${window.location.origin}/nouveau-mot-de-passe`,
+    });
+    setLoading(false);
+    if (error) return toast.error(error.message);
+    setFSent(true);
   };
 
   const signup = async (e: React.FormEvent) => {
@@ -417,6 +444,19 @@ function AuthPage() {
                         {showLoginPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
+                    {/* MOT DE PASSE OUBLIÉ : la sortie de secours obligatoire.
+                        Beaucoup de vendeurs se connectent avec une adresse créée
+                        il y a longtemps ; sans ce lien, ils étaient bloqués. */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFEmail(lEmail);
+                        setForgotOpen(true);
+                      }}
+                      className="text-xs font-semibold text-primary underline underline-offset-2"
+                    >
+                      Mot de passe oublié ?
+                    </button>
                   </div>
                   <Button type="submit" variant="volt" className="h-12 w-full text-base font-semibold" disabled={loading}>
                     {loading ? "..." : "Se connecter"}
@@ -433,6 +473,68 @@ function AuthPage() {
           </div>
         </div>
       </div>
+
+      {/* ===== MOT DE PASSE OUBLIÉ (fenêtre) ===== */}
+      <Dialog open={forgotOpen} onOpenChange={(o) => { setForgotOpen(o); if (!o) setFSent(false); }}>
+        <DialogContent className="max-h-[92svh] w-[calc(100%-1.5rem)] max-w-md overflow-y-auto rounded-2xl p-5">
+          <DialogHeader>
+            <DialogTitle className="text-left">Mot de passe oublié</DialogTitle>
+            <DialogDescription className="text-left">
+              {fSent
+                ? "Regardez votre boîte mail (et les spams)."
+                : "Entrez votre adresse email : nous vous envoyons un lien pour choisir un nouveau mot de passe."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {fSent ? (
+            <div className="space-y-3">
+              <p className="rounded-xl border border-success/40 bg-success/10 px-3 py-2.5 text-xs leading-relaxed">
+                Si un compte existe avec <strong>{fEmail}</strong>, un lien vient d'être envoyé. Il est valable 1 heure.
+                Pensez à regarder dans les <strong>spams</strong> ou les <strong>indésirables</strong>.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Rien reçu ? Vérifiez l'adresse saisie, puis réessayez. Vous pouvez aussi écrire à StockMe sur WhatsApp :
+                nous vous aidons à récupérer votre compte.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button variant="outline" className="h-11" onClick={() => setFSent(false)}>
+                  Réessayer
+                </Button>
+                <a
+                  href={`https://wa.me/${SERVICE_WHATSAPP}?text=${encodeURIComponent("Bonjour StockMe, je n'arrive pas à me connecter à mon compte (mot de passe oublié).")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
+                >
+                  <Button variant="volt" className="h-11 w-full">
+                    <MessageCircle className="mr-1.5 h-4 w-4" /> Aide WhatsApp
+                  </Button>
+                </a>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={sendResetLink} className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="fe">Votre email</Label>
+                <Input
+                  id="fe"
+                  type="email"
+                  className="h-11"
+                  required
+                  autoFocus
+                  value={fEmail}
+                  onChange={(e) => setFEmail(e.target.value)}
+                  placeholder="vous@exemple.com"
+                />
+              </div>
+              <Button type="submit" variant="volt" className="h-12 w-full text-base font-semibold" disabled={loading}>
+                {loading ? "Envoi…" : "Recevoir le lien"}
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <MobileNav />
     </div>
   );

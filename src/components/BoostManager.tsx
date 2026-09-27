@@ -72,6 +72,27 @@ export function BoostManager({ wallet, loading, onRecharge, onExtend, onChanged 
 
   return (
     <div className="space-y-4">
+      {/* COMBIEN D'ANNONCES TOURNENT EN MÊME TEMPS.
+          Plusieurs produits peuvent être mis en avant en parallèle : le vendeur
+          doit le VOIR noir sur blanc (nombre d'annonces + budget engagé par
+          jour), sinon il croit qu'une seule mise en avant est possible. */}
+      {running.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl border border-border bg-muted/40 px-3.5 py-2.5 text-xs">
+          <Rocket className="h-4 w-4 shrink-0 text-volt" />
+          <span className="font-bold">
+            {running.length} annonce{running.length > 1 ? "s" : ""} en diffusion
+          </span>
+          <span className="text-muted-foreground">
+            · {formatFCFA(dailySpend)} engagés par jour
+            {daysLeft > 0 ? ` · environ ${daysLeft} jour${daysLeft > 1 ? "s" : ""} au rythme actuel` : ""}
+          </span>
+          <span className="basis-full text-[11px] text-muted-foreground">
+            Vous pouvez mettre en avant autant de produits que votre solde le permet : appuyez sur « Booster » depuis
+            l'onglet Produits.
+          </span>
+        </div>
+      )}
+
       {/* Une seule ligne d'état, un seul bouton : le solde se gère dans Portefeuille. */}
       {dailySpend > 0 && daysLeft <= 2 && (
         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-volt/50 bg-volt/10 px-3.5 py-3">

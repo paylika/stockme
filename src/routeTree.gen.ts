@@ -17,6 +17,7 @@ import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as DemandesRouteImport } from './routes/demandes'
 import { Route as DropshippingRouteImport } from './routes/dropshipping'
 import { Route as LegalRouteImport } from './routes/legal'
+import { Route as NouveauMotDePasseRouteImport } from './routes/nouveau-mot-de-passe'
 import { Route as PaiementSecuriseRouteImport } from './routes/paiement-securise'
 import { Route as RechercheImageRouteImport } from './routes/recherche-image'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -88,6 +89,11 @@ const DropshippingRoute = DropshippingRouteImport.update({
 const LegalRoute = LegalRouteImport.update({
   id: '/legal',
   path: '/legal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NouveauMotDePasseRoute = NouveauMotDePasseRouteImport.update({
+  id: '/nouveau-mot-de-passe',
+  path: '/nouveau-mot-de-passe',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PaiementSecuriseRoute = PaiementSecuriseRouteImport.update({
@@ -271,6 +277,7 @@ export interface FileRoutesByFullPath {
   '/demandes': typeof DemandesRouteWithChildren
   '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
+  '/nouveau-mot-de-passe': typeof NouveauMotDePasseRoute
   '/paiement-securise': typeof PaiementSecuriseRoute
   '/recherche-image': typeof RechercheImageRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -313,6 +320,7 @@ export interface FileRoutesByTo {
   '/demandes': typeof DemandesRouteWithChildren
   '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
+  '/nouveau-mot-de-passe': typeof NouveauMotDePasseRoute
   '/paiement-securise': typeof PaiementSecuriseRoute
   '/recherche-image': typeof RechercheImageRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -358,6 +366,7 @@ export interface FileRoutesById {
   '/demandes': typeof DemandesRouteWithChildren
   '/dropshipping': typeof DropshippingRoute
   '/legal': typeof LegalRouteWithChildren
+  '/nouveau-mot-de-passe': typeof NouveauMotDePasseRoute
   '/paiement-securise': typeof PaiementSecuriseRoute
   '/recherche-image': typeof RechercheImageRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -402,6 +411,7 @@ export interface FileRouteTypes {
     | '/demandes'
     | '/dropshipping'
     | '/legal'
+    | '/nouveau-mot-de-passe'
     | '/paiement-securise'
     | '/recherche-image'
     | '/sitemap.xml'
@@ -444,6 +454,7 @@ export interface FileRouteTypes {
     | '/demandes'
     | '/dropshipping'
     | '/legal'
+    | '/nouveau-mot-de-passe'
     | '/paiement-securise'
     | '/recherche-image'
     | '/sitemap.xml'
@@ -488,6 +499,7 @@ export interface FileRouteTypes {
     | '/demandes'
     | '/dropshipping'
     | '/legal'
+    | '/nouveau-mot-de-passe'
     | '/paiement-securise'
     | '/recherche-image'
     | '/sitemap.xml'
@@ -533,6 +545,7 @@ export interface RootRouteChildren {
   DemandesRoute: typeof DemandesRouteWithChildren
   DropshippingRoute: typeof DropshippingRoute
   LegalRoute: typeof LegalRouteWithChildren
+  NouveauMotDePasseRoute: typeof NouveauMotDePasseRoute
   PaiementSecuriseRoute: typeof PaiementSecuriseRoute
   RechercheImageRoute: typeof RechercheImageRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -607,6 +620,13 @@ declare module '@tanstack/react-router' {
       path: '/legal'
       fullPath: '/legal'
       preLoaderRoute: typeof LegalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nouveau-mot-de-passe': {
+      id: '/nouveau-mot-de-passe'
+      path: '/nouveau-mot-de-passe'
+      fullPath: '/nouveau-mot-de-passe'
+      preLoaderRoute: typeof NouveauMotDePasseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/paiement-securise': {
@@ -952,6 +972,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemandesRoute: DemandesRouteWithChildren,
   DropshippingRoute: DropshippingRoute,
   LegalRoute: LegalRouteWithChildren,
+  NouveauMotDePasseRoute: NouveauMotDePasseRoute,
   PaiementSecuriseRoute: PaiementSecuriseRoute,
   RechercheImageRoute: RechercheImageRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
