@@ -34,6 +34,46 @@ declare global {
 let started = false;
 let scriptRequested = false;
 
+/* ------------------------------------------------------------------ *
+ * MODE TEST (Events Manager → « Tester les événements »)
+ *
+ * Meta donne un code du type TEST56079. Pour que les événements arrivent dans
+ * la fenêtre de test, il faut l'envoyer AVEC chaque événement.
+ *
+ * ⚠️ Danger évité : si on l'envoyait tout le temps, TOUTES les visites réelles
+ * seraient marquées « test » et sortiraient de tes statistiques de campagne.
+ * On ne l'active donc QUE si l'adresse contient ?fbtest=TEST56079 — et il reste
+ * actif jusqu'à la fermeture de l'onglet.
+ * ------------------------------------------------------------------ */
+const TEST_CODE_KEY = "stockme:fb-test-code";
+
+function testCode(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const fromUrl = new URL(window.location.href).searchParams.get("fbtest");
+    if (fromUrl && /^test\d+$/i.test(fromUrl.trim())) {
+      const code = fromUrl.trim().toUpperCase();
+      sessionStorage.setItem(TEST_CODE_KEY, code);
+      return code;
+    }
+    return sessionStorage.getItem(TEST_CODE_KEY) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Le code de test est-il actif dans cet onglet ? */
+export const isMetaTestMode = () => !!testCode();
+
+/** Envoie un événement, avec le code de test s'il est actif. */
+function send(kind: "track" | "trackCustom", name: string, params?: Record<string, unknown>) {
+  if (typeof window === "undefined" || !window.fbq) return;
+  const code = testCode();
+  const options = code ? { test_event_code: code } : undefined;
+  if (options) window.fbq(kind, name, params ?? {}, options);
+  else window.fbq(kind, name, params ?? {});
+}
+
 /** Charge le script Meta quand le navigateur est libre. */
 function requestScript() {
   if (scriptRequested || typeof document === "undefined") return;
@@ -78,26 +118,29 @@ export function startMetaPixel() {
   }
 
   window.fbq("init", META_PIXEL_ID);
-  window.fbq("track", "PageView");
+
+  const code = testCode();
+  if (code) {
+    console.info(`[StockMe] Pixel Meta en mode TEST — code ${code}. Les événements arrivent dans « Tester les événements ».`);
+  }
+
+  send("track", "PageView");
   requestScript();
 }
 
 /** Page vue (navigation interne d'une application à page unique). */
 export function trackPageView(path?: string) {
-  if (typeof window === "undefined" || !window.fbq) return;
-  window.fbq("track", "PageView", path ? { path } : undefined);
+  send("track", "PageView", path ? { path } : undefined);
 }
 
 /** Compte créé : c'est LE prospect que les campagnes doivent chercher. */
 export function trackCompleteRegistration(role?: string) {
-  if (typeof window === "undefined" || !window.fbq) return;
-  window.fbq("track", "CompleteRegistration", { content_name: role ?? "vendeur" });
+  send("track", "CompleteRegistration", { content_name: role ?? "vendeur" });
 }
 
 /** Premier produit publié : le vrai passage à l'acte du vendeur. */
 export function trackPublishProduct(name: string, priceFcfa?: number) {
-  if (typeof window === "undefined" || !window.fbq) return;
-  window.fbq("trackCustom", "PublierProduit", {
+  send("trackCustom", "PublierProduit", {
     content_name: name,
     value: priceFcfa ?? 0,
     currency: "XOF",
@@ -106,12 +149,10 @@ export function trackPublishProduct(name: string, priceFcfa?: number) {
 
 /** Un acheteur a écrit au vendeur (WhatsApp, appel, copie du numéro). */
 export function trackContact(how: "whatsapp" | "appel" | "copie" | "fiche", productName?: string) {
-  if (typeof window === "undefined" || !window.fbq) return;
-  window.fbq("trackCustom", "Contact", { content_name: productName ?? how, content_category: how });
+  send("trackCustom", "Contact", { content_name: productName ?? how, content_category: how });
 }
 
 /** Produit mis en favori. */
 export function trackAddToWishlist(name?: string) {
-  if (typeof window === "undefined" || !window.fbq) return;
-  window.fbq("trackCustom", "AddToWishlist", { content_name: name ?? "" });
+  send("trackCustom", "AddToWishlist", { content_name: name ?? "" });
 }
