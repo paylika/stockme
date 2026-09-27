@@ -90,34 +90,6 @@ export const XAALISPAY_BENEFITS = {
   ],
 } as const;
 
-/**
- * L'INCITATION — pourquoi faire le premier pas MAINTENANT.
- *
- * ⚠️ StockMe NE prend PAS en charge les frais de séquestre : XaalisPay facture
- * sa protection à l'acheteur, et le montant exact s'affiche dans l'application
- * avant qu'il valide. On ne promet donc jamais la gratuité — on promet un
- * bénéfice à celui qui essuie les plâtres : le VENDEUR.
- */
-export const XAALISPAY_OFFER = {
-  seller: {
-    title: "Votre 1ʳᵉ vente protégée : +2 000 FCFA de mise en avant offerts",
-    detail:
-      "Une fois votre première commande encaissée via XaalisPay, StockMe crédite 2 jours de mise en avant sur votre solde.",
-  },
-} as const;
-
-/** Message de réclamation (traitement manuel, sous 24 h). */
-export function claimMessage(kind: "seller", who?: string | null): string {
-  return [
-    "Bonjour StockMe, je veux profiter de l'offre XaalisPay :",
-    XAALISPAY_OFFER.seller.title + ".",
-    who ? `Mon compte / boutique : ${who}` : "",
-    "Comment on procède ?",
-  ]
-    .filter(Boolean)
-    .join("\n");
-}
-
 /** Message WhatsApp qui PROPOSE le paiement protégé.
  * C'est la pièce maîtresse : l'acheteur demande, le vendeur doit s'équiper
  * pour ne pas perdre la vente. C'est ce qui crée l'usage.

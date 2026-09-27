@@ -581,6 +581,10 @@ export type Database = {
         }
         Returns: Record<string, unknown>
       }
+      admin_revenue_breakdown: {
+        Args: Record<string, never>
+        Returns: Record<string, unknown>
+      }
       seller_dashboard: {
         Args: Record<string, never>
         Returns: {

@@ -43,7 +43,7 @@ function NewProduct() {
   const [uploadingStatus, setUploadingStatus] = useState("");
   const [pending, setPending] = useState<Pending | null>(null);
   const [retrying, setRetrying] = useState(false);
-  // 10 photos par produit pour tout le monde (gratuit compris).
+  // 5 photos par produit pour tout le monde (gratuit compris).
   const [maxPhotos, setMaxPhotos] = useState(FREE_MAX_PHOTOS);
   /** Publications déjà en ligne, et solde : sert à prévenir du prix de 500 F. */
   const [quota, setQuota] = useState<{ published: number; balance: number } | null>(null);

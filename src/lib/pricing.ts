@@ -19,13 +19,13 @@ export type PlanId = "gratuit" | "verifie" | "pro" | "pro_annuel";
 /**
  * QUOTAS ET PRIX DE PUBLICATION — les mêmes pour tout le monde :
  *   • 20 produits publiés offerts (gratuit compris) ;
- *   • 10 photos par produit (gratuit compris) ;
+ *   • 5 photos par produit (gratuit compris) ;
  *   • au-delà de 20 produits : 500 F par publication, prélevés sur le solde ;
  *   • mise en avant : 1 000 F/jour, pour tous (prix unique, aucune option).
  */
 export const FREE_PRODUCTS = 20;
 export const EXTRA_PUBLICATION_PRICE = 500;
-export const MAX_PHOTOS_PER_PRODUCT = 10;
+export const MAX_PHOTOS_PER_PRODUCT = 5;
 
 /**
  * MISE EN AVANT — LE PRIX SE DÉGRADE AVEC LA DURÉE.

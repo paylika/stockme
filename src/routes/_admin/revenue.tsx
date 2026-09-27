@@ -3,205 +3,363 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { formatFCFA } from "@/lib/format";
 import { explainDbError } from "@/lib/db-errors";
+import { PRO_AVAILABLE } from "@/lib/pricing";
 import { toast } from "sonner";
-import { Banknote, CalendarDays, Clock, Rocket, TrendingUp, Wallet } from "lucide-react";
+import {
+  ArrowRight,
+  Banknote,
+  BadgeCheck,
+  CalendarDays,
+  Clock,
+  Gift,
+  Info,
+  Repeat,
+  Rocket,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
 
-type Overview = {
-  revenue_total: number;
-  revenue_30d: number;
-  revenue_today: number;
-  paid_count: number;
-  pending_count: number;
+/**
+ * REVENUS — SÉPARÉS PAR SOURCE, ET UN SEUL TOTAL.
+ *
+ * POURQUOI CETTE PAGE A ÉTÉ REFaite : tout était mélangé (abonnements, badges,
+ * recharges, boosts) dans un seul « total encaissé ». Impossible de savoir d'où
+ * venait l'argent, ni si l'activité récurrente grandissait.
+ *
+ * Ici, quatre sources clairement séparées, puis UN total :
+ *   1. Abonnements Vendeur Pro   → avec le MRR et l'ARR (le revenu qui revient)
+ *   2. Certifications (badges)   → badges validés à la main × 2 000 F + badges payés en ligne
+ *   3. Recharges (mise en avant)  → l'argent réellement encaissé
+ *   4. Mise en avant consommée    → ce qui a été dépensé depuis les soldes
+ *
+ * ⚠️ Le point 4 est DÉJÀ payé par le point 3 : il ne s'ajoute donc JAMAIS au
+ * total. Le total = abonnements + certifications + recharges encaissées.
+ */
+
+const PRO_MONTHLY = 2900;
+const PRO_ANNUAL = 29000;
+const BADGE = 2000;
+
+type Breakdown = {
+  pro_monthly_active: number;
+  pro_annual_active: number;
+  pro_collected: number;
+  badges_manual: number;
+  badges_paid_online: number;
+  badges_paid_count: number;
+  topups_collected: number;
+  topups_count: number;
+  boosts_paid_online: number;
+  boost_consumed: number;
+  publication_consumed: number;
   wallet_liability: number;
-  active_boosts: number;
-  daily_boost_revenue: number;
-  by_provider: { provider: string; paid_count: number; amount: number }[];
-  recent: {
-    id: string;
-    purpose: string;
-    amount_fcfa: number;
-    provider: string;
-    method: string | null;
-    status: string;
-    created_at: string;
-    paid_at: string | null;
-    seller: string | null;
-  }[];
+  pro_credit_given: number;
+  verification_bonus_given: number;
+  xaalispay_escrow_count: number;
 };
 
 export const Route = createFileRoute("/_admin/revenue")({
   component: AdminRevenuePage,
 });
 
-const PURPOSE_LABELS: Record<string, string> = {
-  wallet_topup: "Rechargement",
-  subscription: "Abonnement vérifié",
-  boost: "Boost",
-};
-
-const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
-  paid: { label: "Payé", cls: "bg-success/15 text-success" },
-  pending: { label: "En attente", cls: "bg-volt/15 text-volt" },
-  failed: { label: "Échoué", cls: "bg-destructive/15 text-destructive" },
-  expired: { label: "Expiré", cls: "bg-secondary text-muted-foreground" },
-  cancelled: { label: "Annulé", cls: "bg-secondary text-muted-foreground" },
-};
-
 function AdminRevenuePage() {
-  const [data, setData] = useState<Overview | null>(null);
+  const [d, setD] = useState<Breakdown | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancel = false;
-    supabase.rpc("admin_payments_overview").then(({ data: d, error }) => {
+    supabase.rpc("admin_revenue_breakdown").then(({ data, error: err }) => {
       if (cancel) return;
-      if (error) {
-        toast.error(explainDbError(error.message, "20260724000000_wallet_payments_boosts.sql"));
+      if (err) {
+        setError(explainDbError(err.message, "20260820000000_revenus_separes_et_5_photos.sql"));
         return;
       }
-      setData((d as Overview | null) ?? null);
+      setD((data as Breakdown | null) ?? null);
     });
     return () => {
       cancel = true;
     };
   }, []);
 
+  if (error) {
+    return (
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-tight sm:text-4xl">Revenus</h1>
+        <pre className="mt-4 whitespace-pre-wrap rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-xs text-destructive">
+          {error}
+        </pre>
+      </div>
+    );
+  }
+
+  if (!d) return <p className="mt-6 text-sm text-muted-foreground">Chargement…</p>;
+
+  const mrr = d.pro_monthly_active * PRO_MONTHLY;
+  const arrFromMonthly = mrr * 12;
+  const arrFromAnnual = d.pro_annual_active * PRO_ANNUAL;
+  const arr = arrFromMonthly + arrFromAnnual;
+
+  const manualBadgeRevenue = d.badges_manual * BADGE;
+  const certifTotal = manualBadgeRevenue + d.badges_paid_online;
+
+  const rechargeTotal = d.topups_collected + d.boosts_paid_online;
+  const consumedTotal = d.boost_consumed + d.publication_consumed;
+
+  const total = d.pro_collected + certifTotal + rechargeTotal;
+
   return (
-    <div>
+    <div className="pb-10">
       <div className="flex items-center gap-2">
         <TrendingUp className="h-5 w-5 text-volt" />
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Recettes</p>
       </div>
-      <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
-        <h1 className="font-display text-2xl font-bold tracking-tight sm:text-4xl">Revenus</h1>
-        <span className="text-xs text-muted-foreground">
-          {data ? `${data.paid_count} paiement(s) encaissé(s)` : "…"}
-        </span>
+      <h1 className="mt-1 font-display text-2xl font-bold tracking-tight sm:text-4xl">Revenus par source</h1>
+
+      {/* ============ LE TOTAL, EN PREMIER ============ */}
+      <div className="mt-5 overflow-hidden rounded-3xl border-2 border-volt bg-card">
+        <div className="flex flex-wrap items-end justify-between gap-3 p-5">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+              Total encaissé, toutes sources
+            </p>
+            <p className="mt-1 font-display text-3xl font-bold tracking-tight sm:text-4xl">{formatFCFA(total)}</p>
+          </div>
+          <p className="max-w-md text-[11px] leading-relaxed text-muted-foreground">
+            = abonnements Vendeur Pro {formatFCFA(d.pro_collected)} + certifications {formatFCFA(certifTotal)} +
+            recharges {formatFCFA(rechargeTotal)}.{" "}
+            <strong className="text-foreground">
+              La mise en avant consommée ne s'ajoute pas
+            </strong>{" "}
+            : elle est déjà payée par les recharges.
+          </p>
+        </div>
+
+        <div className="grid border-t border-border sm:grid-cols-3">
+          <Sum label="Abonnements Vendeur Pro" value={formatFCFA(d.pro_collected)} tone="primary" />
+          <Sum label="Certifications (badges)" value={formatFCFA(certifTotal)} tone="primary" />
+          <Sum label="Recharges (mise en avant)" value={formatFCFA(rechargeTotal)} tone="volt" />
+        </div>
       </div>
 
-      {!data ? (
-        <p className="mt-6 text-sm text-muted-foreground">Chargement…</p>
-      ) : (
-        <>
-          {/* Revenus */}
-          <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Kpi icon={CalendarDays} label="Aujourd'hui" value={formatFCFA(data.revenue_today)} tone="volt" />
-            <Kpi icon={TrendingUp} label="30 derniers jours" value={formatFCFA(data.revenue_30d)} tone="primary" />
-            <Kpi icon={Banknote} label="Total encaissé" value={formatFCFA(data.revenue_total)} tone="muted" />
-            <Kpi
-              icon={Clock}
-              label="En attente"
-              value={String(data.pending_count)}
-              hint="paiements non confirmés"
-              tone="muted"
-            />
-          </div>
+      {/* ============ 1. ABONNEMENTS VENDEUR PRO + MRR / ARR ============ */}
+      <Section
+        n="1"
+        icon={Repeat}
+        title="Abonnements Vendeur Pro"
+        subtitle="Le revenu qui REVIENT chaque mois : c'est lui qui compte le plus."
+      >
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Kpi
+            icon={Repeat}
+            label="MRR"
+            value={`${formatFCFA(mrr)} / mois`}
+            hint={`${d.pro_monthly_active} abonné(s) mensuel(s) × ${formatFCFA(PRO_MONTHLY)}`}
+            tone="primary"
+          />
+          <Kpi
+            icon={CalendarDays}
+            label="ARR"
+            value={`${formatFCFA(arr)} / an`}
+            hint={`MRR × 12 + ${d.pro_annual_active} abonné(s) annuel(s)`}
+            tone="primary"
+          />
+          <Kpi
+            icon={Banknote}
+            label="Encaissé (Pro)"
+            value={formatFCFA(d.pro_collected)}
+            hint="depuis le début, paiements confirmés"
+            tone="muted"
+          />
+          <Kpi
+            icon={BadgeCheck}
+            label="Abonnés actifs"
+            value={String(d.pro_monthly_active + d.pro_annual_active)}
+            hint={`${d.pro_monthly_active} mensuel(s) · ${d.pro_annual_active} annuel(s)`}
+            tone="muted"
+          />
+        </div>
+      </Section>
 
-          {/* Activité récurrente */}
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <Kpi
-              icon={Rocket}
-              label="Boosts actifs"
-              value={String(data.active_boosts)}
-              hint={`${formatFCFA(data.daily_boost_revenue)} / jour engagés`}
-              tone="volt"
-            />
-            <Kpi
-              icon={Wallet}
-              label="Soldes vendeurs (engagement)"
-              value={formatFCFA(data.wallet_liability)}
-              hint="rechargé, pas encore consommé"
-              tone="muted"
-            />
-            <Kpi
-              icon={TrendingUp}
-              label="Revenu récurrent estimé"
-              value={`${formatFCFA(data.daily_boost_revenue * 30)} / mois`}
-              hint="si les boosts actuels continuent"
-              tone="primary"
-            />
-          </div>
+      {/* ============ 2. CERTIFICATIONS ============ */}
+      <Section
+        n="2"
+        icon={BadgeCheck}
+        title="Certifications (badge Fournisseur vérifié)"
+        subtitle="Badges que vous activez à la main (Wave / Orange Money) et badges payés par carte."
+      >
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Kpi
+            icon={BadgeCheck}
+            label="Badges activés à la main"
+            value={String(d.badges_manual)}
+            hint={`${d.badges_manual} × ${formatFCFA(BADGE)} = ${formatFCFA(manualBadgeRevenue)}`}
+            tone="primary"
+          />
+          <Kpi
+            icon={Banknote}
+            label="Revenu certification"
+            value={formatFCFA(certifTotal)}
+            hint="badges manuels + badges payés en ligne"
+            tone="volt"
+          />
+          <Kpi
+            icon={Wallet}
+            label="Badges payés en ligne"
+            value={String(d.badges_paid_count)}
+            hint={`${formatFCFA(d.badges_paid_online)} encaissés par carte`}
+            tone="muted"
+          />
+          <Kpi
+            icon={Gift}
+            label="Cadeaux offerts"
+            value={formatFCFA(d.verification_bonus_given)}
+            hint="1 500 F de bienvenue — offert, pas gagné"
+            tone="muted"
+          />
+        </div>
+      </Section>
 
-          {/* Par fournisseur */}
-          {data.by_provider.length > 0 && (
-            <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-card">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-[11px] uppercase tracking-wider text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-3 text-left">Fournisseur</th>
-                    <th className="px-4 py-3 text-right">Paiements</th>
-                    <th className="px-4 py-3 text-right">Montant</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.by_provider.map((p) => (
-                    <tr key={p.provider} className="border-t border-border">
-                      <td className="px-4 py-3 font-medium capitalize">{p.provider}</td>
-                      <td className="px-4 py-3 text-right text-muted-foreground">{p.paid_count}</td>
-                      <td className="px-4 py-3 text-right font-semibold">{formatFCFA(p.amount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+      {/* ============ 3. RECHARGES ============ */}
+      <Section
+        n="3"
+        icon={Wallet}
+        title="Recharges des vendeurs (mise en avant)"
+        subtitle="L'argent réellement encaissé pour alimenter les soldes."
+      >
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Kpi
+            icon={Wallet}
+            label="Recharges encaissées"
+            value={formatFCFA(d.topups_collected)}
+            hint={`${d.topups_count} paiement(s) confirmé(s)`}
+            tone="volt"
+          />
+          <Kpi
+            icon={Rocket}
+            label="Mise en avant par carte"
+            value={formatFCFA(d.boosts_paid_online)}
+            hint="payée directement, sans passer par le solde"
+            tone="muted"
+          />
+          <Kpi
+            icon={Clock}
+            label="Soldes encore chez nous"
+            value={formatFCFA(d.wallet_liability)}
+            hint="rechargé, pas encore dépensé — c'est une dette"
+            tone="muted"
+          />
+          <Kpi
+            icon={Gift}
+            label="Crédit Pro offert chaque mois"
+            value={formatFCFA(d.pro_credit_given)}
+            hint="versé aux abonnés Pro — offert, pas encaissé"
+            tone="muted"
+          />
+        </div>
+      </Section>
 
-          {/* Derniers paiements */}
-          <h2 className="mt-8 text-lg font-semibold tracking-tight">Derniers paiements</h2>
-          <div className="mt-3 overflow-x-auto rounded-2xl border border-border bg-card">
-            <table className="w-full min-w-[760px] text-sm">
-              <thead className="bg-muted/50 text-[11px] uppercase tracking-wider text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 text-left">Vendeur</th>
-                  <th className="px-4 py-3 text-left">Objet</th>
-                  <th className="px-4 py-3 text-left">Moyen</th>
-                  <th className="px-4 py-3 text-left">Date</th>
-                  <th className="px-4 py-3 text-left">Statut</th>
-                  <th className="px-4 py-3 text-right">Montant</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.recent.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">
-                      Aucun paiement pour le moment.
-                    </td>
-                  </tr>
-                ) : (
-                  data.recent.map((r) => {
-                    const st = STATUS_LABELS[r.status] ?? {
-                      label: r.status,
-                      cls: "bg-secondary text-muted-foreground",
-                    };
-                    return (
-                      <tr key={r.id} className="border-t border-border">
-                        <td className="px-4 py-3">{r.seller ?? "—"}</td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {PURPOSE_LABELS[r.purpose] ?? r.purpose}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {r.method ? `${r.provider} · ${r.method}` : r.provider}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
-                          {new Date(r.paid_at ?? r.created_at).toLocaleString("fr-FR", {
-                            dateStyle: "short",
-                            timeStyle: "short",
-                          })}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${st.cls}`}>
-                            {st.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right font-semibold">{formatFCFA(r.amount_fcfa)}</td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
+      {/* ============ 4. MISE EN AVANT CONSOMMÉE ============ */}
+      <Section
+        n="4"
+        icon={Rocket}
+        title="Mise en avant consommée"
+        subtitle="Ce qui a été dépensé depuis les soldes. DÉJÀ payé par les recharges : ne s'ajoute pas au total."
+      >
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Kpi
+            icon={Rocket}
+            label="Mise en avant (jours diffusés)"
+            value={formatFCFA(d.boost_consumed)}
+            hint="débité des soldes, jour après jour"
+            tone="volt"
+          />
+          <Kpi
+            icon={Banknote}
+            label="Publications supplémentaires"
+            value={formatFCFA(d.publication_consumed)}
+            hint="500 F par produit au-delà de 20"
+            tone="muted"
+          />
+          <Kpi
+            icon={TrendingUp}
+            label="Total consommé"
+            value={formatFCFA(consumedTotal)}
+            hint="somme des deux ci-dessus"
+            tone="primary"
+          />
+          <Kpi
+            icon={Info}
+            label="Taux de consommation"
+            value={d.topups_collected + d.boosts_paid_online > 0 ? `${Math.round((consumedTotal / (d.topups_collected + d.boosts_paid_online)) * 100)} %` : "—"}
+            hint="part des recharges déjà utilisée en publicité"
+            tone="muted"
+          />
+        </div>
+      </Section>
+
+      {/* ============ XAALISPAY ============ */}
+      <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-4">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-secondary text-muted-foreground">
+          <Info className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold">XaalisPay — ventes protégées</p>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+            {d.xaalispay_escrow_count > 0
+              ? `${d.xaalispay_escrow_count} vente(s) protégée(s) enregistrée(s). Aucun revenu StockMe : XaalisPay est notre partenaire de séquestre, et StockMe ne prend AUCUN frais.`
+              : "Aucune vente protégée enregistrée pour l'instant. Rappel : StockMe ne prend aucun frais sur le séquestre — c'est XaalisPay qui facture sa protection, à l'acheteur."}
+          </p>
+        </div>
+        {PRO_AVAILABLE && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-volt/15 px-2.5 py-1 text-[11px] font-semibold text-foreground">
+            <ArrowRight className="h-3 w-3" /> Les abonnements Pro alimentent le MRR ci-dessus
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Bloc d'une source de revenu. */
+function Section({
+  n,
+  icon: Icon,
+  title,
+  subtitle,
+  children,
+}: {
+  n: string;
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="mt-7">
+      <div className="flex items-start gap-3">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-volt text-sm font-black text-volt-foreground">
+          {n}
+        </span>
+        <div className="min-w-0">
+          <h2 className="flex items-center gap-2 text-lg font-bold tracking-tight">
+            <Icon className="h-4 w-4 text-volt" /> {title}
+          </h2>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{subtitle}</p>
+        </div>
+      </div>
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
+
+/** Ligne de total, sous le grand total. */
+function Sum({ label, value, tone }: { label: string; value: string; tone: "primary" | "volt" }) {
+  return (
+    <div className="border-t border-border p-4 first:border-t-0 sm:border-l sm:border-t-0 sm:first:border-l-0">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+      <p className={`mt-1 text-lg font-bold tracking-tight ${tone === "volt" ? "text-foreground" : "text-foreground"}`}>
+        {value}
+      </p>
     </div>
   );
 }
@@ -236,7 +394,7 @@ function Kpi({
         </span>
       </div>
       <p className="mt-2 text-lg font-bold tracking-tight sm:text-xl">{value}</p>
-      {hint && <p className="mt-0.5 text-[11px] text-muted-foreground">{hint}</p>}
+      {hint && <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{hint}</p>}
     </div>
   );
 }

@@ -223,6 +223,13 @@ export function ProductForm({
   const sizeGroups = SIZE_PRESET_GROUPS[category] ?? [];
   const presetValues = sizeGroups.flatMap((g) => g.values);
 
+  /**
+   * Nombre de photos de la fiche d'origine, AVANT modification. Sert à ne
+   * jamais bloquer une ancienne fiche qui a plus de photos que la limite
+   * actuelle (on est passé de 10 à 5 par produit).
+   */
+  const legacyImageCount = (initial?.images ?? []).length;
+
   const onFiles = (list: FileList | null) => {
     if (!list) return;
     const incoming = Array.from(list);
@@ -352,8 +359,20 @@ export function ProductForm({
       return stop("Nom trop long : 90 caractères maximum (mettez les détails dans la description).");
     }
     if (!category || !city) return stop("Catégorie et localité requises");
-    if (totalImages < 1 || totalImages > maxPhotos)
-      return stop(`Ajoutez entre 1 et ${maxPhotos} photos.`);
+    if (totalImages < 1) return stop("Ajoutez au moins 1 photo.");
+    /**
+     * ANCIENNES FICHES : elles peuvent avoir plus de photos que la limite
+     * actuelle (on est passé de 10 à 5). On ne les bloque JAMAIS : on interdit
+     * seulement d'en AJOUTER au-delà de la limite. Sinon un vendeur ne pourrait
+     * même plus corriger le prix d'une fiche existante.
+     */
+    if (totalImages > maxPhotos && totalImages > legacyImageCount) {
+      return stop(
+        legacyImageCount > maxPhotos
+          ? `Cette fiche a déjà ${totalImages} photos : vous ne pouvez plus en ajouter (${maxPhotos} maximum aujourd'hui). Vous pouvez en retirer.`
+          : `Ajoutez entre 1 et ${maxPhotos} photos.`,
+      );
+    }
     if (price === "" || quantity === "" || moq === "")
       return stop("Prix, stock et MOQ requis");
     if (Number(price) <= 0) return stop("Le prix doit être supérieur à 0");
@@ -446,7 +465,9 @@ export function ProductForm({
         <div className="flex items-center justify-between gap-3">
           <Label>Photos *</Label>
           <span className="text-xs text-muted-foreground">
-            {images.length}/{maxPhotos}
+            {images.length > maxPhotos && legacyImageCount > maxPhotos
+              ? `${images.length} photos (ancienne fiche — ${maxPhotos} maximum aujourd'hui)`
+              : `${images.length}/${maxPhotos}`}
           </span>
         </div>
         {/* Une SEULE ligne qui défile : avec 10 photos, une grille passait sur

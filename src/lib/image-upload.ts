@@ -1,9 +1,17 @@
 import { supabase } from "@/integrations/supabase/stockme-client";
 
-/** Fournisseur vérifié / PRO : 10 photos par produit (ce qui est annoncé sur la page Tarifs). */
-export const MAX_PHOTOS = 10;
-/** Compte gratuit : 10 photos aussi — la limite est la même pour tout le monde. */
-export const FREE_MAX_PHOTOS = 10;
+/**
+ * 5 PHOTOS PAR PRODUIT (décision du fondateur : 10, c'était trop).
+ *
+ * 5 photos nettes suffisent largement à vendre, et cela allège la page produit
+ * (donc le forfait data de l'acheteur). La limite est la MÊME pour tout le
+ * monde, Pro compris — ce n'est pas un levier de vente.
+ *
+ * Les fiches DÉJÀ en ligne avec plus de 5 photos ne sont pas touchées : elles
+ * gardent leurs photos, on interdit seulement d'en AJOUTER au-delà de 5.
+ */
+export const MAX_PHOTOS = 5;
+export const FREE_MAX_PHOTOS = 5;
 /** Taille maximale du fichier CHOISI par l'utilisateur (il est compressé avant envoi). */
 export const MAX_PHOTO_SIZE = 15 * 1024 * 1024;
 /** Taille maximale réellement ENVOYÉE au serveur (garantie par la compression). */

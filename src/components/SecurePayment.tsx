@@ -1,16 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { SERVICE_WHATSAPP } from "@/lib/constants";
-import {
-  XAALISPAY,
-  XAALISPAY_BENEFITS,
-  XAALISPAY_OFFER,
-  XAALISPAY_STEPS,
-  claimMessage,
-  preferredStoreUrl,
-} from "@/lib/xaalispay";
+import { XAALISPAY, XAALISPAY_BENEFITS, XAALISPAY_STEPS, preferredStoreUrl } from "@/lib/xaalispay";
 import { Button } from "@/components/ui/button";
-import { Check, ChevronDown, Gift, Lock, ShieldCheck, Smartphone, Store } from "lucide-react";
+import { Check, ChevronDown, Lock, ShieldCheck, Smartphone, Store } from "lucide-react";
 
 /**
  * LE BLOC DE CONFIANCE — pensé MOBILE D'ABORD.
@@ -93,24 +85,21 @@ export function SecurePaymentBlock({
             </Button>
           </a>
         ) : (
-          <a
-            href={`https://wa.me/${SERVICE_WHATSAPP}?text=${encodeURIComponent(claimMessage("seller"))}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block"
-          >
+          /* Côté vendeur : AUCUN cadeau à réclamer (l'offre « 2 000 F de mise
+             en avant » a été retirée). On propose simplement d'installer
+             l'application et d'expliquer le principe. */
+          <a href={installUrl} target="_blank" rel="noopener noreferrer" className="block">
             <Button variant="volt" className="h-12 w-full text-sm font-bold">
-              <Gift className="mr-1.5 h-4 w-4" /> Réclamer les 2 000 F de mise en avant
+              <Smartphone className="mr-1.5 h-4 w-4" /> Installer XaalisPay
             </Button>
           </a>
         )}
 
-        {/* Offre vendeur : elle ne concerne QUE le vendeur (StockMe ne paie
-            jamais les frais de séquestre). */}
+        {/* Ce que le vendeur y gagne — sans aucun cadeau promis. */}
         {!buyer && (
-          <p className="rounded-xl border border-volt/50 bg-volt/10 px-3 py-2 text-[11px] leading-snug">
-            <strong className="text-foreground">{XAALISPAY_OFFER.seller.title}</strong>
-            <span className="mt-0.5 block text-muted-foreground">{XAALISPAY_OFFER.seller.detail}</span>
+          <p className="rounded-xl border border-border bg-muted/40 px-3 py-2 text-[11px] leading-snug text-muted-foreground">
+            <strong className="text-foreground">Fini les commandes fantômes :</strong> le client paie d'abord dans
+            l'application, l'argent est bloqué, vous livrez tranquille. StockMe ne prend aucun frais sur le séquestre.
           </p>
         )}
 

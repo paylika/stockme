@@ -179,7 +179,7 @@ export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChang
             <span>
               <strong className="text-foreground">Vos cadeaux y arrivent aussi</strong> — les{" "}
               {formatFCFA(VERIFICATION_BONUS_FCFA)} offerts à la vérification de votre boutique, et les{" "}
-              {formatFCFA(2000)} de la première vente protégée XaalisPay.
+              {formatFCFA(PRO_MONTHLY_BOOST_CREDIT)} versés chaque mois si vous êtes Vendeur Pro.
             </span>
           </li>
         </ul>
