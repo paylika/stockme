@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { formatFCFA } from "@/lib/format";
 import { explainDbError } from "@/lib/db-errors";
+import { Button } from "@/components/ui/button";
 import { PRO_AVAILABLE } from "@/lib/pricing";
 import { toast } from "sonner";
 import {
@@ -13,6 +14,8 @@ import {
   Clock,
   Gift,
   Info,
+  Loader2,
+  RefreshCw,
   Repeat,
   Rocket,
   TrendingUp,
@@ -65,21 +68,44 @@ export const Route = createFileRoute("/_admin/revenue")({
 function AdminRevenuePage() {
   const [d, setD] = useState<Breakdown | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [at, setAt] = useState<Date | null>(null);
+
+  /**
+   * MISE À JOUR DES CHIFFRES.
+   *
+   * Avant : les totaux étaient chargés UNE SEULE FOIS à l'ouverture. Si un
+   * vendeur rechargeait pendant que la page était ouverte, on lisait encore
+   * l'ancien montant — d'où l'impression de chiffres faux.
+   *
+   * Maintenant : bouton « Actualiser », mise à jour automatique toutes les
+   * 60 secondes, et rechargement dès qu'on revient sur l'onglet.
+   */
+  const load = useCallback(async () => {
+    setBusy(true);
+    const { data, error: err } = await supabase.rpc("admin_revenue_breakdown");
+    setBusy(false);
+    if (err) {
+      setError(explainDbError(err.message, "20260820000000_revenus_separes_et_5_photos.sql"));
+      return;
+    }
+    setError(null);
+    setD((data as Breakdown | null) ?? null);
+    setAt(new Date());
+  }, []);
 
   useEffect(() => {
-    let cancel = false;
-    supabase.rpc("admin_revenue_breakdown").then(({ data, error: err }) => {
-      if (cancel) return;
-      if (err) {
-        setError(explainDbError(err.message, "20260820000000_revenus_separes_et_5_photos.sql"));
-        return;
-      }
-      setD((data as Breakdown | null) ?? null);
-    });
-    return () => {
-      cancel = true;
+    void load();
+    const timer = window.setInterval(() => void load(), 60_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void load();
     };
-  }, []);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [load]);
 
   if (error) {
     return (
@@ -99,16 +125,15 @@ function AdminRevenuePage() {
   const arrFromAnnual = d.pro_annual_active * PRO_ANNUAL;
   const arr = arrFromMonthly + arrFromAnnual;
 
-  const manualBadgeRevenue = d.badges_manual * BADGE;
   /**
-   * REVENU CERTIFICATION = badges validés À LA MAIN × 2 000 F.
+   * REVENU CERTIFICATION = badges que J'AI VALIDÉS MOI-MÊME × 2 000 F.
    *
-   * ⚠️ Les badges PAYÉS EN LIGNE ne sont PAS additionnés ici (décision du
-   * fondateur) : ces paiements ont dû être activés à la main, donc les compter
-   * une deuxième fois faussait le total. Ils restent affichés à titre
-   * d'information, sans jamais entrer dans un total.
+   * Les badges PAYÉS EN LIGNE ne sont comptés NULLE PART : ces paiements ont dû
+   * être activés à la main (l'automatique ne fonctionnait pas), donc les inclure
+   * faussait les totaux. Ils ne sont même plus affichés, pour ne laisser aucune
+   * ambiguïté.
    */
-  const certifTotal = manualBadgeRevenue;
+  const certifTotal = d.badges_manual * BADGE;
 
   const rechargeTotal = d.topups_collected + d.boosts_paid_online;
   const consumedTotal = d.boost_consumed + d.publication_consumed;
@@ -117,11 +142,31 @@ function AdminRevenuePage() {
 
   return (
     <div className="pb-10">
-      <div className="flex items-center gap-2">
-        <TrendingUp className="h-5 w-5 text-volt" />
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Recettes</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-volt" />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Recettes</p>
+          </div>
+          <h1 className="mt-1 font-display text-2xl font-bold tracking-tight sm:text-4xl">Revenus par source</h1>
+        </div>
+
+        {/* MISE À JOUR : bouton + heure du dernier calcul + rappel automatique. */}
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] text-muted-foreground">
+            {at
+              ? `Mis à jour à ${at.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
+              : "…"}
+          </span>
+          <Button variant="outline" size="sm" className="h-9" onClick={() => void load()} disabled={busy}>
+            {busy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="mr-1.5 h-3.5 w-3.5" />}
+            Actualiser
+          </Button>
+        </div>
       </div>
-      <h1 className="mt-1 font-display text-2xl font-bold tracking-tight sm:text-4xl">Revenus par source</h1>
+      <p className="mt-1 text-[11px] text-muted-foreground">
+        Les chiffres se recalculent tout seuls toutes les 60 secondes, et dès que vous revenez sur cet onglet.
+      </p>
 
       {/* ============ LE TOTAL, EN PREMIER ============ */}
       <div className="mt-5 overflow-hidden rounded-3xl border-2 border-volt bg-card">
@@ -200,7 +245,7 @@ function AdminRevenuePage() {
             icon={BadgeCheck}
             label="Badges activés à la main"
             value={String(d.badges_manual)}
-            hint={`${d.badges_manual} × ${formatFCFA(BADGE)} = ${formatFCFA(manualBadgeRevenue)}`}
+            hint={`${d.badges_manual} × ${formatFCFA(BADGE)} = ${formatFCFA(certifTotal)}`}
             tone="primary"
           />
           <Kpi
@@ -210,13 +255,9 @@ function AdminRevenuePage() {
             hint="badges que vous avez validés vous-même (× 2 000 F)"
             tone="volt"
           />
-          <Kpi
-            icon={Wallet}
-            label="Badges payés en ligne"
-            value={String(d.badges_paid_count)}
-            hint="information seule — activés à la main, NON comptés dans ce revenu"
-            tone="muted"
-          />
+          {/* Les badges payés en ligne ne sont plus affichés NI comptés : ces
+              paiements ont dû être activés à la main, donc les inclure faussait
+              les totaux. */}
           <Kpi
             icon={Gift}
             label="Cadeaux offerts"
