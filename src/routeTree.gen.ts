@@ -39,7 +39,6 @@ import { Route as LegalCookiesRouteImport } from './routes/legal.cookies'
 import { Route as LegalMentionsRouteImport } from './routes/legal.mentions'
 import { Route as PaiementRetourRouteImport } from './routes/paiement.retour'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
-import { Route as VendeurRouteImport } from './routes/vendeur.'
 import { Route as VendeurIdRouteImport } from './routes/vendeur.$id'
 import { Route as AuthenticatedDashboardNewRouteImport } from './routes/_authenticated/dashboard.new'
 import { Route as AuthenticatedProfileEditRouteImport } from './routes/_authenticated/profile.edit'
@@ -201,11 +200,6 @@ const ProductIdRoute = ProductIdRouteImport.update({
   path: '/product/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const VendeurRoute = VendeurRouteImport.update({
-  id: '/vendeur/',
-  path: '/vendeur/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const VendeurIdRoute = VendeurIdRouteImport.update({
   id: '/vendeur/$id',
   path: '/vendeur/$id',
@@ -281,7 +275,6 @@ export interface FileRoutesByFullPath {
   '/recherche-image': typeof RechercheImageRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tarifs': typeof TarifsRoute
-  '/vendeur/': typeof VendeurRoute
   '/admin': typeof AdminAdminRoute
   '/ads': typeof AdminAdsRoute
   '/demandes-admin': typeof AdminDemandesAdminRoute
@@ -324,7 +317,6 @@ export interface FileRoutesByTo {
   '/recherche-image': typeof RechercheImageRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tarifs': typeof TarifsRoute
-  '/vendeur': typeof VendeurRoute
   '/admin': typeof AdminAdminRoute
   '/ads': typeof AdminAdsRoute
   '/demandes-admin': typeof AdminDemandesAdminRoute
@@ -370,7 +362,6 @@ export interface FileRoutesById {
   '/recherche-image': typeof RechercheImageRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tarifs': typeof TarifsRoute
-  '/vendeur/': typeof VendeurRoute
   '/_admin/admin': typeof AdminAdminRoute
   '/_admin/ads': typeof AdminAdsRoute
   '/_admin/demandes-admin': typeof AdminDemandesAdminRoute
@@ -415,7 +406,6 @@ export interface FileRouteTypes {
     | '/recherche-image'
     | '/sitemap.xml'
     | '/tarifs'
-    | '/vendeur/'
     | '/admin'
     | '/ads'
     | '/demandes-admin'
@@ -458,7 +448,6 @@ export interface FileRouteTypes {
     | '/recherche-image'
     | '/sitemap.xml'
     | '/tarifs'
-    | '/vendeur'
     | '/admin'
     | '/ads'
     | '/demandes-admin'
@@ -503,7 +492,6 @@ export interface FileRouteTypes {
     | '/recherche-image'
     | '/sitemap.xml'
     | '/tarifs'
-    | '/vendeur/'
     | '/_admin/admin'
     | '/_admin/ads'
     | '/_admin/demandes-admin'
@@ -549,7 +537,6 @@ export interface RootRouteChildren {
   RechercheImageRoute: typeof RechercheImageRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TarifsRoute: typeof TarifsRoute
-  VendeurRoute: typeof VendeurRoute
   ApiGeoRoute: typeof ApiGeoRoute
   PaiementRetourRoute: typeof PaiementRetourRoute
   ProductIdRoute: typeof ProductIdRoute
@@ -776,13 +763,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/vendeur/': {
-      id: '/vendeur/'
-      path: '/vendeur'
-      fullPath: '/vendeur/'
-      preLoaderRoute: typeof VendeurRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/vendeur/$id': {
       id: '/vendeur/$id'
       path: '/vendeur/$id'
@@ -976,7 +956,6 @@ const rootRouteChildren: RootRouteChildren = {
   RechercheImageRoute: RechercheImageRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TarifsRoute: TarifsRoute,
-  VendeurRoute: VendeurRoute,
   ApiGeoRoute: ApiGeoRoute,
   PaiementRetourRoute: PaiementRetourRoute,
   ProductIdRoute: ProductIdRoute,
