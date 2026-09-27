@@ -270,6 +270,35 @@ function AdminRevenuePage() {
         </div>
       </div>
 
+      {/* ============ À FAIRE MAINTENANT : paiements payés mais non livrés ============
+          Placé JUSTE sous le total : c'est la seule chose qui demande une action
+          de ta part. Une personne a payé, elle n'a rien reçu → à activer. */}
+      {notDelivered.length > 0 && (
+        <div className="mt-4 rounded-2xl border-2 border-destructive/50 bg-destructive/10 p-4">
+          <p className="flex items-center gap-2 text-sm font-bold text-destructive">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            {notDelivered.length} paiement{notDelivered.length > 1 ? "s" : ""} encaissé
+            {notDelivered.length > 1 ? "s" : ""} mais non livré{notDelivered.length > 1 ? "s" : ""}
+          </p>
+          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+            Ces personnes ont payé et n'ont pas eu leur badge ou leur abonnement. Activez-le depuis la page
+            <strong className="text-foreground"> Utilisateurs</strong> (bouton « Vérifier » ou « Donner accès »), puis
+            appuyez sur « Actualiser » ici.
+          </p>
+          <ul className="mt-2 space-y-1 text-[11px]">
+            {notDelivered.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center gap-x-2">
+                <span className="font-semibold">{p.seller ?? p.email ?? "—"}</span>
+                <span className="text-muted-foreground">
+                  {p.objet} · {formatFCFA(p.amount_fcfa)} · {dateLabel(p)}
+                  {p.email ? ` · ${p.email}` : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* ============ 1. ABONNEMENTS VENDEUR PRO + MRR / ARR ============ */}
       <Section
         n="1"
@@ -432,30 +461,6 @@ function AdminRevenuePage() {
         title="Chaque paiement, en détail"
         subtitle="Qui a payé, pour quoi, et si la personne a bien reçu ce qu'elle a payé."
       >
-        {/* Ce qui doit être corrigé à la main, en premier */}
-        {notDelivered.length > 0 && (
-          <div className="mb-3 rounded-2xl border-2 border-destructive/50 bg-destructive/10 p-4">
-            <p className="text-sm font-bold text-destructive">
-              ⚠️ {notDelivered.length} paiement{notDelivered.length > 1 ? "s" : ""} encaissé
-              {notDelivered.length > 1 ? "s" : ""} mais NON livré{notDelivered.length > 1 ? "s" : ""}
-            </p>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-              Ces personnes ont payé et n'ont pas eu leur badge / abonnement. Activez-le depuis la page
-              <strong className="text-foreground"> Utilisateurs</strong> (bouton « Vérifier »), puis actualisez ici.
-            </p>
-            <ul className="mt-2 space-y-1 text-[11px]">
-              {notDelivered.map((p) => (
-                <li key={p.id} className="flex flex-wrap items-center gap-x-2">
-                  <span className="font-semibold">{p.seller ?? p.email ?? "—"}</span>
-                  <span className="text-muted-foreground">
-                    {p.objet} · {formatFCFA(p.amount_fcfa)} · {dateLabel(p)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
         <div className="overflow-x-auto rounded-2xl border border-border bg-card">
           <table className="w-full min-w-[880px] text-sm">
             <thead className="bg-muted/50 text-[11px] uppercase tracking-wider text-muted-foreground">
