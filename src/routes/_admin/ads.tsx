@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { uploadImage } from "@/lib/image-upload";
-import { formatFCFA } from "@/lib/format";
+import { formatFCFA, normalizePhone } from "@/lib/format";
 import { thumb } from "@/lib/img";
 import { ctr as computeCtr } from "@/lib/ad-tracking";
 import { isMissingFunction } from "@/lib/db-errors";
@@ -65,7 +65,9 @@ const normalizeHref = (v: string) => {
   const s = v.trim();
   if (!s) return "";
   if (/^https?:\/\//i.test(s)) return s;
-  if (/^\+?[\d\s]+$/.test(s)) return `https://wa.me/${s.replace(/\D/g, "")}`;
+  /* Un numéro saisi sans indicatif (« 77 123 45 67 ») donne un lien WhatsApp
+     refusé par WhatsApp : on le complète avec l'indicatif pays. */
+  if (/^\+?[\d\s]+$/.test(s)) return `https://wa.me/${normalizePhone(s)}`;
   return `https://${s}`;
 };
 

@@ -224,41 +224,46 @@ if (sampleProducts[0]?.id) {
 }
 
 /* ==========================================================================
- * 3. PUBLICATION DE BOUT EN BOUT (compte jetable, supprimé à la fin)
+ * 3. PUBLICATION DE BOUT EN BOUT (compte de vérification, réutilisé)
+ *
+ * Un SEUL compte de test, toujours le même : le test tourne plusieurs fois par
+ * jour et ne doit pas remplir la liste des utilisateurs. Les produits créés
+ * sont supprimés à la fin de chaque exécution.
  * ========================================================================== */
-const email = `smoke-${Date.now()}@stockme.test`;
-const password = `Smoke!${Math.floor(Math.random() * 1e9)}aZ`;
+const email = "verification-auto@stockme.test";
+const password = "StockMe-Verification-2026!";
 let token = null;
 let userId = null;
 let createdId = null;
 
-try {
+const signup = async () => {
   const r = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
     method: "POST",
     headers: { apikey: ANON, "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
   const j = await r.json();
-  token = j?.access_token ?? null;
-  userId = j?.user?.id ?? null;
-  if (token && userId) ok("Inscription d'un nouveau compte", userId.slice(0, 8));
-  else ko("Inscription d'un nouveau compte", `pas de session (HTTP ${r.status})`);
-} catch (e) {
-  ko("Inscription d'un nouveau compte", e.message);
-}
+  return { status: r.status, token: j?.access_token ?? null, id: j?.user?.id ?? null, raw: j };
+};
 
-// Connexion avec mot de passe (l'utilisateur qui revient)
 try {
-  const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-    method: "POST",
-    headers: { apikey: ANON, "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
-  const j = await r.json();
-  if (r.status === 200 && j?.access_token) ok("Connexion avec mot de passe", "session obtenue");
-  else ko("Connexion avec mot de passe", `HTTP ${r.status} — ${JSON.stringify(j).slice(0, 120)}`);
+  let s = await signup();
+  if (!s.token) {
+    // Le compte existe déjà : on se connecte avec le même mot de passe.
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: "POST",
+      headers: { apikey: ANON, "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const j = await r.json();
+    s = { status: r.status, token: j?.access_token ?? null, id: j?.user?.id ?? null, raw: j };
+  }
+  token = s.token;
+  userId = s.id;
+  if (token && userId) ok("Compte de vérification (connexion)", userId.slice(0, 8));
+  else ko("Compte de vérification (connexion)", `impossible d'obtenir une session — ${JSON.stringify(s.raw).slice(0, 140)}`);
 } catch (e) {
-  ko("Connexion avec mot de passe", e.message);
+  ko("Compte de vérification (connexion)", e.message);
 }
 
 if (token && userId) {
@@ -342,7 +347,52 @@ if (token && userId) {
     ko("Anti-doublon de publication", e.message);
   }
 
-  // 3.d Contact vendeur : l'événement doit s'enregistrer (204 = succès)
+  // 3.d Le vendeur doit pouvoir masquer/republier son produit (sinon il ne
+  //     peut pas gérer son stock et le croit en ligne pour toujours)
+  if (createdId) {
+    try {
+      const h = { ...H, "Content-Type": "application/json", Prefer: "return=representation" };
+      const off = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${createdId}`, {
+        method: "PATCH",
+        headers: h,
+        body: JSON.stringify({ published: false }),
+      });
+      const offRows = off.status < 300 ? await off.json() : [];
+      const on = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${createdId}`, {
+        method: "PATCH",
+        headers: h,
+        body: JSON.stringify({ published: true, price_fcfa: 1500 }),
+      });
+      const onRows = on.status < 300 ? await on.json() : [];
+      if (offRows?.[0]?.published === false && onRows?.[0]?.published === true && onRows?.[0]?.price_fcfa === 1500) {
+        ok("Vendeur : masquer / republier / modifier le prix", "modifications enregistrées");
+      } else {
+        ko(
+          "Vendeur : masquer / republier / modifier le prix",
+          `masquer=${off.status} republier=${on.status} — la modification n'a pas été enregistrée`,
+        );
+      }
+    } catch (e) {
+      ko("Vendeur : masquer / republier / modifier le prix", e.message);
+    }
+  }
+
+  // 3.e La limite de 5 photos doit être respectée côté serveur
+  try {
+    const h = { ...H, "Content-Type": "application/json", Prefer: "return=representation" };
+    const imgs = Array.from({ length: 6 }, (_, i) => `${photoUrl}?${i}`);
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/products`, {
+      method: "POST",
+      headers: h,
+      body: productBody({ published: false, images: imgs, submission_token: crypto.randomUUID() }),
+    });
+    if (r.status >= 400) ok("Limite de 5 photos respectée", `6 photos refusées (HTTP ${r.status})`);
+    else ko("Limite de 5 photos respectée", "6 photos acceptées : la règle des 5 photos n'est plus appliquée");
+  } catch (e) {
+    warn("Limite de 5 photos respectée", e.message);
+  }
+
+  // 3.f Contact vendeur : l'événement doit s'enregistrer (204 = succès)
   if (createdId) {
     try {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/log_product_event`, {
@@ -393,7 +443,9 @@ if (token && userId) {
     const del = await fetch(`${SUPABASE_URL}/rest/v1/products?owner_id=eq.${userId}`, { method: "DELETE", headers: H });
     if (del.status < 300) ok("Nettoyage des données de test", "produits supprimés");
     else warn("Nettoyage des données de test", `HTTP ${del.status}`);
-    await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${path}`, { method: "DELETE", headers: H });
+    const delFile = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${path}`, { method: "DELETE", headers: H });
+    if (delFile.status < 300) ok("Nettoyage de la photo de test", "fichier supprimé");
+    else warn("Nettoyage de la photo de test", `suppression HTTP ${delFile.status}`);
   } catch {
     /* sans gravité */
   }
