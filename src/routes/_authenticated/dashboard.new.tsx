@@ -86,17 +86,27 @@ function NewProduct() {
     const userId = await requireUserId("Reconnectez-vous pour publier le produit.");
 
     /**
-     * VITESSE ET FIABILITÉ : les photos ont déjà été envoyées pendant que le
-     * vendeur remplissait sa fiche (voir ProductForm). Ici on ne traite que
-     * celles qui ont échoué : on leur donne une DERNIÈRE chance, souvent
-     * réussie parce que le réseau a changé entre-temps.
+     * NE JAMAIS FAIRE ATTENDRE LE VENDEUR PLUSIEURS MINUTES.
+     *
+     * Avant : on retentait TOUTES les photos en échec ici, avec 5 tentatives de
+     * 25 s chacune — le bouton « Publier » tournait plusieurs minutes sans rien
+     * afficher. C'était le deuxième bug de publication.
+     *
+     * Maintenant :
+     *   • si AU MOINS UNE photo est déjà arrivée → on publie TOUT DE SUITE avec
+     *     celles-là (la fiche est vendable), les autres seront renvoyées après ;
+     *   • si AUCUNE photo n'est arrivée → UNE seule tentative rapide sur la
+     *     première photo, puis on enregistre la fiche en brouillon.
      */
     let lateUrls: string[] = [];
     let failures: UploadFailure[] = [];
-    if (values.newFiles.length > 0) {
-      const res = await uploadImagesResilient(values.newFiles, userId, setUploadingStatus);
+    if (values.newFiles.length > 0 && values.uploadedUrls.length === 0) {
+      const res = await uploadImagesResilient(values.newFiles.slice(0, 1), userId, setUploadingStatus);
       lateUrls = res.urls;
       failures = res.failures;
+    } else if (values.newFiles.length > 0) {
+      // Des photos sont prêtes : on n'attend pas les autres pour publier.
+      failures = values.newFiles.map((f) => ({ fileName: f.name, reason: "Envoi à reprendre après publication" }));
     }
 
     const urls = [...values.uploadedUrls, ...lateUrls];

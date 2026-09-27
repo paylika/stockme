@@ -349,11 +349,20 @@ export function ProductForm({
     // Les photos s'envoient en arrière-plan : si le vendeur appuie sur Publier
     // avant la fin, on ATTEND quelques secondes au lieu de renvoyer les fichiers
     // (ce qui doublerait les envois et ferait échouer les deux).
+    /**
+     * ATTENTE COURTE ET BORNÉE (6 s au lieu de 25 s).
+     *
+     * Les photos s'envoient déjà pendant la saisie. Si le vendeur appuie alors
+     * qu'une photo est encore en cours, on lui laisse 6 secondes — pas plus.
+     * Au-delà, on publie avec ce qui est prêt (ou on enregistre la fiche) :
+     * le vendeur doit TOUJOURS avoir une réponse en quelques secondes, jamais
+     * un bouton qui tourne dans le vide pendant une minute.
+     */
     if (imagesRef.current.some((i) => i.status === "uploading")) {
       setFormError("Un instant : vos photos finissent de s'envoyer…");
       const start = Date.now();
-      while (Date.now() - start < 25_000 && imagesRef.current.some((i) => i.status === "uploading")) {
-        await new Promise((r) => setTimeout(r, 700));
+      while (Date.now() - start < 6_000 && imagesRef.current.some((i) => i.status === "uploading")) {
+        await new Promise((r) => setTimeout(r, 500));
       }
       setFormError("");
     }

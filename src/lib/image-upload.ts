@@ -235,6 +235,37 @@ function classifyUploadError(err: unknown, size: number): string {
 }
 
 /**
+ * ⏱️ DÉLAI MAXIMUM PAR TENTATIVE D'ENVOI (décisif).
+ *
+ * POURQUOI : `fetch` n'a AUCUN délai maximum par défaut. Quand une connexion
+ * mobile lâche en cours d'envoi (très fréquent), le navigateur reste bloqué
+ * plusieurs MINUTES sans rien dire — le vendeur voit le bouton tourner dans le
+ * vide et croit que l'application est cassée. C'était exactement le bug.
+ *
+ * Avec ce plafond : une tentative échoue en 25 s au maximum, on réessaie, et au
+ * pire on enregistre la fiche en brouillon. Le vendeur a TOUJOURS une réponse.
+ */
+const UPLOAD_TIMEOUT_MS = 25_000;
+
+/** Envoi d'un fichier avec un délai maximum (interruption propre). */
+async function uploadBlobWithTimeout(path: string, blob: Blob, timeoutMs = UPLOAD_TIMEOUT_MS): Promise<void> {
+  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  try {
+    const { error } = await supabase.storage.from("product-images").upload(path, blob, {
+      contentType: blob.type || "image/jpeg",
+      cacheControl: "31536000",
+      upsert: false,
+      // @ts-expect-error — `signal` est transmis à fetch par supabase-js
+      signal: controller?.signal,
+    });
+    if (error) throw error;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+/**
  * Envoi d'un fichier avec plusieurs tentatives, en respectant le retour du
  * réseau : si le téléphone est hors ligne, on attend qu'il le redevienne au
  * lieu de brûler les tentatives pour rien.
@@ -248,10 +279,15 @@ async function uploadWithRetries(path: string, blob: Blob, onStatus?: (s: string
       await waitForOnline(30_000);
     }
     try {
-      await uploadBlob(path, blob);
+      await uploadBlobWithTimeout(path, blob);
       return;
     } catch (e) {
       lastError = e;
+      // Délai dépassé : message clair plutôt qu'une attente sans fin.
+      const msg = e instanceof Error ? e.message : String(e ?? "");
+      if (/abort/i.test(msg)) {
+        onStatus?.("Connexion trop lente — nouvelle tentative...");
+      }
       if (attempt < ATTEMPTS) await sleep(RETRY_WAITS_MS[attempt - 1] ?? 9000);
     }
   }
@@ -285,12 +321,9 @@ export async function uploadProductImage(file: File, userId: string): Promise<st
 }
 
 async function uploadBlob(path: string, blob: Blob): Promise<void> {
-  const { error } = await supabase.storage.from("product-images").upload(path, blob, {
-    contentType: blob.type || "image/jpeg",
-    cacheControl: "31536000",
-    upsert: false,
-  });
-  if (error) throw error;
+  // Tous les envois passent par la version avec délai maximum : sans elle, une
+  // connexion qui lâche bloque le navigateur plusieurs minutes sans message.
+  return uploadBlobWithTimeout(path, blob);
 }
 
 export type UploadFailure = { fileName: string; reason: string };

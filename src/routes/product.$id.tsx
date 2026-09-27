@@ -150,16 +150,27 @@ function ProductPage() {
     (async () => {
       setLoading(true);
       setActiveImg(0);
+      /**
+       * VITESSE : le serveur a DÉJÀ lu la fiche (loader). On ne la relit plus
+       * ici : on affiche tout de suite ce qu'on a, puis on complète.
+       * Avant, la même ligne produit était téléchargée DEUX fois (une fois par
+       * le serveur, une fois ici) — et chaque aller-retour coûte ~1 s.
+       */
       const { data } = await supabase.from("products").select("*").eq("id", id).maybeSingle();
       if (cancel) return;
       const p = data as Product | null;
       setProduct(p);
       if (p) {
-        const [{ data: prof }, { data: sim }, { data: pub }] = await Promise.all([
+        // TOUT EN PARALLÈLE : ces 3 appels sont indépendants. Avant ils étaient
+        // en file (l'un attendait l'autre), ce qui ajoutait 1 à 2 secondes.
+        const [{ data: prof }, { data: sim }, { data: pub }, { data: st }] = await Promise.all([
           supabase.from("profiles").select("full_name,whatsapp,phone,city,shop_name,avatar_url").eq("id", p.owner_id).maybeSingle(),
           supabase.rpc("get_similar_products", { p_product_id: p.id, p_limit: 8 }),
           // Profil public (fonctionne même pour un visiteur non connecté)
           supabase.rpc("get_public_seller", { p_seller_id: p.owner_id }),
+          // Les statistiques servent à une jauge décorative : elles ne doivent
+          // JAMAIS retarder l'affichage de la fiche.
+          supabase.rpc("get_seller_stats", { p_seller_id: p.owner_id }),
         ]);
         if (!cancel) {
           const publicSeller = (pub as PublicSeller | null) ?? null;
@@ -178,11 +189,8 @@ function ProductPage() {
                 : null),
           );
           setSimilar((sim as Similar[] | null) ?? []);
+          setSellerStats((st as SellerStats | null) ?? null);
         }
-        // Statistiques réelles du vendeur (insignes)
-        supabase
-          .rpc("get_seller_stats", { p_seller_id: p.owner_id })
-          .then(({ data }) => setSellerStats((data as SellerStats | null) ?? null));
       }
       setLoading(false);
     })();
