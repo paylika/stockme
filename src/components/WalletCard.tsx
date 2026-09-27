@@ -5,7 +5,7 @@ import { formatFCFA } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import type { BoostRow, WalletData } from "@/hooks/useWallet";
 import { toggleBoostStatus } from "@/components/SellerMoneyProvider";
-import { BOOST_DAY_PRICE, BOOST_PACKS, boostDaysFor, boostPriceFor } from "@/lib/pricing";
+import { BOOST_DAY_PRICE, BOOST_PACKS, boostDaysFor, boostPriceFor, boostSavingsFor } from "@/lib/pricing";
 import { thumb } from "@/lib/img";
 import {
   ArrowDownLeft,
@@ -66,6 +66,12 @@ export function WalletCard({ wallet, loading, onRecharge, onProlong, onChanged }
 
   const balance = wallet.balance_fcfa ?? 0;
   const activeBoosts = wallet.boosts.filter((b) => b.status === "active");
+  /**
+   * Mises en avant ARRÊTÉES : le message le plus rentable qu'on puisse envoyer.
+   * Le vendeur a déjà payé, il a des résultats à montrer, et il suffit d'un
+   * appui pour repartir. On affiche donc ses chiffres juste à côté du bouton.
+   */
+  const stoppedBoosts = wallet.boosts.filter((b) => b.status !== "active" && (b.days_served ?? 0) > 0);
   const dailySpend = activeBoosts.reduce((s, b) => s + b.daily_budget_fcfa, 0);
   const daysLeft = dailySpend > 0 ? Math.floor(balance / dailySpend) : 0;
   const daysAvailable = boostDaysFor(balance);
@@ -130,8 +136,9 @@ export function WalletCard({ wallet, loading, onRecharge, onProlong, onChanged }
                   : `Il reste ${daysLeft} jour${daysLeft > 1 ? "s" : ""} de diffusion`}
               </p>
               <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                Choisissez la durée à ajouter : {formatFCFA(BOOST_DAY_PRICE)} par jour, rien d'autre à faire ensuite.
-                Le produit reste en tête de l'accueil tant qu'il reste du solde.
+                Choisissez la durée à ajouter — {formatFCFA(1000)} le jour, {formatFCFA(900)} dès 11 jours,{" "}
+                {formatFCFA(800)} dès 21 jours. Rien d'autre à faire ensuite : le produit reste en tête de l'accueil
+                tant qu'il reste du solde.
               </p>
             </div>
           </div>
@@ -141,18 +148,60 @@ export function WalletCard({ wallet, loading, onRecharge, onProlong, onChanged }
                 key={p.days}
                 type="button"
                 onClick={() => onRecharge(boostPriceFor(p.days), PACK_AMOUNTS)}
-                className="rounded-xl border border-volt/50 bg-background px-2 py-2 text-center transition hover:bg-volt/15"
+                className="rounded-xl border border-volt/50 bg-background px-1.5 py-2 text-center transition hover:bg-volt/15"
               >
-                <span className="block text-sm font-bold">{p.days} jours</span>
+                <span className="block text-sm font-bold">+{p.days} j</span>
                 <span className="block text-[11px] font-semibold text-foreground">
                   {formatFCFA(boostPriceFor(p.days))}
                 </span>
-                <span className="block text-[10px] text-muted-foreground">{p.label}</span>
+                <span className="block text-[10px] text-muted-foreground">
+                  {boostSavingsFor(p.days) > 0 ? `−${formatFCFA(boostSavingsFor(p.days))}` : p.label}
+                </span>
               </button>
             ))}
           </div>
         </div>
       )}
+
+      {/* ---------- Relancer une mise en avant arrêtée (le message qui rapporte) ---------- */}
+      {stoppedBoosts.map((b) => (
+        <div key={b.id} className="rounded-2xl border border-volt/50 bg-volt/10 p-4">
+          <div className="flex items-start gap-3">
+            <Rocket className="mt-0.5 h-5 w-5 shrink-0 text-volt" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold">
+                Votre mise en avant s'est arrêtée — « {b.product_name ?? "votre produit"} »
+              </p>
+              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                Pendant {b.days_served} jour{b.days_served > 1 ? "s" : ""}, votre produit a été vu{" "}
+                <strong className="text-foreground">{(b.impressions ?? 0).toLocaleString("fr-FR")} fois</strong>
+                {(b.product_contacts ?? 0) > 0 ? (
+                  <>
+                    {" "}
+                    et vous a rapporté{" "}
+                    <strong className="text-foreground">
+                      {b.product_contacts} contact{b.product_contacts > 1 ? "s" : ""}
+                    </strong>
+                  </>
+                ) : null}
+                . Relancez quand vous voulez : le produit repart en tête de l'accueil.
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button variant="volt" className="h-10" onClick={() => onProlong({ id: b.product_id, name: b.product_name ?? "Produit" })}>
+              <Play className="mr-1.5 h-4 w-4" /> Relancer
+            </Button>
+            <Button
+              variant="outline"
+              className="h-10"
+              onClick={() => onRecharge(boostPriceFor(7), PACK_AMOUNTS)}
+            >
+              <Plus className="mr-1 h-4 w-4" /> Recharger 7 jours — {formatFCFA(boostPriceFor(7))}
+            </Button>
+          </div>
+        </div>
+      ))}
 
       {/* ---------- Ce qui tourne en ce moment ---------- */}
       <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">

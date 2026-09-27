@@ -27,25 +27,60 @@ export const FREE_PRODUCTS = 20;
 export const EXTRA_PUBLICATION_PRICE = 500;
 export const MAX_PHOTOS_PER_PRODUCT = 10;
 
-/** Prix d'une journée de mise en avant — LE MÊME pour tout le monde. */
+/**
+ * MISE EN AVANT — LE PRIX SE DÉGRADE AVEC LA DURÉE.
+ *
+ * Prix d'entrée : **1 000 F pour UNE journée**. C'est le point le plus
+ * important : il est beaucoup plus facile de sortir 1 000 F que 7 000 F. Le
+ * vendeur essaie un jour, voit l'effet, puis allonge s'il veut.
+ *
+ *   • 1 à 10 jours  → 1 000 F / jour  (prix normal)
+ *   • 11 à 20 jours →   900 F / jour  (−100 F par jour)
+ *   • 21 jours et + →   800 F / jour  (−200 F par jour)
+ *
+ * C'est l'utilisateur qui choisit la durée : il voit le TOTAL et l'ÉCONOMIE
+ * avant de payer, recharge par carte, et lance.
+ */
 export const BOOST_DAY_PRICE = 1000;
 
+export const BOOST_TIERS: { min: number; max: number; price: number; note: string }[] = [
+  { min: 1, max: 10, price: BOOST_DAY_PRICE, note: "prix normal" },
+  { min: 11, max: 20, price: 900, note: "−100 F par jour" },
+  { min: 21, max: 90, price: 800, note: "−200 F par jour" },
+];
+
+/** Prix d'une journée selon la durée choisie. */
+export const boostDayPrice = (days: number): number => {
+  const d = Math.max(1, Math.floor(days || 1));
+  return BOOST_TIERS.find((t) => d >= t.min && d <= t.max)?.price ?? 800;
+};
+
+/** Prix TOTAL pour N jours (dégressif). */
+export const boostPriceFor = (days: number): number => {
+  const d = Math.max(0, Math.floor(days || 0));
+  return d * boostDayPrice(d);
+};
+
+/** Économie par rapport au prix normal (1 000 F/jour) — affichée au vendeur. */
+export const boostSavingsFor = (days: number): number => {
+  const d = Math.max(0, Math.floor(days || 0));
+  return d * (BOOST_DAY_PRICE - boostDayPrice(d));
+};
+
 /**
- * Les 3 formules proposées d'un clic (le prix est toujours jours × 1 000 F).
- * Aucune remise, aucune astuce : la durée EST le montant. C'est ce qui rend
- * l'achat immédiatement compréhensible (« 30 000 F = 1 mois »).
- *
- * Le format CONSEILLÉ est 7 jours / 7 000 F : un seul choix à comprendre,
- * assez long pour voir l'effet, assez court pour oser essayer.
+ * Les durées proposées. Le détail « combien de jours » reste entièrement libre :
+ * le prix au jour baisse tout seul quand la durée augmente.
  */
 export const BOOST_PACKS: { days: number; label: string; popular?: boolean }[] = [
+  { days: 1, label: "essayer" },
+  { days: 3, label: "3 jours" },
   { days: 7, label: "1 semaine", popular: true },
-  { days: 15, label: "2 semaines" },
+  { days: 15, label: "15 jours" },
   { days: 30, label: "1 mois" },
 ];
 
-/** Durée pré-sélectionnée partout (7 jours = 7 000 F). */
-export const BOOST_DEFAULT_DAYS = 7;
+/** Durée pré-sélectionnée partout : 1 jour = 1 000 F (le prix d'entrée). */
+export const BOOST_DEFAULT_DAYS = 1;
 
 /** Durées proposées d'un clic (en jours). */
 export const BOOST_DAY_PRESETS = BOOST_PACKS.map((p) => p.days);
@@ -194,13 +229,19 @@ export const BOOST_DAILY_PRICE: Record<PlanId, number> = {
   pro_annuel: BOOST_DAY_PRICE,
 };
 
-/** Combien de jours de mise en avant un solde permet-il de payer ? */
-export const boostDaysFor = (balanceFcfa: number): number =>
-  Math.max(0, Math.floor(Math.max(0, balanceFcfa) / BOOST_DAY_PRICE));
-
-/** Combien faut-il de solde pour N jours de mise en avant ? */
-export const boostPriceFor = (days: number): number =>
-  Math.max(0, Math.floor(days)) * BOOST_DAY_PRICE;
+/**
+ * Combien de jours de mise en avant un solde permet-il de payer ?
+ *
+ * Dégressif : un gros solde achète des journées moins chères. On avance palier
+ * par palier pour ne jamais promettre plus de jours que le solde n'en paie.
+ */
+export const boostDaysFor = (balanceFcfa: number): number => {
+  const b = Math.max(0, Math.floor(Math.max(0, balanceFcfa)));
+  if (b <= 0) return 0;
+  if (b <= 10 * BOOST_DAY_PRICE) return Math.min(10, Math.floor(b / BOOST_DAY_PRICE));
+  if (b <= 20 * 900) return Math.min(20, Math.floor(b / 900));
+  return Math.min(90, Math.floor(b / 800));
+};
 
 /** Durée du bonus offert à la vérification (jours de mise en avant). */
 export const VERIFICATION_BONUS_DAYS = 3;

@@ -18,7 +18,7 @@ export const Route = createFileRoute("/tarifs")({
     const { meta, links } = buildSeoHead({
       title: "Tarifs StockMe — Badge fournisseur vérifié 2 000 F/an",
       description:
-        "Publiez gratuitement sur StockMe. Le badge Fournisseur vérifié coûte 2 000 FCFA/an. Ensuite, vous payez seulement la mise en avant de vos produits : 1 000 FCFA par jour, sans abonnement.",
+        "Publiez gratuitement sur StockMe. Le badge Fournisseur vérifié coûte 2 000 FCFA/an. Ensuite, vous payez seulement la mise en avant de vos produits : 1 000 FCFA le jour, moins cher si vous prenez plusieurs jours, sans abonnement.",
       path: "/tarifs",
       keywords:
         "tarif marketplace Afrique, prix badge vendeur, fournisseur vérifié, publicité stock en gros, boost annonce, vendre en gros Sénégal",
@@ -267,6 +267,7 @@ function PricingPage() {
                 <div className="mt-3 rounded-xl bg-muted/50 px-3 py-2 text-xs">
                   <span className="inline-flex items-center gap-1.5 font-semibold">
                     <Rocket className="h-3.5 w-3.5 text-volt" /> Mise en avant : {formatFCFA(plan.boostPerDay)} / jour
+                    <span className="font-normal text-muted-foreground">· dégressif jusqu'à 800 F</span>
                   </span>
                 </div>
 

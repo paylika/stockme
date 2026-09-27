@@ -9,12 +9,14 @@ import {
   BOOST_MAX_DAYS,
   BOOST_MIN_DAYS,
   BOOST_PACKS,
+  boostDayPrice,
   boostDaysFor,
   boostPriceFor,
+  boostSavingsFor,
 } from "@/lib/pricing";
 import { clearBoostIntent, readBoostIntent, saveBoostIntent } from "@/lib/boost-intent";
 import { thumb } from "@/lib/img";
-import { CheckCircle2, ImageOff, Pause, Rocket, Wallet } from "lucide-react";
+import { CheckCircle2, ImageOff, Pause, Rocket, Sparkles, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 type ProductLite = {
@@ -59,8 +61,46 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
   const [customDays, setCustomDays] = useState("");
   const [busy, setBusy] = useState(false);
   const [resumed, setResumed] = useState<string | null>(null);
+  /**
+   * LE MEILLEUR CANDIDAT À BOOSTER.
+   * Le vendeur ne sait pas quel produit mettre en avant : on lui DÉSIGNE celui
+   * que les acheteurs regardent déjà (vues + favoris des 30 derniers jours).
+   * On lui évite la seule question qui le bloquait : « lequel ? ».
+   */
+  const [best, setBest] = useState<{ id: string; name: string; views: number; favorites: number } | null>(null);
 
   const live = (products ?? []).filter((p) => p.published);
+
+  useEffect(() => {
+    const mine = new Set((products ?? []).map((p) => p.id));
+    if (mine.size === 0) return;
+    let cancel = false;
+    supabase
+      .rpc("get_ranked_products", { p_sort: "populaire", p_limit: 60, p_offset: 0 })
+      .then(({ data }) => {
+        if (cancel) return;
+        const rows = (data as { id: string; views_30?: number; favorites?: number }[] | null) ?? [];
+        const mineRows = rows
+          .filter((r) => mine.has(r.id))
+          .map((r) => ({ ...r, score: (r.views_30 ?? 0) + (r.favorites ?? 0) * 3 }))
+          .sort((a, b) => b.score - a.score);
+        const top = mineRows[0];
+        if (!top || top.score <= 0) return;
+        const product = (products ?? []).find((p) => p.id === top.id);
+        if (!product) return;
+        setBest({
+          id: top.id,
+          name: product.name,
+          views: top.views_30 ?? 0,
+          favorites: top.favorites ?? 0,
+        });
+        setSelectedId((prev) => prev ?? top.id);
+      });
+    return () => {
+      cancel = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products]);
 
   // Au retour d'un paiement, on retrouve le produit et la durée déjà choisis.
   useEffect(() => {
@@ -78,9 +118,12 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
 
   const wanted = customDays ? Math.floor(Number(customDays)) : days;
   const validDays = Number.isFinite(wanted) && wanted >= BOOST_MIN_DAYS ? Math.min(wanted, BOOST_MAX_DAYS) : 0;
+  /** Tarif dégressif : 1 000 F/jour jusqu'à 10 jours, puis 900, puis 800. */
+  const dayPrice = boostDayPrice(validDays);
   const needed = boostPriceFor(validDays);
+  const saving = boostSavingsFor(validDays);
   const missing = Math.max(0, needed - balance);
-  const canStart = balance >= BOOST_DAY_PRICE;
+  const canStart = balance >= dayPrice;
   const covers = validDays > 0 && balance >= needed;
   const daysWithBalance = boostDaysFor(balance);
 
@@ -89,21 +132,23 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
     setBusy(true);
     const { data, error } = await supabase.rpc("boost_start", {
       p_product_id: selected.id,
-      p_daily_budget: BOOST_DAY_PRICE,
+      // On transmet le TARIF DU JOUR de la durée choisie : c'est lui qui est
+      // débité chaque jour, donc la remise s'applique pour de vrai.
+      p_daily_budget: boostDayPrice(validDays),
     });
     setBusy(false);
     if (error) return toast.error(error.message);
 
     const res = data as { ok?: boolean; reason?: string } | null;
     if (res?.ok === false && res.reason === "insufficient_balance") {
-      toast.error(`Il faut au moins ${formatFCFA(BOOST_DAY_PRICE)} de solde pour démarrer.`);
+      toast.error(`Il faut au moins ${formatFCFA(dayPrice)} de solde pour démarrer.`);
       return;
     }
 
     clearBoostIntent();
     setResumed(null);
     toast.success(
-      `« ${selected.name} » passe en tête de l'accueil — ${formatFCFA(BOOST_DAY_PRICE)} par jour, environ ${daysWithBalance} jour${daysWithBalance > 1 ? "s" : ""}.`,
+      `« ${selected.name} » passe en tête de l'accueil — ${formatFCFA(dayPrice)} par jour, environ ${daysWithBalance} jour${daysWithBalance > 1 ? "s" : ""}.`,
       { duration: 7000 },
     );
     onStarted();
@@ -134,7 +179,7 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
           <Rocket className="h-5 w-5 text-volt" /> Mettre un produit en avant
         </h3>
         <span className="text-xs font-semibold text-muted-foreground">
-          {formatFCFA(BOOST_DAY_PRICE)} par jour · même prix pour tout le monde
+          {formatFCFA(BOOST_DAY_PRICE)} pour 1 jour · moins cher si vous prenez plus de jours
         </span>
       </div>
       <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
@@ -155,6 +200,21 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
 
       {/* ① Le produit */}
       <p className="mt-4 text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">1. Le produit</p>
+
+      {/* Le conseil : on désigne LE produit à booster au lieu de laisser choisir
+          au hasard. C'est la question qui bloquait le vendeur. */}
+      {best && (
+        <div className="mt-2 flex items-start gap-2.5 rounded-xl border border-volt/50 bg-background px-3 py-2.5">
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-volt" />
+          <span className="min-w-0 flex-1 text-[11px] leading-relaxed">
+            <strong className="text-foreground">Commencez par « {best.name} »</strong> : c'est votre produit le plus
+            regardé ({best.views} vue{best.views > 1 ? "s" : ""}
+            {best.favorites > 0 ? `, ${best.favorites} favori${best.favorites > 1 ? "s" : ""}` : ""} ces 30 derniers
+            jours) — donc celui qui a le plus de chances de rapporter.
+          </span>
+        </div>
+      )}
+
       {live.length === 1 ? (
         <p className="mt-2 flex items-center gap-2 text-sm font-semibold">
           {live[0].images?.[0] ? (
@@ -199,12 +259,12 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
         </div>
       )}
 
-      {/* ② La durée — UN SEUL CHOIX AFFICHÉ PAR DÉFAUT : 7 jours = 7 000 F.
-          Le vendeur qui ne veut pas réfléchir appuie sur le bouton et c'est
-          tout ; celui qui veut ajuster ouvre « Changer la durée ». Avant, il
-          devait comprendre trois formules avant de pouvoir payer. */}
+      {/* ② La durée — PAR DÉFAUT 1 JOUR = 1 000 F (le prix d'entrée).
+          Il est beaucoup plus facile de sortir 1 000 F que 7 000 F : le vendeur
+          essaie un jour, voit l'effet, puis allonge s'il veut. Plus la durée est
+          longue, moins la journée coûte (900 F/jour dès 11 jours, 800 F dès 21). */}
       <p className="mt-4 text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
-        2. Combien de temps
+        2. Combien de jours
       </p>
       <div className="mt-2 rounded-xl border-2 border-volt bg-volt/10 p-3">
         <div className="flex items-start justify-between gap-3">
@@ -213,8 +273,12 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
               {validDays} jour{validDays > 1 ? "s" : ""} — {formatFCFA(needed)}
             </span>
             <span className="mt-0.5 block text-[11px] text-muted-foreground">
-              soit {formatFCFA(BOOST_DAY_PRICE)} par jour
-              {!customDays && days === BOOST_DEFAULT_DAYS ? " · le format conseillé" : ""}
+              soit {formatFCFA(dayPrice)} par jour
+              {saving > 0 ? (
+                <span className="font-semibold text-success"> · vous économisez {formatFCFA(saving)}</span>
+              ) : (
+                " · le prix d'entrée"
+              )}
             </span>
           </span>
           <button
@@ -231,6 +295,8 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
             <div className="mt-3 grid grid-cols-3 gap-2">
               {BOOST_PACKS.map((p) => {
                 const active = !customDays && days === p.days;
+                const packPrice = boostPriceFor(p.days);
+                const packSaving = boostSavingsFor(p.days);
                 return (
                   <button
                     key={p.days}
@@ -239,7 +305,7 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
                       setDays(p.days);
                       setCustomDays("");
                     }}
-                    className={`relative rounded-xl border-2 px-2 py-2.5 text-center transition ${
+                    className={`relative rounded-xl border-2 px-1.5 py-2.5 text-center transition ${
                       active ? "border-volt bg-volt text-volt-foreground" : "border-border bg-background hover:bg-accent"
                     }`}
                   >
@@ -250,10 +316,10 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
                     )}
                     <span className="block text-lg font-bold leading-tight">{p.days} j</span>
                     <span className={`block text-sm font-bold ${active ? "" : "text-foreground"}`}>
-                      {formatFCFA(boostPriceFor(p.days))}
+                      {formatFCFA(packPrice)}
                     </span>
                     <span className={`block text-[10px] ${active ? "opacity-80" : "text-muted-foreground"}`}>
-                      {p.label}
+                      {packSaving > 0 ? `−${formatFCFA(packSaving)}` : p.label}
                     </span>
                   </button>
                 );
@@ -271,7 +337,8 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
                 className="h-10 w-40"
               />
               <span className="text-[11px] text-muted-foreground">
-                {formatFCFA(BOOST_DAY_PRICE)} par jour, quelle que soit la durée.
+                {formatFCFA(BOOST_DAY_PRICE)} le jour, puis {formatFCFA(900)} dès 11 jours et{" "}
+                {formatFCFA(800)} dès 21 jours.
               </span>
             </div>
           </>
@@ -293,7 +360,7 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
               {formatFCFA(needed)}
             </Button>
             <p className="text-[11px] text-muted-foreground">
-              Chaque jour coûte {formatFCFA(BOOST_DAY_PRICE)} : recharger revient à ajouter des jours de diffusion.
+              Chaque jour coûte {formatFCFA(dayPrice)} : recharger revient à ajouter des jours de diffusion.
             </p>
           </>
         ) : covers ? (

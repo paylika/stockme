@@ -49,9 +49,9 @@ const visibilitySlide = (selfService: boolean, loggedIn: boolean): Slide =>
   selfService
     ? {
         badge: "Sponsorisé",
-        title: "Boostez vos produits — 1 000 FCFA / jour",
+        title: "Boostez vos produits — 1 000 FCFA le jour",
         description:
-          "Mettez vos produits en tête de l'accueil et suivez les résultats (vues, clics, contacts). Rechargez votre solde, puis boostez en 2 clics.",
+          "Un jour pour essayer. Ensuite le prix du jour baisse : 900 F dès 11 jours, 800 F dès 21 jours. Vos produits passent en tête de l'accueil, avec les vues et les contacts mesurés.",
         ctaLabel: loggedIn ? "Booster mes produits" : "Créer mon compte",
         href: loggedIn ? "/profile" : "/auth",
         icon: Rocket,

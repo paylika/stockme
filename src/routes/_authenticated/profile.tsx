@@ -596,8 +596,8 @@ function ProfilePage() {
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-bold">Mettre un produit en tête de l'accueil</span>
                 <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
-                  7 jours pour {formatFCFA(7000)} ({formatFCFA(1000)} par jour). Les acheteurs de votre région
-                  voient votre produit en premier — vous suivez les vues et les contacts reçus.
+                  {formatFCFA(1000)} pour 1 jour. Plus vous prenez de jours, moins la journée coûte (900 F dès 11 jours,
+                  800 F dès 21 jours). Vous suivez les vues et les contacts reçus.
                 </span>
               </span>
               <span className="shrink-0 text-xs font-bold text-volt">Booster →</span>

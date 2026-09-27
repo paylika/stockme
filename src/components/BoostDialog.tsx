@@ -11,13 +11,14 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { formatFCFA } from "@/lib/format";
 import {
-  BOOST_DAY_PRICE,
   BOOST_DEFAULT_DAYS,
   BOOST_MAX_DAYS,
   BOOST_MIN_DAYS,
   BOOST_PACKS,
+  boostDayPrice,
   boostDaysFor,
   boostPriceFor,
+  boostSavingsFor,
 } from "@/lib/pricing";
 import { saveBoostIntent } from "@/lib/boost-intent";
 import { CalendarDays, CheckCircle2, Pause, Rocket, Wallet } from "lucide-react";
@@ -78,9 +79,16 @@ export function BoostDialog({
 
   const wanted = customDays ? Math.floor(Number(customDays)) : days;
   const validDays = Number.isFinite(wanted) && wanted >= BOOST_MIN_DAYS ? Math.min(wanted, BOOST_MAX_DAYS) : 0;
+  /**
+   * Tarif DÉGRESSIF : 1 000 F/jour (1 à 10 jours), 900 F (11 à 20), 800 F (21+).
+   * C'est ce tarif du jour qui est transmis à la base : elle débite exactement
+   * ce montant chaque jour, donc la remise s'applique réellement.
+   */
+  const dayPrice = boostDayPrice(validDays);
   const needed = boostPriceFor(validDays);
+  const saving = boostSavingsFor(validDays);
   const missing = Math.max(0, needed - balance);
-  const canStart = balance >= BOOST_DAY_PRICE;
+  const canStart = balance >= dayPrice;
   const covers = validDays > 0 && balance >= needed;
   const daysWithBalance = boostDaysFor(balance);
   const alreadyRunning = existing?.status === "active";
@@ -94,7 +102,7 @@ export function BoostDialog({
     setBusy(true);
     const { data, error } = await supabase.rpc("boost_start", {
       p_product_id: productId,
-      p_daily_budget: BOOST_DAY_PRICE,
+      p_daily_budget: boostDayPrice(validDays),
     });
     setBusy(false);
 
@@ -102,12 +110,12 @@ export function BoostDialog({
 
     const res = data as { ok?: boolean; reason?: string; balance?: number } | null;
     if (res?.ok === false && res.reason === "insufficient_balance") {
-      toast.error(`Il faut au moins ${formatFCFA(BOOST_DAY_PRICE)} de solde pour démarrer.`);
+      toast.error(`Il faut au moins ${formatFCFA(dayPrice)} de solde pour démarrer.`);
       return;
     }
 
     toast.success(
-      `Mise en avant activée : ${formatFCFA(BOOST_DAY_PRICE)} par jour${
+      `Mise en avant activée : ${formatFCFA(dayPrice)} par jour${
         daysWithBalance > 1 ? ` · environ ${daysWithBalance} jours` : ""
       }.`,
       { duration: 6000 },
@@ -123,29 +131,36 @@ export function BoostDialog({
     onTopUpRequested(amount, BOOST_PACKS.map((p) => boostPriceFor(p.days)));
   };
 
-  // Formules + durée libre (même tarif, aucune remise cachée).
+  // Durées proposées + durée libre : le tarif du jour baisse avec la durée.
   const dayPicker = (
     <>
       <div className="space-y-2">
-        <p className="text-sm font-semibold">Pendant combien de temps ?</p>
+        <p className="text-sm font-semibold">Combien de jours ?</p>
         <div className="grid grid-cols-3 gap-2">
           {BOOST_PACKS.map((p) => {
             const active = !customDays && days === p.days;
+            const packPrice = boostPriceFor(p.days);
+            const packSaving = boostSavingsFor(p.days);
             return (
               <button
                 key={p.days}
                 type="button"
                 onClick={() => selectDays(p.days)}
-                className={`relative rounded-xl border px-2 py-2.5 text-center transition ${
+                className={`relative rounded-xl border px-1.5 py-2.5 text-center transition ${
                   active ? "border-volt bg-volt text-volt-foreground" : "border-border bg-background hover:bg-accent"
                 }`}
               >
+                {p.popular && !active && (
+                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-foreground px-1.5 py-0.5 text-[9px] font-bold text-background">
+                    conseillé
+                  </span>
+                )}
                 <span className="block text-base font-bold leading-tight">{p.days} j</span>
                 <span className={`block text-[11px] font-semibold ${active ? "opacity-90" : "text-foreground"}`}>
-                  {formatFCFA(boostPriceFor(p.days))}
+                  {formatFCFA(packPrice)}
                 </span>
                 <span className={`block text-[10px] ${active ? "opacity-80" : "text-muted-foreground"}`}>
-                  {p.label}
+                  {packSaving > 0 ? `économisez ${formatFCFA(packSaving)}` : p.label}
                 </span>
               </button>
             );
@@ -156,7 +171,7 @@ export function BoostDialog({
           inputMode="numeric"
           min={BOOST_MIN_DAYS}
           max={BOOST_MAX_DAYS}
-          placeholder={`Autre durée : nombre de jours (${formatFCFA(BOOST_DAY_PRICE)}/jour)`}
+          placeholder="Autre durée : nombre de jours"
           value={customDays}
           onChange={(e) => setCustomDays(e.target.value)}
         />
@@ -169,6 +184,16 @@ export function BoostDialog({
           </span>
           <span className="font-semibold">{formatFCFA(needed)}</span>
         </div>
+        <div className="mt-1.5 flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">Prix du jour</span>
+          <span className="font-semibold">{formatFCFA(dayPrice)}</span>
+        </div>
+        {saving > 0 && (
+          <div className="mt-1 flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Remise durée</span>
+            <span className="font-semibold text-success">−{formatFCFA(saving)}</span>
+          </div>
+        )}
         <div className="mt-1.5 flex items-center justify-between">
           <span className="inline-flex items-center gap-1.5 text-muted-foreground">
             <Wallet className="h-4 w-4" /> Votre solde
@@ -179,7 +204,7 @@ export function BoostDialog({
         </div>
         <p className={`mt-2 border-t border-border pt-2 text-xs font-semibold ${missing > 0 ? "text-destructive" : "text-success"}`}>
           {missing > 0
-            ? `Il manque ${formatFCFA(missing)} pour ${validDays} jour${validDays > 1 ? "s" : ""}.`
+            ? `Il manque ${formatFCFA(missing)}. Vous pouvez démarrer dès maintenant avec ${formatFCFA(balance)} (≈ ${daysWithBalance} jour${daysWithBalance > 1 ? "s" : ""}).`
             : "Votre solde couvre la durée choisie : démarrage immédiat."}
         </p>
       </div>
@@ -195,7 +220,7 @@ export function BoostDialog({
           </DialogTitle>
           <DialogDescription className="text-left">
             <span className="line-clamp-1 font-medium text-foreground">{productName}</span>
-            {formatFCFA(BOOST_DAY_PRICE)} par jour · en haut de l'accueil et dans le carrousel.
+            {formatFCFA(dayPrice)} par jour · en haut de l'accueil et dans le carrousel.
           </DialogDescription>
         </DialogHeader>
 
@@ -258,7 +283,7 @@ export function BoostDialog({
 
         <ul className="space-y-1 text-[11px] leading-relaxed text-muted-foreground">
           <li>
-            • <strong className="text-foreground">{formatFCFA(BOOST_DAY_PRICE)} débités chaque jour</strong> sur votre
+            • <strong className="text-foreground">{formatFCFA(dayPrice)} débités chaque jour</strong> sur votre
             solde, automatiquement — rien à relancer.
           </li>
           <li>
