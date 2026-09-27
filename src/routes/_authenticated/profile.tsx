@@ -414,9 +414,18 @@ function ProfilePage() {
                       <VerifiedBadge />
                     )
                   ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                      <ShieldQuestion className="h-3 w-3" /> Non vérifiée
-                    </span>
+                    /* Une pastille CLIQUABLE : le vendeur qui voit « non vérifiée »
+                       doit pouvoir agir tout de suite, surtout sur mobile. */
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUpgradePlan("verifie");
+                        setUpgradeOpen(true);
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary transition hover:bg-primary/15"
+                    >
+                      <ShieldQuestion className="h-3 w-3" /> Non vérifiée — obtenir le badge
+                    </button>
                   )}
                   {isPro && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-volt/15 px-2 py-0.5 text-[11px] font-bold text-foreground">

@@ -178,12 +178,19 @@ function SellerPage() {
       <section className="border-b border-border">
         <div className="mx-auto max-w-4xl">
           {/* Bannière de la boutique */}
-          <div className="sm:px-6 sm:pt-5">
+          <div className="relative sm:px-6 sm:pt-5">
             <ShopBanner
               src={seller?.banner_url ?? null}
               position={seller?.banner_position ?? 50}
               className="h-32 sm:h-44 sm:rounded-3xl"
               overlay
+            />
+            {/* Sur mobile, le retour vit SUR la bannière : sous elle, il
+                chevauchait l'avatar et le nom (illisible). */}
+            <BackLink
+              fallback="/"
+              label="Retour"
+              className="absolute left-2 top-2 z-10 inline-flex items-center gap-1.5 rounded-full bg-background/90 px-2.5 py-1.5 text-xs font-semibold text-foreground backdrop-blur sm:hidden"
             />
           </div>
 
@@ -191,7 +198,7 @@ function SellerPage() {
             <BackLink
               fallback="/"
               label="Retour aux produits"
-              className="inline-flex items-center gap-1.5 pt-3 text-xs text-muted-foreground hover:text-foreground"
+              className="hidden items-center gap-1.5 pt-3 text-xs text-muted-foreground hover:text-foreground sm:inline-flex"
             />
 
             {!seller && products !== null && products.length === 0 ? (
