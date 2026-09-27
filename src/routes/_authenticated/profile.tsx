@@ -363,9 +363,12 @@ function ProfilePage() {
           </div>
 
           <div className="px-4 pb-6 sm:px-6">
-            {/* Avatar qui chevauche la bannière + identité */}
-            <div className="-mt-12 flex items-end gap-3 sm:-mt-14 sm:gap-4">
-              <div className="relative shrink-0">
+            {/* Avatar qui chevauche la bannière + identité.
+                MOBILE : avatar, puis nom + badge en dessous — sinon le nom et le
+                badge passent DERRIÈRE la bannière (le badge semblait masqué).
+                ORDINATEUR : côte à côte. */}
+            <div className="-mt-12 sm:-mt-14 sm:flex sm:items-end sm:gap-4">
+              <div className="relative w-fit sm:shrink-0">
                 <div className="grid h-24 w-24 place-items-center overflow-hidden rounded-2xl border-4 border-background bg-volt text-2xl font-bold text-volt-foreground">
                   {profile?.avatar_url ? (
                     <img src={profile.avatar_url} alt={displayName} className="h-full w-full object-cover" />
@@ -400,7 +403,7 @@ function ProfilePage() {
                   Le sceau (rosace + coche) est collé au nom : il se voit sur
                   TOUS les écrans, mobile compris — un badge caché ne rassure
                   personne. */}
-              <div className="min-w-0 flex-1 pb-0.5">
+              <div className="mt-3 min-w-0 sm:mt-0 sm:flex-1 sm:pb-0.5">
                 <div className="flex items-center gap-1.5">
                   <h1 className="truncate font-display text-xl font-bold tracking-tight sm:text-2xl">{displayName}</h1>
                   {isVerified && <VerifiedMark size={19} tone={isLifetime ? "gold" : "blue"} />}

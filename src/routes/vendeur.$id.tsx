@@ -210,22 +210,28 @@ function SellerPage() {
               </div>
             ) : (
               <>
-                {/* Avatar qui chevauche la bannière + identité */}
-                <div className="-mt-9 flex items-end gap-3 sm:-mt-12 sm:gap-4">
-                  <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-2xl border-4 border-background bg-volt text-xl font-bold text-volt-foreground sm:h-24 sm:w-24">
-                    {seller?.avatar_url ? (
-                      <img
-                  src={thumb(seller.avatar_url, IMG.avatar)}
-                  alt={displayName}
-                  decoding="async"
-                  className="h-full w-full object-cover"
-                />
-                    ) : (
-                      <span>{initials}</span>
-                    )}
+                {/* Avatar qui chevauche la bannière + identité.
+                    MOBILE : avatar puis nom en dessous — sinon le nom et le
+                    badge passent DERRIÈRE la bannière (texte foncé sur fond
+                    foncé : le badge semblait avoir disparu).
+                    ORDINATEUR : avatar et nom côte à côte, comme avant. */}
+                <div className="-mt-10 sm:-mt-12 sm:flex sm:items-end sm:gap-4">
+                  <div className="w-fit sm:shrink-0">
+                    <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl border-4 border-background bg-volt text-xl font-bold text-volt-foreground sm:h-24 sm:w-24">
+                      {seller?.avatar_url ? (
+                        <img
+                          src={thumb(seller.avatar_url, IMG.avatar)}
+                          alt={displayName}
+                          decoding="async"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span>{initials}</span>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="min-w-0 flex-1 pb-1">
+                  <div className="mt-3 min-w-0 sm:mt-0 sm:flex-1 sm:pb-1">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <h1 className="truncate font-display text-xl font-bold tracking-tight sm:text-2xl">
                         {displayName}
