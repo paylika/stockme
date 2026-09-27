@@ -7,6 +7,7 @@ import { MobileFooter } from "@/components/MobileFooter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatFCFA } from "@/lib/format";
+import { thumb, thumbResponsive, IMG } from "@/lib/img";
 import { AlertTriangle, BadgeCheck, Camera, Edit2, MapPin, Package, Pencil, Plus, Rocket, Save, Trash2, UserRound, Wallet, X } from "lucide-react";
 import { StatusSwitch } from "@/components/StatusSwitch";
 import { BoostButton, SellerMoneyProvider, useSellerMoney } from "@/components/SellerMoneyProvider";
@@ -118,7 +119,7 @@ function Dashboard() {
             {/* Photo de profil du vendeur dans son espace */}
             <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full bg-volt text-lg font-bold text-volt-foreground">
               {seller?.avatar_url ? (
-                <img src={seller.avatar_url} alt={seller.shop_name || seller.full_name || "Ma boutique"} className="h-full w-full object-cover" />
+                <img src={thumb(seller.avatar_url, IMG.avatar)} alt={seller.shop_name || seller.full_name || "Ma boutique"} loading="lazy" decoding="async" className="h-full w-full object-cover" />
               ) : (
                 <span>{initials}</span>
               )}
@@ -270,7 +271,7 @@ function Dashboard() {
                 <div key={p.id} className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
                   <Link to="/product/$id" params={{ id: p.id }} className="block aspect-[4/3] bg-muted overflow-hidden">
                     {p.images[0] ? (
-                      <img src={p.images[0]} alt={p.name} className="h-full w-full object-cover" />
+                      <img {...thumbResponsive(p.images[0], [...IMG.card.widths], IMG.card.sizes)} alt={p.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
                     ) : (
                       <div className="grid h-full place-items-center text-muted-foreground"><Package className="h-10 w-10" /></div>
                     )}

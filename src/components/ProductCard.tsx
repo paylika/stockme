@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Eye, Heart, MessageCircle, Megaphone, Tag } from "lucide-react";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { normalizeTiers, lowestTierPrice } from "@/lib/price-tiers";
-import { Stars } from "@/components/ProductReviews";
+import { Stars } from "@/components/Stars";
 import { formatFCFA } from "@/lib/format";
 import { IconPin as MapPin, IconBox as Package } from "@/components/icons";
 import { IMG, thumbResponsive } from "@/lib/img";

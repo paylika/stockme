@@ -7,6 +7,7 @@ import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { COUNTRY_FLAGS, countryOfCity } from "@/lib/constants";
 import { explainDbError } from "@/lib/db-errors";
 import { formatFCFA } from "@/lib/format";
+import { thumb } from "@/lib/img";
 import { toast } from "sonner";
 import {
   BadgeCheck,
@@ -479,7 +480,7 @@ function AdminUsersPage() {
                                         className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-muted"
                                       >
                                         {p.images?.[0] ? (
-                                          <img src={p.images[0]} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                          <img src={thumb(p.images[0], { w: 96, q: 60, cover: true })} alt="" loading="lazy" className="h-full w-full object-cover" />
                                         ) : (
                                           <span className="grid h-full w-full place-items-center text-muted-foreground">
                                             <Package className="h-4 w-4" />

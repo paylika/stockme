@@ -229,7 +229,9 @@ export function useSellerDashboard(enabled = true) {
 
   useEffect(() => {
     if (!enabled) {
-      clearSellerDashboard();
+      // ⚠️ On ne VIDE PAS la mémoire ici : `useAuth` arrive après le premier
+      // rendu, donc vider à ce moment annulait la requête déjà en vol et en
+      // relançait une deuxième. Le vidage est fait sur SIGNED_OUT (wireAuth).
       return;
     }
     // Déjà en mémoire (arrivée sur une autre page) → aucun appel réseau.

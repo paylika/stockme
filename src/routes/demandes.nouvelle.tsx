@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CATEGORIES, WEST_AFRICA_COUNTRIES, WEST_AFRICA_LOCATIONS } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
+import { thumb } from "@/lib/img";
 import { createBuyingRequest } from "@/lib/buying-requests";
 import { useAuth } from "@/hooks/useAuth";
 import { useVisitorCountry } from "@/lib/geo";
@@ -266,7 +267,7 @@ function NewRequestPage() {
                   <li key={p.id} className="w-28 shrink-0">
                     <Link to="/product/$id" params={{ id: p.id }} className="block">
                       {p.images?.[0] ? (
-                        <img src={p.images[0]} alt="" className="h-20 w-28 rounded-lg object-cover" />
+                        <img src={thumb(p.images[0], { w: 200, q: 65, cover: true })} alt="" className="h-20 w-28 rounded-lg object-cover" />
                       ) : (
                         <span className="grid h-20 w-28 place-items-center rounded-lg bg-muted">
                           <Package className="h-4 w-4 text-muted-foreground" />

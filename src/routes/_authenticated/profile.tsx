@@ -24,6 +24,7 @@ import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
 import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { requireUserId } from "@/lib/current-user";
 import { formatFCFA } from "@/lib/format";
+import { thumb, thumbResponsive, IMG } from "@/lib/img";
 import {
   COUNTRY_FLAGS,
   SERVICE_WHATSAPP,
@@ -366,7 +367,7 @@ function ProfilePage() {
               <div className="relative mt-3 w-fit sm:mt-0 sm:shrink-0">
                 <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl border-4 border-background bg-volt text-xl font-bold text-volt-foreground sm:h-24 sm:w-24 sm:text-2xl">
                   {profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt={displayName} className="h-full w-full object-cover" />
+                    <img src={thumb(profile.avatar_url, IMG.avatar)} alt={displayName} decoding="async" className="h-full w-full object-cover" />
                   ) : (
                     <span>{initials}</span>
                   )}
@@ -777,7 +778,7 @@ function ProfilePage() {
                         className="relative block aspect-[16/10] w-full overflow-hidden bg-muted"
                       >
                         {p.images[0] ? (
-                          <img src={p.images[0]} alt={p.name} className="h-full w-full object-cover" />
+                          <img {...thumbResponsive(p.images[0], [...IMG.card.widths], IMG.card.sizes)} alt={p.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
                         ) : (
                           <div className="grid h-full place-items-center text-muted-foreground">
                             <Package className="h-9 w-9" />

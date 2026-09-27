@@ -40,6 +40,7 @@ import { isAdminEmail, VERIFIED_BADGE_PRICE_FCFA } from "@/lib/constants";
 import { PRO_MONTHLY_BOOST_CREDIT, planById } from "@/lib/pricing";
 import { VerifiedMark } from "@/components/VerifiedBadge";
 import { formatFCFA } from "@/lib/format";
+import { thumb, IMG } from "@/lib/img";
 import logoUrl from "@/assets/stockme-logo.jpg";
 
 const COLLAPSE_KEY = "stockme:sidebar:collapsed";
@@ -131,9 +132,11 @@ export function AppSidebar() {
   useEffect(() => {
     if (!user) return;
     if (!REFRESH_PAGES.some((p) => pathname.startsWith(p))) return;
+    // UN SEUL rafraîchissement : le solde arrive dans le MÊME paquet que le
+    // profil, les produits et les statistiques. Avant, les deux appels partaient
+    // en parallèle et téléchargeaient deux fois la même chose.
     refresh();
-    refreshMoney();
-  }, [pathname, user, refresh, refreshMoney]);
+  }, [pathname, user, refresh]);
 
   const isActive = (m: string) => pathname === m || (m !== "/" && pathname.startsWith(m));
 
@@ -197,7 +200,7 @@ export function AppSidebar() {
             <div className="flex items-center gap-2">
               <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg border border-border bg-volt text-xs font-bold text-volt-foreground">
                 {info?.avatarUrl ? (
-                  <img src={info.avatarUrl} alt="" className="h-full w-full object-cover" />
+                  <img src={thumb(info.avatarUrl, IMG.avatar)} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                 ) : (
                   initials
                 )}
@@ -463,7 +466,7 @@ export function AppSidebar() {
                     className="flex w-full items-center gap-3 rounded-xl border border-border p-2 text-left transition hover:border-volt hover:bg-volt/5"
                   >
                     {p.image ? (
-                      <img src={p.image} alt="" className="h-11 w-11 shrink-0 rounded-lg object-cover" />
+                      <img src={thumb(p.image, 96)} alt="" loading="lazy" decoding="async" className="h-11 w-11 shrink-0 rounded-lg object-cover" />
                     ) : (
                       <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
                         <IconBox className="h-5 w-5" />

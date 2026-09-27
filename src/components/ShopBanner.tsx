@@ -60,7 +60,7 @@ export function ShopBanner({ src, position = 50, className = "h-32 sm:h-44", ove
       {showImage ? (
         <>
           <img
-            src={thumb(src as string, 1200)}
+            src={thumb(src as string, { w: 900, q: 70, cover: true })}
             alt=""
             loading="lazy"
             decoding="async"

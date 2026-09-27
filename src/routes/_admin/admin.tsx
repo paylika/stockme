@@ -15,6 +15,7 @@ import {
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { countryOfCity } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
+import { thumb } from "@/lib/img";
 import { Eye, EyeOff, MessageCircle, Package, Trash2, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -507,7 +508,7 @@ function AdminDashboard() {
                     <div className="flex items-center gap-3">
                       {p.images?.[0] ? (
                         <img
-                          src={p.images[0]}
+                          src={thumb(p.images[0], { w: 96, q: 60, cover: true })}
                           alt=""
                           loading="lazy"
                           className="h-11 w-11 shrink-0 rounded-lg border border-border object-cover"

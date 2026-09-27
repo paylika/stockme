@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { Header } from "@/components/Header";
 import { Input } from "@/components/ui/input";
@@ -63,11 +63,25 @@ function Browse() {
   const [q, setQ] = useState(search.q ?? "");
   const verified = useVerifiedSellers();
   const visitor = useVisitorCountry();
+  /** Premier affichage : les données viennent du serveur, rien à recharger. */
+  const firstRunRef = useRef(true);
   // Pays détecté → on cherche dans ses villes (sauf si l'utilisateur a choisi une ville précise).
   const visitorCities = visitor.country ? WEST_AFRICA_LOCATIONS[visitor.country] ?? null : null;
 
   useEffect(() => {
     let cancel = false;
+    /**
+     * PAS DE RECHARGEMENT AU PREMIER AFFICHAGE.
+     *
+     * Le serveur a DÉJÀ envoyé les 60 produits (`fetchBrowseFeed` dans le
+     * loader) : les redemander ici téléchargeait deux fois la même liste et
+     * lançait deux fois la requête des annonces sponsorisées, à chaque visite.
+     * On ne recharge donc que lorsqu'un filtre change réellement.
+     */
+    if (firstRunRef.current) {
+      firstRunRef.current = false;
+      return;
+    }
     // On ne vide plus la liste pendant le rafraîchissement : les produits
     // affichés restent à l'écran jusqu'à l'arrivée des nouveaux.
     const run = async () => {
@@ -111,6 +125,7 @@ function Browse() {
     };
     run();
     return () => { cancel = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.city, search.category, search.q, visitor.country]);
 
   const update = (patch: Partial<Filters>) =>

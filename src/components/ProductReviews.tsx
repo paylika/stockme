@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { uploadImage, MAX_PHOTO_SIZE } from "@/lib/image-upload";
 import { IMG, thumb } from "@/lib/img";
+import { Stars } from "@/components/Stars";
 
 /**
  * Avis et notes d'un produit — étoiles, commentaire et photos, comme sur
@@ -40,24 +41,7 @@ type Summary = {
 const MAX_REVIEW_PHOTOS = 3;
 
 /** Affichage d'une note en étoiles (avec demi-étoile). */
-export function Stars({ value, size = "sm" }: { value: number; size?: "xs" | "sm" | "md" }) {
-  const px = size === "xs" ? "h-3 w-3" : size === "md" ? "h-5 w-5" : "h-4 w-4";
-  return (
-    <span className="inline-flex items-center gap-0.5" aria-label={`${value} sur 5`}>
-      {[1, 2, 3, 4, 5].map((i) => {
-        const fill = value >= i ? 1 : value >= i - 0.5 ? 0.5 : 0;
-        return (
-          <span key={i} className={`relative inline-block ${px}`}>
-            <Star className={`absolute inset-0 ${px} text-muted-foreground/40`} />
-            <span className="absolute inset-0 overflow-hidden" style={{ width: `${fill * 100}%` }}>
-              <Star className={`${px} fill-volt text-volt`} />
-            </span>
-          </span>
-        );
-      })}
-    </span>
-  );
-}
+
 
 export function ProductReviews({ productId, sellerId }: { productId: string; sellerId?: string | null }) {
   const { user } = useAuth();
@@ -330,7 +314,7 @@ export function ProductReviews({ productId, sellerId }: { productId: string; sel
               <div className="flex items-start gap-3">
                 <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full border border-border bg-volt text-[11px] font-bold text-volt-foreground">
                   {r.author_avatar ? (
-                    <img src={r.author_avatar} alt="" className="h-full w-full object-cover" />
+                    <img src={thumb(r.author_avatar, IMG.avatar)} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                   ) : (
                     r.author.slice(0, 2).toUpperCase()
                   )}

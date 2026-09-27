@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { Button } from "@/components/ui/button";
 import { formatFCFA } from "@/lib/format";
+import { thumb } from "@/lib/img";
 import { explainDbError } from "@/lib/db-errors";
 import { toast } from "sonner";
 import { Eye, EyeOff, Loader2, Package, Sparkles, Trash2 } from "lucide-react";
@@ -256,7 +257,7 @@ function AdminProductsPage() {
                     <div className="flex items-center gap-3">
                       {p.images?.[0] ? (
                         <img
-                          src={p.images[0]}
+                          src={thumb(p.images[0], { w: 96, q: 60, cover: true })}
                           alt=""
                           loading="lazy"
                           className="h-11 w-11 shrink-0 rounded-lg border border-border object-cover"

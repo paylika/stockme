@@ -19,6 +19,8 @@ import { formatFCFA } from "@/lib/format";
 import { normalizeTiers, validateTiers, type PriceTier } from "@/lib/price-tiers";
 
 export type FormImage = {
+  /** Identifiant STABLE de la photo (jamais la référence de l'objet). */
+  id: string;
   /** Adresse publique de la photo une fois ARRIVÉE sur le serveur. */
   url?: string;
   file?: File;
@@ -28,6 +30,11 @@ export type FormImage = {
   /** Message clair quand l'envoi a échoué (réseau, format, droits…). */
   reason?: string;
 };
+
+const newImageId = () =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `img-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 export type ProductFormValues = {
   name: string;
@@ -179,7 +186,7 @@ export function ProductForm({
     initial?.weight_grams != null && initial.weight_grams >= 1000 ? "kg" : "g",
   );
   const [images, setImages] = useState<FormImage[]>(
-    (initial?.images ?? []).map((url) => ({ url, preview: url })),
+    (initial?.images ?? []).map((url, i) => ({ id: `existante-${i}`, url, preview: url })),
   );
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
@@ -257,7 +264,11 @@ export function ProductForm({
     // remplit tranquillement sa fiche pendant que les photos montent. Le jour
     // où il appuie sur « Publier », tout est déjà arrivé — la publication ne
     // peut donc plus être bloquée par le réseau au dernier moment.
-    const added: FormImage[] = arr.map((f) => ({ file: f, preview: URL.createObjectURL(f) }));
+    const added: FormImage[] = arr.map((f) => ({
+      id: newImageId(),
+      file: f,
+      preview: URL.createObjectURL(f),
+    }));
     setImages((prev) => [...prev, ...added]);
   };
 
@@ -267,6 +278,13 @@ export function ProductForm({
    * Le vendeur n'attend plus à la fin : chaque photo part dès qu'elle est
    * choisie, une par une (jamais toutes en même temps : sur un réseau mobile
    * faible, les envois simultanés se gênent et échouent tous ensemble).
+   *
+   * ⚠️ CORRECTION IMPORTANTE : on repère la photo par son IDENTIFIANT STABLE
+   * (`id`), jamais par la référence de l'objet. Un premier correctif comparait
+   * les objets (`img === target`) : comme l'objet était remplacé au moment de
+   * l'envoi, l'URL n'était JAMAIS enregistrée, la photo restait bloquée sur
+   * « en cours d'envoi »… et plus personne ne pouvait publier. C'était la cause
+   * du blocage de publication.
    * ------------------------------------------------------------------ */
   const uploadingRef = useRef(false);
   useEffect(() => {
@@ -275,21 +293,27 @@ export function ProductForm({
     if (!next?.file) return;
 
     uploadingRef.current = true;
-    const target = next;
-    setImages((prev) => prev.map((img) => (img === target ? { ...img, status: "uploading" } : img)));
+    const targetId = next.id;
+    const file = next.file;
+    setImages((prev) => prev.map((img) => (img.id === targetId ? { ...img, status: "uploading" } : img)));
 
     (async () => {
       try {
-        const url = await uploadFile(target.file as File);
-        setImages((prev) => prev.map((img) => (img === target ? { ...img, url, status: "done" } : img)));
+        const url = await uploadFile(file);
+        setImages((prev) => prev.map((img) => (img.id === targetId ? { ...img, url, status: "done" } : img)));
       } catch (e) {
         const reason = e instanceof Error ? e.message : "Envoi impossible.";
-        setImages((prev) => prev.map((img) => (img === target ? { ...img, status: "error", reason } : img)));
+        setImages((prev) =>
+          prev.map((img) => (img.id === targetId ? { ...img, status: "error", reason } : img)),
+        );
       } finally {
         uploadingRef.current = false;
       }
     })();
-  }, [images, uploadFile]);
+    // On ne dépend que du NOMBRE de photos sans URL : la liste `images` change
+    // d'identité à chaque rendu et relancerait l'effet pour rien.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [images.filter((i) => i.file && !i.url && i.status !== "error").length, uploadFile]);
 
   const retryImage = (i: number) => {
     setImages((prev) => prev.map((img, j) => (j === i ? { ...img, status: undefined, reason: undefined } : img)));
@@ -475,7 +499,7 @@ export function ProductForm({
         <div className="no-scrollbar -mx-1 flex snap-x gap-2.5 overflow-x-auto px-1 pb-1">
           {images.map((img, i) => (
             <div
-              key={i}
+              key={img.id}
               className="relative aspect-square w-24 shrink-0 snap-start overflow-hidden rounded-lg border border-border sm:w-28"
             >
               <img src={img.preview} alt="" className="h-full w-full object-cover" />

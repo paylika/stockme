@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/stockme-client";
+import { thumb, IMG } from "@/lib/img";
 import { requireUserId } from "@/lib/current-user";
 import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
 import { BannerEditor } from "@/components/BannerEditor";
@@ -145,7 +146,7 @@ export function ProfileEditDialog({
         <div className="flex items-center gap-4 rounded-2xl border border-border bg-muted/40 p-3">
           <span className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full bg-volt text-lg font-bold text-volt-foreground">
             {avatar ? (
-              <img src={avatar} alt="" className="h-full w-full object-cover" />
+              <img src={thumb(avatar, IMG.avatar)} alt="" decoding="async" className="h-full w-full object-cover" />
             ) : (
               <span>{(form.shop_name || form.full_name || "SM").slice(0, 2).toUpperCase()}</span>
             )}

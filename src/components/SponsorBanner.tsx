@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { thumb } from "@/lib/img";
 
 type Props = {
   badge?: string;
@@ -36,7 +37,7 @@ export function SponsorBanner({
       <div className="flex min-w-0 items-center gap-3 sm:flex-1">
         {logoSrc ? (
           <img
-            src={logoSrc}
+            src={logoSrc ? thumb(logoSrc, { w: 96, q: 70 }) : logoSrc}
             alt={logoAlt}
             loading="lazy"
             className="h-10 w-10 shrink-0 rounded-xl object-contain sm:h-11 sm:w-11"

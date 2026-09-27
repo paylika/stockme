@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
@@ -60,15 +60,31 @@ function DemandesPage() {
   const [mine, setMine] = useState<BuyingRequest[]>([]);
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
+  /**
+   * TEMPORISATION DE LA RECHERCHE.
+   * Avant : chaque lettre tapée déclenchait DEUX requêtes (la liste complète +
+   * « mes demandes »). Taper « telephone » = 18 requêtes, dont 9 résultats
+   * périmés — et l'affichage pouvait sauter quand les réponses arrivaient dans
+   * le désordre. On attend maintenant 350 ms après la dernière frappe.
+   */
+  const [qDebounced, setQDebounced] = useState("");
+  useEffect(() => {
+    const t = window.setTimeout(() => setQDebounced(q), 350);
+    return () => window.clearTimeout(t);
+  }, [q]);
 
+  // « Mes demandes » ne dépend PAS de la recherche : on ne le recharge pas à
+  // chaque frappe (liste stable gardée en mémoire).
+  const mineRef = useRef<BuyingRequest[]>([]);
   const load = useCallback(async () => {
     try {
       const [all, own] = await Promise.all([
-        listBuyingRequests({ q: q || undefined, category: category || undefined, limit: 40 }),
+        listBuyingRequests({ q: qDebounced || undefined, category: category || undefined, limit: 40 }),
         user ? listBuyingRequests({ mineOnly: true, limit: 10 }) : Promise.resolve([]),
       ]);
       setItems(all);
       setMine(own);
+      mineRef.current = own;
     } catch (err) {
       setItems([]);
       const message = err instanceof Error ? err.message : "";
@@ -78,7 +94,7 @@ function DemandesPage() {
         toast.error("Chargement impossible. Réessayez dans un instant.");
       }
     }
-  }, [q, category, user]);
+  }, [qDebounced, category, user]);
 
   useEffect(() => {
     void load();

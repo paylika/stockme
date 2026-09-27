@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { uploadImage } from "@/lib/image-upload";
 import { formatFCFA } from "@/lib/format";
+import { thumb } from "@/lib/img";
 import { ctr as computeCtr } from "@/lib/ad-tracking";
 import { isMissingFunction } from "@/lib/db-errors";
 import { toast } from "sonner";
@@ -350,7 +351,7 @@ function AdminAdsPage() {
                 {selectedProduct && (
                   <div className="flex items-center gap-3 rounded-xl border border-border bg-background/50 p-3">
                     {selectedProduct.images?.[0] ? (
-                      <img src={selectedProduct.images[0]} alt="" className="h-12 w-12 rounded-lg object-cover" />
+                      <img src={thumb(selectedProduct.images[0], { w: 96, q: 60, cover: true })} alt="" className="h-12 w-12 rounded-lg object-cover" />
                     ) : (
                       <span className="grid h-12 w-12 place-items-center rounded-lg bg-muted"><Package className="h-4 w-4" /></span>
                     )}
