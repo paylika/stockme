@@ -7,11 +7,11 @@ import { MobileFooter } from "@/components/MobileFooter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatFCFA } from "@/lib/format";
-import { AlertTriangle, BadgeCheck, Camera, Edit2, MapPin, Package, Pencil, Plus, Save, Trash2, UserRound, Wallet, X } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Camera, Edit2, MapPin, Package, Pencil, Plus, Rocket, Save, Trash2, UserRound, Wallet, X } from "lucide-react";
 import { StatusSwitch } from "@/components/StatusSwitch";
 import { BoostButton, SellerMoneyProvider, useSellerMoney } from "@/components/SellerMoneyProvider";
 import { SecurePaymentBlock } from "@/components/SecurePayment";
-import { FREE_PRODUCTS, EXTRA_PUBLICATION_PRICE } from "@/lib/pricing";
+import { FREE_PRODUCTS, EXTRA_PUBLICATION_PRICE, PRO_MONTHLY_BOOST_CREDIT } from "@/lib/pricing";
 import { toast } from "sonner";
 
 type P = {
@@ -170,35 +170,78 @@ function Dashboard() {
         </div>
 
         {/* Quota de publications atteint : on ne laisse jamais le vendeur bloqué
-            avec un simple message — le bouton de recharge est juste en dessous. */}
+            avec un simple message — et on lui montre l'offre qui règle le
+            problème pour de bon (Vendeur Pro : publications illimitées). */}
         {items !== null && publishedCount >= FREE_PRODUCTS && (
           <div className="mt-4 rounded-2xl border border-volt/40 bg-volt/10 p-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <Package className="h-6 w-6 shrink-0 text-volt" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold">
-                  {publishedCount} produits en ligne : vos {FREE_PRODUCTS} publications offertes sont utilisées
+            <p className="text-sm font-bold">
+              {publishedCount} produits en ligne : vos {FREE_PRODUCTS} publications offertes sont utilisées
+            </p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {/* Option 1 : payer à l'unité */}
+              <div className="rounded-xl border border-border bg-background p-3">
+                <p className="text-xs font-bold">Payer à l'unité</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                  {formatFCFA(EXTRA_PUBLICATION_PRICE)} par publication supplémentaire, prélevés sur votre solde
+                  {money ? ` (${formatFCFA(money.balance)} disponible)` : ""}.
                 </p>
-                <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                  Chaque nouvelle publication coûte{" "}
-                  <strong className="text-foreground">{formatFCFA(EXTRA_PUBLICATION_PRICE)}</strong>, prélevés sur votre
-                  solde{money ? ` (${formatFCFA(money.balance)} disponible)` : ""}. Rechargez, puis publiez autant de
-                  produits que vous voulez — aucun abonnement.
-                </p>
+                <div className="mt-2">
+                  {money ? (
+                    <Button variant="outline" className="h-10" onClick={() => money.openTopUp(EXTRA_PUBLICATION_PRICE)}>
+                      <Wallet className="mr-1.5 h-4 w-4" /> Recharger {formatFCFA(EXTRA_PUBLICATION_PRICE)}
+                    </Button>
+                  ) : (
+                    <Link to="/profile" search={{ tab: "wallet" }}>
+                      <Button variant="outline" className="h-10">
+                        <Wallet className="mr-1.5 h-4 w-4" /> Recharger mon solde
+                      </Button>
+                    </Link>
+                  )}
+                </div>
               </div>
-              {money ? (
-                <Button variant="volt" className="h-11" onClick={() => money.openTopUp(EXTRA_PUBLICATION_PRICE)}>
-                  <Wallet className="mr-1.5 h-4 w-4" /> Recharger {formatFCFA(EXTRA_PUBLICATION_PRICE)}
-                </Button>
-              ) : (
-                <Link to="/profile" search={{ tab: "promo" }}>
-                  <Button variant="volt" className="h-11">
-                    <Wallet className="mr-1.5 h-4 w-4" /> Recharger mon solde
+
+              {/* Option 2 : l'offre qui supprime la limite (mise en avant) */}
+              <div className="rounded-xl border border-volt/60 bg-volt/15 p-3">
+                <p className="flex items-center gap-1.5 text-xs font-bold">
+                  <Rocket className="h-3.5 w-3.5 text-volt" /> Vendeur Pro — {formatFCFA(2900)}/mois
+                </p>
+                <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                  <strong className="text-foreground">Publications illimitées</strong> +{" "}
+                  <strong className="text-foreground">{formatFCFA(PRO_MONTHLY_BOOST_CREDIT)} de mise en avant versés
+                  chaque mois</strong> sur votre solde (soit plus que l'abonnement) + badge vérifié inclus.
+                </p>
+                <Link to="/tarifs" className="mt-2 inline-block">
+                  <Button variant="volt" className="h-10">
+                    <Rocket className="mr-1.5 h-4 w-4" /> Voir l'offre Vendeur Pro
                   </Button>
                 </Link>
-              )}
+              </div>
             </div>
           </div>
+        )}
+
+        {/* Offre Pro même en dessous de la limite : elle est plus rentable que
+            d'acheter 3 jours de mise en avant dans le mois. */}
+        {items !== null && publishedCount > 0 && publishedCount < FREE_PRODUCTS && (
+          <Link
+            to="/tarifs"
+            className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-volt/40 bg-volt/5 p-3.5 transition hover:border-volt"
+          >
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-volt text-volt-foreground">
+              <Rocket className="h-5 w-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold">
+                Vendeur Pro — {formatFCFA(2900)}/mois : {formatFCFA(PRO_MONTHLY_BOOST_CREDIT)} de mise en avant offerts
+                chaque mois
+              </span>
+              <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
+                3 jours de mise en avant coûtent {formatFCFA(3000)} : avec Vendeur Pro vous les avez chaque mois, plus
+                les <strong className="text-foreground">publications illimitées</strong> et le badge vérifié.
+              </span>
+            </span>
+            <span className="shrink-0 text-xs font-bold text-volt">Découvrir →</span>
+          </Link>
         )}
 
         <SellerMoneyProvider defaultPhone={null} onChanged={load}>

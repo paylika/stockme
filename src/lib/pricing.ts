@@ -130,6 +130,9 @@ export const FREE_PLAN = {
   missing: ["Badge Fournisseur vérifié", "Priorité dans la recherche", "1 500 F de mise en avant offerts"],
 };
 
+/** Crédit de mise en avant versé chaque mois aux vendeurs Vendeur Pro. */
+export const PRO_MONTHLY_BOOST_CREDIT = 3000;
+
 /** Type commun (offre gratuite incluse) pour l'affichage public. */
 export type AnyPlan = {
   id: PlanId;
@@ -173,43 +176,52 @@ export const PAID_PLANS: Plan[] = [
   },
   {
     id: "pro",
-    name: "StockMe PRO",
-    price: 2500,
-    regularPrice: 3500,
+    name: "Vendeur Pro",
+    price: 2900,
     period: "par mois",
-    monthlyEquivalent: 2500,
+    monthlyEquivalent: 2900,
     days: 30,
     recurring: "month",
     dbPlan: "pro",
     boostPerDay: BOOST_DAY_PRICE,
-    tagline: "Pour dominer votre catégorie",
-    badge: "Tarif de lancement",
+    tagline: "Publiez sans limite et restez en tête",
+    badge: "Le plus avantageux",
+    highlight: true,
+    /**
+     * POURQUOI CE PRIX : 2 900 F rendent 3 000 F de crédit de mise en avant
+     * chaque mois (donc le vendeur est gagnant dès le premier jour) PLUS les
+     * publications illimitées. Le coût réel pour StockMe est faible : les
+     * publications ne coûtent rien à servir, et c'est ce qui donne à l'offre
+     * une valeur qui ne cannibalise pas la vente de jours supplémentaires
+     * (le crédit est mensuel et non cumulable).
+     */
     features: [
-      "Tout ce que contient l'offre Fournisseur vérifié",
-      "3 jours de mise en avant offerts chaque mois",
-      "Statistiques avancées : pays des acheteurs, taux de contact, valeur du stock",
-      "Prélèvement automatique, résiliable à tout moment",
-      "Assistance prioritaire + accompagnement",
+      `${PRO_MONTHLY_BOOST_CREDIT.toLocaleString("fr-FR")} F de mise en avant versés chaque mois sur votre solde`,
+      `Publications illimitées (au lieu de ${EXTRA_PUBLICATION_PRICE} F par produit au-delà de ${FREE_PRODUCTS})`,
+      "Badge « Fournisseur vérifié » inclus",
+      "Priorité dans la recherche",
+      "Statistiques avancées : par produit, pays des acheteurs, coût par contact",
+      "Prélèvement automatique par carte, résiliable à tout moment",
     ],
   },
   {
     id: "pro_annuel",
-    name: "PRO à l'année",
-    price: 25000,
+    name: "Vendeur Pro à l'année",
+    price: 29000,
     period: "par an",
-    monthlyEquivalent: 2083,
+    monthlyEquivalent: 2417,
     days: 365,
     recurring: null,
     dbPlan: "pro",
     boostPerDay: BOOST_DAY_PRICE,
-    tagline: "12 mois de PRO, 2 mois offerts",
+    tagline: "12 mois de Vendeur Pro, 2 mois offerts",
     badge: "2 mois offerts",
     features: [
-      "Tout StockMe PRO pendant 12 mois",
+      "Tout Vendeur Pro pendant 12 mois",
       "Paiement unique : plus rien à penser pendant un an",
+      "36 000 F de mise en avant versés sur l'année (3 000 F par mois)",
       "Votre badge reste acquis même si vous arrêtez ensuite",
-      "Mise en avant au même tarif pendant 12 mois",
-      "Soit 2 083 F/mois au lieu de 2 500",
+      "Soit 2 417 F/mois au lieu de 2 900",
     ],
   },
 ];
@@ -249,7 +261,7 @@ export const VERIFICATION_BONUS_DAYS = 3;
 export const VERIFICATION_BONUS_FCFA = 1500;
 
 /** Pack « badge annuel + PRO » : total payé le premier mois. */
-export const PACK_TOTAL = 2000 + 2500; // 4 500 F
+export const PACK_TOTAL = 2000 + 2900; // 4 900 F
 
 /**
  * PRO (abonnement mensuel et annuel) est MASQUÉ pour le moment.
@@ -259,7 +271,7 @@ export const PACK_TOTAL = 2000 + 2500; // 4 500 F
  * disparaît de l'interface — le code et les tarifs restent en place, il suffit
  * de repasser ce drapeau à `true` pour tout rallumer d'un coup.
  */
-export const PRO_AVAILABLE = false;
+export const PRO_AVAILABLE = true;
 
 /** Garantie affichée (levier de conversion). */
 export const SATISFACTION_GUARANTEE =

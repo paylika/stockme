@@ -4,8 +4,20 @@ import { Button } from "@/components/ui/button";
 import { formatFCFA } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import type { PendingPayment, WalletData } from "@/hooks/useWallet";
-import { BOOST_DAY_PRICE, FREE_PRODUCTS, EXTRA_PUBLICATION_PRICE, VERIFICATION_BONUS_FCFA, boostDaysFor, boostPriceFor, boostSavingsFor } from "@/lib/pricing";
-import { ArrowDownLeft, ChevronDown, Clock, Gift, Plus, Rocket, Wallet } from "lucide-react";
+import {
+  BOOST_DAY_PRICE,
+  FREE_PRODUCTS,
+  EXTRA_PUBLICATION_PRICE,
+  PRO_AVAILABLE,
+  PRO_MONTHLY_BOOST_CREDIT,
+  VERIFICATION_BONUS_FCFA,
+  boostDaysFor,
+  boostPriceFor,
+  boostSavingsFor,
+  planById,
+  type PlanId,
+} from "@/lib/pricing";
+import { ArrowDownLeft, BadgeCheck, Check, ChevronDown, Clock, Gift, Plus, Rocket, Wallet } from "lucide-react";
 
 type Props = {
   wallet: WalletData | null;
@@ -14,6 +26,12 @@ type Props = {
   onRecharge: (amount?: number, presets?: number[]) => void;
   onEditPending: (pending: PendingPayment) => void;
   onChanged?: () => void;
+  /** Offre actuelle du vendeur (« pro » = abonnement actif). */
+  plan?: PlanId | null;
+  /** Fin d'abonnement Vendeur Pro, si connue. */
+  proUntil?: string | null;
+  /** Ouvre la fenêtre d'abonnement Vendeur Pro. */
+  onPro?: () => void;
 };
 
 /**
@@ -26,7 +44,7 @@ type Props = {
  *
  * Les campagnes vivent dans l'onglet Sponsorisation, les chiffres dans Stat.
  */
-export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChanged }: Props) {
+export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChanged, plan, proUntil, onPro }: Props) {
   // Réparation automatique : une campagne active et financée dont l'annonce
   // n'est plus servie est remise en service (aucun débit : la journée est payée).
   useEffect(() => {
@@ -82,6 +100,64 @@ export function WalletCard({ wallet, loading, onRecharge, onEditPending, onChang
           </Button>
         </div>
       </div>
+
+      {/* ---------- 1 bis. Vendeur Pro : le crédit mensuel dépasse l'abonnement ---------- */}
+      {PRO_AVAILABLE && plan === "pro" && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-volt/50 bg-volt/10 p-4">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-volt text-volt-foreground">
+            <Rocket className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1.5 text-sm font-bold">
+              Vendeur Pro actif <BadgeCheck className="h-4 w-4 text-volt" />
+            </p>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+              {formatFCFA(PRO_MONTHLY_BOOST_CREDIT)} de mise en avant sont crédités sur ce solde chaque mois, et vos
+              publications sont illimitées.
+              {proUntil ? ` Prochaine échéance : ${new Date(proUntil).toLocaleDateString("fr-FR")}.` : ""}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {PRO_AVAILABLE && plan !== "pro" && onPro && (
+        <div className="rounded-2xl border border-volt/60 bg-volt/10 p-4">
+          <div className="flex items-start gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-volt text-volt-foreground">
+              <Rocket className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold">
+                Vendeur Pro — {formatFCFA(planById("pro")?.price ?? 2900)}/mois
+              </p>
+              <p className="mt-1 text-xs leading-relaxed">
+                <strong>{formatFCFA(PRO_MONTHLY_BOOST_CREDIT)} de mise en avant versés sur ce solde chaque mois</strong>{" "}
+                — soit plus que le prix de l'abonnement. Vous récupérez donc l'argent en jours de mise en avant.
+              </p>
+              <ul className="mt-2 space-y-1 text-[11px] text-muted-foreground">
+                <li className="flex items-start gap-1.5">
+                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-volt" />
+                  <span>
+                    Publications illimitées (au-delà de {FREE_PRODUCTS} produits, au lieu de{" "}
+                    {formatFCFA(EXTRA_PUBLICATION_PRICE)} l'unité)
+                  </span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-volt" />
+                  <span>Badge « Fournisseur vérifié » et priorité dans la recherche inclus</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-volt" />
+                  <span>Prélèvement par carte, résiliable à tout moment</span>
+                </li>
+              </ul>
+              <Button variant="volt" className="mt-3 h-11 w-full sm:w-auto" onClick={onPro}>
+                <Rocket className="mr-1.5 h-4 w-4" /> Passer Vendeur Pro
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ---------- 2. Ce que le solde permet d'acheter (l'explication, au bon endroit) ---------- */}
       <details open className="rounded-2xl border border-border bg-card p-4">

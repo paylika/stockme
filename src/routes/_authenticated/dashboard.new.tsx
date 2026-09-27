@@ -9,10 +9,10 @@ import { PhotoFailurePanel } from "@/components/PhotoFailurePanel";
 import { Button } from "@/components/ui/button";
 import { uploadImagesResilient, MAX_PHOTOS, FREE_MAX_PHOTOS, type UploadFailure } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
-import { FREE_PRODUCTS, EXTRA_PUBLICATION_PRICE } from "@/lib/pricing";
+import { FREE_PRODUCTS, EXTRA_PUBLICATION_PRICE, PRO_AVAILABLE, PRO_MONTHLY_BOOST_CREDIT } from "@/lib/pricing";
 import { formatFCFA } from "@/lib/format";
 import { useSellerMoney } from "@/components/SellerMoneyProvider";
-import { Package, Wallet } from "lucide-react";
+import { Package, Rocket, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/dashboard/new")({
@@ -285,13 +285,30 @@ function NewProduct() {
                   )}
                 </>
               ) : (
-                <Link to="/profile" search={{ tab: "promo" }}>
+                <Link to="/profile" search={{ tab: "wallet" }}>
                   <Button variant="volt" className="h-10">
                     <Wallet className="mr-1.5 h-4 w-4" /> Recharger mon solde
                   </Button>
                 </Link>
               )}
             </div>
+
+            {/* L'autre réponse au quota : l'offre qui SUPPRIME la limite. Plus
+                rentable qu'acheter des publications une par une. */}
+            {PRO_AVAILABLE && (
+              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-volt/40 bg-volt/10 px-3 py-2">
+                <Rocket className="h-4 w-4 shrink-0 text-volt" />
+                <p className="min-w-0 flex-1 text-[11px] leading-snug">
+                  <strong>Vendeur Pro — 2 900 F/mois :</strong> publications illimitées et{" "}
+                  {formatFCFA(PRO_MONTHLY_BOOST_CREDIT)} de mise en avant versés sur votre solde chaque mois.
+                </p>
+                <Link to="/tarifs">
+                  <Button variant="outline" className="h-9">
+                    Voir l'offre
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         )}
 

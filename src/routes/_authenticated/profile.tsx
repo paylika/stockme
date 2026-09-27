@@ -795,83 +795,16 @@ function ProfilePage() {
           </>
         )}
 
-        {/* ---------- Statistiques : mes annonces, produit par produit ---------- */}
+        {/* ---------- Statistiques : refonte totale (chiffres, trafic, annonces) ---------- */}
         {tab === "stats" && (
-          <div className="mt-5 space-y-4">
-            {/* Les chiffres de MES MISES EN AVANT, mis en avant eux aussi : c'est
-                la première question du vendeur (« est-ce que ça marche ? »). */}
-            <div>
-              <h3 className="text-sm font-bold tracking-tight">Mes annonces, produit par produit</h3>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">
-                Vues, clics, contacts et coût par contact pour chaque mise en avant.
-              </p>
-              <div className="mt-3">
-                <AdStats wallet={money?.wallet ?? null} loading={money?.loading ?? false} />
-              </div>
-            </div>
-
-            <h3 className="pt-2 text-sm font-bold tracking-tight">Toute ma boutique</h3>
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <StatCard label="Produits en ligne" value={online} icon={Package} />
-              <StatCard label="Vues totales" value={stats?.total_views ?? 0} icon={Eye} />
-              <StatCard label="Contacts reçus" value={stats?.total_contacts ?? 0} icon={MessageCircle} />
-              <StatCard label="Favoris" value={stats?.total_favorites ?? 0} icon={Heart} />
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Taux de contact (contacts ÷ vues)
-              </p>
-              <p className="mt-1 text-2xl font-bold tracking-tight">
-                {(stats?.total_views ?? 0) > 0
-                  ? `${Math.round(((stats?.total_contacts ?? 0) / (stats?.total_views ?? 1)) * 100)} %`
-                  : "—"}
-              </p>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Au-dessus de 5 %, vos fiches convertissent bien : gardez des photos nettes et un prix clair.
-              </p>
-            </div>
-
-            {stats?.countries && stats.countries.length > 0 && (
-              <div className="rounded-2xl border border-border bg-card p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  D'où viennent vos acheteurs
-                </p>
-                <ul className="mt-3 space-y-2">
-                  {stats.countries.slice(0, 8).map((c) => {
-                    const total = (stats.countries ?? []).reduce((s, x) => s + x.value, 0) || 1;
-                    const pct = Math.round((c.value / total) * 100);
-                    return (
-                      <li key={c.country ?? "?"}>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-medium">
-                            {COUNTRY_FLAGS[c.country ?? ""] ?? ""} {c.country || "Non identifié"}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {c.value} vue{c.value > 1 ? "s" : ""} · {pct} %
-                          </span>
-                        </div>
-                        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
-                          <div className="h-full rounded-full bg-volt" style={{ width: `${pct}%` }} />
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            )}
-
-            {stats?.stock_value ? (
-              <div className="rounded-2xl border border-border bg-card p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Valeur de votre stock en ligne
-                </p>
-                <p className="mt-1 text-2xl font-bold tracking-tight">{formatFCFA(stats.stock_value)}</p>
-              </div>
-            ) : null}
+          <div className="mt-5">
+            <AdStats
+              wallet={money?.wallet ?? null}
+              loading={money?.loading ?? false}
+              sellerStats={stats}
+            />
           </div>
         )}
-
         {/* ---------- Sponsorisation : mes annonces (créer, piloter) ---------- */}
         {tab === "promo" && <SponsorshipPanel plan={planOf(profile)} products={products} />}
 
@@ -885,6 +818,12 @@ function ProfilePage() {
                 onRecharge={money.openTopUp}
                 onEditPending={(p) => money.resumePending(p)}
                 onChanged={money.refresh}
+                plan={planOf(profile)}
+                proUntil={profile?.verified_until ?? null}
+                onPro={() => {
+                  setUpgradePlan("pro");
+                  setUpgradeOpen(true);
+                }}
               />
             ) : (
               <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-center">
@@ -991,48 +930,23 @@ function StatCard({
  */
 function SponsorshipPanel({ plan, products }: { plan: PlanId; products: Product[] | null }) {
   const money = useSellerMoney();
-
-  const currentLabel =
-    plan === "gratuit" ? "Offre gratuite" : plan === "verifie" ? "Fournisseur vérifié" : "StockMe PRO";
+  // `plan` et `products` restent dans la signature : l'onglet Produits s'en sert
+  // pour le bandeau « Booster », et le plan sert au libellé de l'offre.
+  void products;
 
   return (
     <div className="mt-5 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            Mon offre
-          </span>
-          <span className="rounded-full bg-volt/15 px-2.5 py-1 text-[11px] font-bold text-foreground">
-            {currentLabel}
-          </span>
-        </div>
-        <Link to="/tarifs" className="text-[11px] text-muted-foreground underline underline-offset-2">
-          Voir les offres
-        </Link>
-      </div>
-
       {money ? (
-        <>
-          {/* 1. Créer une mise en avant : produit → durée → lancer. */}
-          <BoostLauncher
-            products={products}
-            balance={money.balance}
-            campaigns={money.wallet?.boosts ?? []}
-            onTopUp={money.openTopUp}
-            onStarted={money.refresh}
-          />
-
-          {/* 2. Piloter mes annonces : en diffusion, en pause, terminées —
-              comme un gestionnaire de publicités. Le solde et les chiffres
-              détaillés sont dans leurs propres onglets. */}
-          <BoostManager
-            wallet={money.wallet}
-            loading={money.loading}
-            onRecharge={money.openTopUp}
-            onExtend={(p) => money.openBoost(p)}
-            onChanged={money.refresh}
-          />
-        </>
+        /* L'onglet Sponsorisation ne sert QU'À regarder ses annonces et agir
+           vite : créer une annonce se fait depuis l'onglet Produits (bouton
+           Booster), l'argent et les chiffres ont leurs propres onglets. */
+        <BoostManager
+          wallet={money.wallet}
+          loading={money.loading}
+          onRecharge={money.openTopUp}
+          onExtend={(p) => money.openBoost(p)}
+          onChanged={money.refresh}
+        />
       ) : (
         <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-center">
           <Zap className="mx-auto h-6 w-6 text-muted-foreground" />
