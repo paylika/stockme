@@ -9,7 +9,10 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "smoke": "node scripts/smoke.mjs",
+    "smoke:local": "node scripts/smoke.mjs --local",
+    "verifier": "tsc --noEmit -p tsconfig.json && vite build && node scripts/smoke.mjs"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",

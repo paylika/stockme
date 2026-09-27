@@ -23,7 +23,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
 import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { requireUserId } from "@/lib/current-user";
-import { formatFCFA } from "@/lib/format";
+import { formatFCFA, formatPhone } from "@/lib/format";
 import { thumb, thumbResponsive, IMG } from "@/lib/img";
 import {
   COUNTRY_FLAGS,
@@ -482,7 +482,7 @@ function ProfilePage() {
             </span>
             {profile?.whatsapp && (
               <span className="inline-flex items-center gap-1.5">
-                <MessageCircle className="h-3.5 w-3.5" /> {profile.whatsapp}
+                <MessageCircle className="h-3.5 w-3.5" /> {formatPhone(profile.whatsapp)}
               </span>
             )}
             {/* Le téléphone n'est affiché que s'il est différent du WhatsApp :

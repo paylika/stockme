@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { COUNTRY_FLAGS, countryOfCity } from "@/lib/constants";
 import { explainDbError } from "@/lib/db-errors";
-import { formatFCFA } from "@/lib/format";
+import { formatFCFA, formatPhone, whatsappLink } from "@/lib/format";
 import { thumb } from "@/lib/img";
 import { toast } from "sonner";
 import {
@@ -322,13 +322,19 @@ function AdminUsersPage() {
                       <div className="flex flex-col gap-0.5 text-xs">
                         {u.phone && <span className="text-muted-foreground">{u.phone}</span>}
                         {u.whatsapp && (
+                          /* Lien construit par le même utilitaire que le site :
+                             sans indicatif pays, WhatsApp refuse le numéro et
+                             l'admin ne peut pas joindre le vendeur. */
                           <a
-                            href={`https://wa.me/${u.whatsapp.replace(/\D/g, "")}`}
+                            href={whatsappLink(
+                              u.whatsapp,
+                              `Bonjour${u.full_name ? ` ${u.full_name}` : ""}, l'équipe StockMe à propos de votre badge vérifié.`,
+                            )}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 font-medium text-volt underline underline-offset-2"
                           >
-                            <MessageCircle className="h-3 w-3" /> {u.whatsapp}
+                            <MessageCircle className="h-3 w-3" /> {formatPhone(u.whatsapp)}
                           </a>
                         )}
                       </div>

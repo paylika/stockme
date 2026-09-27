@@ -15,7 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePaymentsStatus } from "@/lib/features";
 import { buildSeoHead, breadcrumbLd, SITE_URL } from "@/lib/seo";
 import { COUNTRY_FLAGS, countryOfCity } from "@/lib/constants";
-import { formatFCFA, sellerInquiryMessage, whatsappLink } from "@/lib/format";
+import { formatFCFA, formatPhone, sellerInquiryMessage, telLink, whatsappLink } from "@/lib/format";
 import { PRO_MONTHLY_BOOST_CREDIT } from "@/lib/pricing";
 import { trackContact } from "@/lib/meta-pixel";
 import { IMG, thumb } from "@/lib/img";
@@ -345,9 +345,10 @@ function SellerPage() {
                         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                           Numéro du vendeur — contact direct
                         </p>
-                        {/* `break-all` : sur mobile le numéro passe à la ligne au
-                            lieu d'être coupé (« +2217770… » ne sert à personne). */}
-                        <p className="break-all text-base font-bold tracking-tight">{sellerContact}</p>
+                        {/* Affiché en forme internationale complète : le vendeur
+                            peut être copié-collé dans WhatsApp ou composé tel quel.
+                            `break-all` évite la coupure sur mobile. */}
+                        <p className="break-all text-base font-bold tracking-tight">{formatPhone(sellerContact)}</p>
                       </div>
 
                       <div className="flex w-full items-center gap-1.5 sm:w-auto">
@@ -361,7 +362,7 @@ function SellerPage() {
                           <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
                         </a>
                         <a
-                          href={`tel:${sellerContact}`}
+                          href={telLink(sellerContact) ?? "#"}
                           onClick={() => trackContact("appel")}
                           aria-label="Appeler le vendeur"
                           className="grid h-9 w-9 place-items-center rounded-full border border-border bg-background transition hover:bg-accent"
@@ -373,7 +374,7 @@ function SellerPage() {
                           aria-label="Copier le numéro"
                           onClick={async () => {
                             try {
-                              await navigator.clipboard.writeText(sellerContact);
+                              await navigator.clipboard.writeText(formatPhone(sellerContact));
                               toast.success("Numéro du vendeur copié");
                             } catch {
                               toast.error("Copie impossible");

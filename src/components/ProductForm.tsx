@@ -15,7 +15,7 @@ import {
 import { ImagePlus, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { MAX_PHOTOS, MAX_PHOTO_SIZE } from "@/lib/image-upload";
-import { formatFCFA } from "@/lib/format";
+import { formatFCFA, normalizePhone } from "@/lib/format";
 import { normalizeTiers, validateTiers, type PriceTier } from "@/lib/price-tiers";
 
 export type FormImage = {
@@ -78,8 +78,6 @@ export type ProductFormInitial = {
   price_tiers?: unknown;
   images: string[];
 };
-
-const cleanPhone = (value: string) => value.replace(/[^+\d]/g, "").trim();
 
 const SIZE_OPTIONS = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL"];
 const COLOR_OPTIONS = ["Noir", "Blanc", "Beige", "Gris", "Bleu", "Rouge", "Vert", "Jaune", "Marron", "Rose", "Violet", "Orange", "Doré"];
@@ -369,7 +367,7 @@ export function ProductForm({
     const currentImages = imagesRef.current;
     const trimmedName = name.trim();
     const trimmedDescription = description.trim();
-    const normalizedWhatsapp = cleanPhone(whatsapp);
+    const normalizedWhatsapp = normalizePhone(whatsapp);
     const existingImages = currentImages.filter((i) => i.url && !i.file).map((i) => i.url!);
     /** Photos nouvelles déjà arrivées sur le serveur (envoi fait pendant la saisie). */
     const uploadedUrls = currentImages.filter((i) => i.url && i.file).map((i) => i.url!);

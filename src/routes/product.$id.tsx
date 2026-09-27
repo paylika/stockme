@@ -5,7 +5,7 @@ import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
 import { Button } from "@/components/ui/button";
-import { formatFCFA, productInquiryMessage, whatsappLink } from "@/lib/format";
+import { formatFCFA, productInquiryMessage, telLink, whatsappLink } from "@/lib/format";
 import { useAuth } from "@/hooks/useAuth";
 import { IntensityGauge, computeIntensity } from "@/components/IntensityGauge";
 import { JsonLd } from "@/components/JsonLd";
@@ -402,6 +402,9 @@ function ProductPage() {
     priceFcfa: hasPromo ? product.promo_price_fcfa : product.price_fcfa,
   });
   const wa = waNumber ? whatsappLink(waNumber, waMsg) : null;
+  /* Lien d'appel : toujours en forme internationale (sinon le téléphone ne
+     compose pas le bon numéro). Même correction que le lien WhatsApp. */
+  const tel = telLink(product.whatsapp || profile?.phone || null);
   const img = product.images[activeImg];
   /** Paliers de prix dégressifs : plus l'acheteur prend, moins l'unité coûte. */
   const tiers = normalizeTiers(product.price_tiers);
@@ -725,8 +728,8 @@ function ProductPage() {
                   ) : (
                     <Button variant="volt" disabled className="flex-1 h-11">Contact indisponible</Button>
                   )}
-                  {(product.whatsapp || profile?.phone) && (
-                    <a href={`tel:${product.whatsapp || profile?.phone}`} onClick={() => logContact()}>
+                  {tel && (
+                    <a href={tel} onClick={() => logContact()}>
                       <Button variant="outline" className="h-11 w-full sm:w-auto">
                         <Phone className="h-4 w-4" />
                       </Button>

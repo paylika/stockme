@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/stockme-client";
 import { thumb, IMG } from "@/lib/img";
 import { requireUserId } from "@/lib/current-user";
 import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
+import { normalizePhone } from "@/lib/format";
 import { BannerEditor } from "@/components/BannerEditor";
 import { COUNTRY_FLAGS, WEST_AFRICA_CITIES, countryOfCity } from "@/lib/constants";
 import { Camera, Loader2 } from "lucide-react";
@@ -113,8 +114,8 @@ export function ProfileEditDialog({
           full_name: form.full_name?.trim() || null,
           bio: form.bio?.trim() || null,
           city: form.city?.trim() || null,
-          phone: form.phone?.trim() || null,
-          whatsapp: form.whatsapp?.trim() || null,
+          phone: normalizePhone(form.phone) || null,
+          whatsapp: normalizePhone(form.whatsapp) || null,
           avatar_url: avatarUrl,
         })
         .eq("id", userId);
