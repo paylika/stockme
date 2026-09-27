@@ -330,10 +330,12 @@ function SellerPage() {
                         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                           Numéro du vendeur — contact direct
                         </p>
-                        <p className="truncate text-base font-bold tracking-tight">{sellerContact}</p>
+                        {/* `break-all` : sur mobile le numéro passe à la ligne au
+                            lieu d'être coupé (« +2217770… » ne sert à personne). */}
+                        <p className="break-all text-base font-bold tracking-tight">{sellerContact}</p>
                       </div>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex w-full items-center gap-1.5 sm:w-auto">
                         <a
                           href={waLink}
                           target="_blank"

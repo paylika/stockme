@@ -116,24 +116,34 @@ function PricingPage() {
           </p>
 
           {/* LES 2 CHEMINS, tout de suite : on ne fait pas chercher le visiteur. */}
-          <div className="mx-auto mt-6 grid max-w-lg gap-2 sm:grid-cols-2">
+          <div className="mx-auto mt-6 grid max-w-xl gap-2 sm:grid-cols-2">
             <Button
               variant="volt"
-              className="h-12 text-sm font-bold"
+              className="h-14 justify-start gap-2 text-left"
               onClick={() => openUpgrade("pro")}
               disabled={isPro}
             >
-              <Rocket className="mr-1.5 h-4 w-4" />
-              {isPro ? "Vendeur Pro actif ✓" : `Être Vendeur Pro — ${formatFCFA(planById("pro")?.price ?? 2900)}/mois`}
+              <Rocket className="h-5 w-5 shrink-0" />
+              <span className="flex min-w-0 flex-col leading-tight">
+                <span className="text-sm font-bold">{isPro ? "Vendeur Pro actif ✓" : "Être Vendeur Pro"}</span>
+                <span className="text-[11px] font-semibold opacity-90">
+                  {formatFCFA(planById("pro")?.price ?? 2900)} / mois
+                </span>
+              </span>
             </Button>
             <Button
               variant="outline"
-              className="h-12 text-sm font-bold"
+              className="h-14 justify-start gap-2 text-left"
               onClick={() => openUpgrade("verifie")}
               disabled={isVerified}
             >
-              <BadgeCheck className="mr-1.5 h-4 w-4 text-primary" />
-              {isVerified ? "Badge déjà actif ✓" : `Être vérifié — ${formatFCFA(VERIFIED_BADGE_PRICE_FCFA)}/an`}
+              <BadgeCheck className="h-5 w-5 shrink-0 text-primary" />
+              <span className="flex min-w-0 flex-col leading-tight">
+                <span className="text-sm font-bold">{isVerified ? "Badge déjà actif ✓" : "Être vérifié"}</span>
+                <span className="text-[11px] font-semibold text-muted-foreground">
+                  {formatFCFA(VERIFIED_BADGE_PRICE_FCFA)} / an
+                </span>
+              </span>
             </Button>
           </div>
           <p className="mx-auto mt-2 max-w-lg text-[11px] text-muted-foreground">
