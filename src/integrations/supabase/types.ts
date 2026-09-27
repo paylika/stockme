@@ -594,6 +594,12 @@ export type Database = {
         }
         Returns: Record<string, unknown>
       }
+      admin_payments_detail: {
+        Args: {
+          p_limit?: number
+        }
+        Returns: Record<string, unknown>[]
+      }
       admin_revenue_breakdown: {
         Args: Record<string, never>
         Returns: Record<string, unknown>

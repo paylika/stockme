@@ -7,14 +7,17 @@ import { Button } from "@/components/ui/button";
 import { PRO_AVAILABLE } from "@/lib/pricing";
 import { toast } from "sonner";
 import {
+  AlertTriangle,
   ArrowRight,
-  Banknote,
   BadgeCheck,
+  Banknote,
   CalendarDays,
+  Check,
   Clock,
   Gift,
   Info,
   Loader2,
+  Receipt,
   RefreshCw,
   Repeat,
   Rocket,
@@ -61,12 +64,58 @@ type Breakdown = {
   xaalispay_escrow_count: number;
 };
 
+/** Un paiement, avec tout ce qu'il faut pour savoir quoi faire. */
+type PaymentRow = {
+  id: string;
+  created_at: string;
+  paid_at: string | null;
+  status: string;
+  purpose: string;
+  amount_fcfa: number;
+  provider: string;
+  method: string | null;
+  provider_ref: string | null;
+  checkout_url: string | null;
+  user_id: string;
+  email: string | null;
+  seller: string | null;
+  seller_phone: string | null;
+  seller_plan: string | null;
+  seller_verified: boolean;
+  seller_verified_until: string | null;
+  plan_meta: string | null;
+  jours: number | null;
+  objet: string;
+  /** Payé ET la personne a reçu ce qu'elle a payé. `null` = pas encore payé. */
+  delivered: boolean | null;
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  paid: "Payé",
+  pending: "En attente",
+  failed: "Échoué",
+  expired: "Expiré",
+  cancelled: "Annulé",
+};
+
+const STATUS: Record<string, string> = {
+  paid: "bg-success/15 text-success",
+  pending: "bg-volt/15 text-volt",
+  failed: "bg-destructive/15 text-destructive",
+  expired: "bg-secondary text-muted-foreground",
+  cancelled: "bg-secondary text-muted-foreground",
+};
+
+const dateLabel = (p: PaymentRow) =>
+  new Date(p.paid_at ?? p.created_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
+
 export const Route = createFileRoute("/_admin/revenue")({
   component: AdminRevenuePage,
 });
 
 function AdminRevenuePage() {
   const [d, setD] = useState<Breakdown | null>(null);
+  const [payments, setPayments] = useState<PaymentRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [at, setAt] = useState<Date | null>(null);
@@ -83,14 +132,21 @@ function AdminRevenuePage() {
    */
   const load = useCallback(async () => {
     setBusy(true);
-    const { data, error: err } = await supabase.rpc("admin_revenue_breakdown");
+    const [b, list] = await Promise.all([
+      supabase.rpc("admin_revenue_breakdown"),
+      supabase.rpc("admin_payments_detail", { p_limit: 100 }),
+    ]);
     setBusy(false);
-    if (err) {
-      setError(explainDbError(err.message, "20260820000000_revenus_separes_et_5_photos.sql"));
+
+    if (b.error) {
+      setError(explainDbError(b.error.message, "20260820000000_revenus_separes_et_5_photos.sql"));
       return;
     }
     setError(null);
-    setD((data as Breakdown | null) ?? null);
+    setD((b.data as Breakdown | null) ?? null);
+    // Le détail des paiements est un PLUS : s'il manque (SQL pas encore collé),
+    // les totaux restent affichés, sans écran d'erreur.
+    setPayments(list.error ? [] : ((list.data as PaymentRow[] | null) ?? []));
     setAt(new Date());
   }, []);
 
@@ -140,6 +196,11 @@ function AdminRevenuePage() {
 
   const total = d.pro_collected + certifTotal + rechargeTotal;
 
+  /** Paiements ENCAISSÉS mais dont la personne n'a rien reçu : à corriger. */
+  const notDelivered = (payments ?? []).filter((p) => p.status === "paid" && p.delivered === false);
+  /** Paiements pas encore aboutis : ce ne sont PAS des revenus. */
+  const pending = (payments ?? []).filter((p) => p.status !== "paid");
+
   return (
     <div className="pb-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -167,6 +228,21 @@ function AdminRevenuePage() {
       <p className="mt-1 text-[11px] text-muted-foreground">
         Les chiffres se recalculent tout seuls toutes les 60 secondes, et dès que vous revenez sur cet onglet.
       </p>
+
+      {/* Les paiements NON aboutis, bien séparés des revenus : ils ne comptent
+          dans AUCUN total tant que le statut n'est pas « Payé ». */}
+      {pending.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-volt/50 bg-volt/10 px-3.5 py-2.5 text-xs">
+          <Clock className="h-4 w-4 shrink-0 text-volt" />
+          <span className="font-bold">
+            {pending.length} paiement{pending.length > 1 ? "s" : ""} en attente
+          </span>
+          <span className="text-muted-foreground">
+            · {formatFCFA(pending.reduce((s, p) => s + p.amount_fcfa, 0))} non encaissés —{" "}
+            <strong className="text-foreground">comptés nulle part</strong>. Détail en bas de page.
+          </span>
+        </div>
+      )}
 
       {/* ============ LE TOTAL, EN PREMIER ============ */}
       <div className="mt-5 overflow-hidden rounded-3xl border-2 border-volt bg-card">
@@ -344,6 +420,127 @@ function AdminRevenuePage() {
             tone="muted"
           />
         </div>
+      </Section>
+
+      {/* ============ 5. CHAQUE PAIEMENT, EN DÉTAIL ============
+          C'est LA section qui répond aux questions du terrain : qui a payé,
+          pour quoi, combien, et est-ce que la personne a bien reçu ce qu'elle a
+          payé. Un paiement « en attente » n'est PAS un revenu : on le voit ici. */}
+      <Section
+        n="5"
+        icon={Receipt}
+        title="Chaque paiement, en détail"
+        subtitle="Qui a payé, pour quoi, et si la personne a bien reçu ce qu'elle a payé."
+      >
+        {/* Ce qui doit être corrigé à la main, en premier */}
+        {notDelivered.length > 0 && (
+          <div className="mb-3 rounded-2xl border-2 border-destructive/50 bg-destructive/10 p-4">
+            <p className="text-sm font-bold text-destructive">
+              ⚠️ {notDelivered.length} paiement{notDelivered.length > 1 ? "s" : ""} encaissé
+              {notDelivered.length > 1 ? "s" : ""} mais NON livré{notDelivered.length > 1 ? "s" : ""}
+            </p>
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+              Ces personnes ont payé et n'ont pas eu leur badge / abonnement. Activez-le depuis la page
+              <strong className="text-foreground"> Utilisateurs</strong> (bouton « Vérifier »), puis actualisez ici.
+            </p>
+            <ul className="mt-2 space-y-1 text-[11px]">
+              {notDelivered.map((p) => (
+                <li key={p.id} className="flex flex-wrap items-center gap-x-2">
+                  <span className="font-semibold">{p.seller ?? p.email ?? "—"}</span>
+                  <span className="text-muted-foreground">
+                    {p.objet} · {formatFCFA(p.amount_fcfa)} · {dateLabel(p)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+          <table className="w-full min-w-[880px] text-sm">
+            <thead className="bg-muted/50 text-[11px] uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3 text-left">Date</th>
+                <th className="px-4 py-3 text-left">Qui a payé</th>
+                <th className="px-4 py-3 text-left">Pour quoi</th>
+                <th className="px-4 py-3 text-left">Moyen</th>
+                <th className="px-4 py-3 text-left">Statut</th>
+                <th className="px-4 py-3 text-left">Livré ?</th>
+                <th className="px-4 py-3 text-right">Montant</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payments === null ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">
+                    Chargement…
+                  </td>
+                </tr>
+              ) : payments.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">
+                    Aucun paiement pour le moment.
+                  </td>
+                </tr>
+              ) : (
+                payments.map((p) => (
+                  <tr key={p.id} className="border-t border-border">
+                    <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">{dateLabel(p)}</td>
+                    <td className="px-4 py-3">
+                      <span className="block font-medium">{p.seller ?? "—"}</span>
+                      <span className="block text-[11px] text-muted-foreground">{p.email ?? "email inconnu"}</span>
+                      {p.seller_phone && (
+                        <span className="block text-[11px] text-muted-foreground">{p.seller_phone}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="block">{p.objet}</span>
+                      {p.jours ? <span className="block text-[11px] text-muted-foreground">{p.jours} jours</span> : null}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">
+                      <span className="block capitalize">{p.provider}</span>
+                      {p.method ? <span className="block">{p.method}</span> : null}
+                      {p.provider_ref && p.provider === "stripe" && (
+                        <a
+                          href={`https://dashboard.stripe.com/search?query=${encodeURIComponent(p.provider_ref)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-0.5 inline-block font-semibold text-primary underline underline-offset-2"
+                        >
+                          Voir sur Stripe
+                        </a>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS[p.status] ?? "bg-secondary text-muted-foreground"}`}>
+                        {STATUS_LABEL[p.status] ?? p.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {p.status !== "paid" ? (
+                        <span className="text-[11px] text-muted-foreground">—</span>
+                      ) : p.delivered ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[11px] font-semibold text-success">
+                          <Check className="h-3 w-3" /> Oui
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-semibold text-destructive">
+                          <AlertTriangle className="h-3 w-3" /> Non
+                        </span>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right font-semibold">{formatFCFA(p.amount_fcfa)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+          Seuls les paiements au statut <strong className="text-foreground">Payé</strong> entrent dans les totaux
+          ci-dessus. Un paiement « En attente » n'est pas un revenu : la personne n'a pas terminé son paiement.
+        </p>
       </Section>
 
       {/* ============ XAALISPAY ============ */}
