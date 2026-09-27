@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { ensureSession } from "@/lib/auth-session";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
@@ -20,11 +21,11 @@ function Favorites() {
 
   useEffect(() => {
     (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return;
+      const session = await ensureSession();
+      if (!session?.user) return;
       const { data } = await supabase.from("favorites")
         .select("product_id, products(id,name,price_fcfa,promo_price_fcfa,city,images,category,sold_out,owner_id)")
-        .eq("user_id", u.user.id)
+        .eq("user_id", session.user.id)
         .eq("products.published", true)
         .order("created_at", { ascending: false });
       setItems((data as unknown as Fav[]) ?? []);

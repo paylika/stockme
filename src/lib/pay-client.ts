@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/stockme-client";
+import { ensureSession } from "@/lib/auth-session";
 
 /**
  * Démarrage d'un paiement (rechargement, abonnement).
@@ -24,8 +24,11 @@ export async function startCheckout(input: {
   customerNumber?: string | null;
   metadata?: Record<string, unknown>;
 }): Promise<CheckoutResult> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
+  // `ensureSession` et non `getSession` : un jeton momentanément illisible (app
+  // qui revient au premier plan, réseau qui change) ne doit pas empêcher un
+  // paiement ni faire croire à une déconnexion.
+  const session = await ensureSession();
+  const token = session?.access_token;
   if (!token) throw new Error("Reconnectez-vous pour payer.");
 
   const res = await fetch("/api/pay/checkout", {

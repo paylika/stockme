@@ -1,6 +1,7 @@
 import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
+import { signOutSafely, ensureSession } from "@/lib/auth-session";
 import { ADMIN_NAV, AdminSidebar } from "@/components/AdminSidebar";
 import { buildSeoHead } from "@/lib/seo";
 import logoUrl from "@/assets/stockme-logo.jpg";
@@ -8,8 +9,8 @@ import logoUrl from "@/assets/stockme-logo.jpg";
 export const Route = createFileRoute("/_admin")({
   beforeLoad: async ({ location }) => {
     if (typeof window === "undefined") return;
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user;
+    const sessionData = await ensureSession();
+    const user = sessionData?.user;
     if (!user) {
       throw redirect({ to: "/auth", search: { redirect: location.pathname, mode: "login" } });
     }
@@ -33,7 +34,7 @@ function AdminLayout() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setAdminEmail(data.session?.user?.email ?? ""));
+    ensureSession().then((session) => setAdminEmail(session?.user?.email ?? ""));
   }, []);
 
   return (
@@ -61,7 +62,7 @@ function AdminLayout() {
             Voir le site
           </Link>
           <button
-            onClick={() => supabase.auth.signOut().then(() => window.location.assign("/"))}
+            onClick={() => signOutSafely().then(() => window.location.assign("/"))}
             className="rounded-lg bg-background/15 px-3 py-1.5 text-xs font-semibold transition hover:bg-background/25"
           >
             Déconnexion

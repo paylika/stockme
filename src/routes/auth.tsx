@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
+import { ensureSession } from "@/lib/auth-session";
 import { trackCompleteRegistration } from "@/lib/meta-pixel";
 import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
@@ -90,8 +91,10 @@ function AuthPage() {
   }, [isSenegal, sRegion, sCountry]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) window.location.assign(destination);
+    /* `ensureSession` : si la session existe (même à récupérer), on renvoie
+       l'utilisateur là où il allait, au lieu de lui remontrer le formulaire. */
+    ensureSession().then((session) => {
+      if (session) window.location.assign(destination);
     });
   }, [destination]);
 

@@ -24,6 +24,7 @@ import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
 import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { requireUserId } from "@/lib/current-user";
 import { formatFCFA, formatPhone } from "@/lib/format";
+import { signOutSafely } from "@/lib/auth-session";
 import { thumb, thumbResponsive, IMG } from "@/lib/img";
 import {
   COUNTRY_FLAGS,
@@ -261,7 +262,9 @@ function ProfilePage() {
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    // Déconnexion VOLONTAIRE : elle efface aussi la copie de secours du jeton,
+    // sinon le site reconnecterait le vendeur au chargement suivant.
+    await signOutSafely();
     toast.success("Déconnecté");
     navigate({ to: "/" });
   };

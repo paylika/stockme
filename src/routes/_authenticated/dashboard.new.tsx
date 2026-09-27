@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
+import { ensureSession } from "@/lib/auth-session";
 import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
@@ -66,8 +67,8 @@ function NewProduct() {
 
   useEffect(() => {
     (async () => {
-      const { data: s } = await supabase.auth.getSession();
-      const uid = s.session?.user?.id;
+      const s = await ensureSession();
+      const uid = s?.user?.id;
       if (!uid) return;
       const [{ data: prof }, { count }, { data: wallet }] = await Promise.all([
         supabase.from("profiles").select("verified,verified_until,whatsapp").eq("id", uid).maybeSingle(),

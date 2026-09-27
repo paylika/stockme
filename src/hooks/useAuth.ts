@@ -1,24 +1,18 @@
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/stockme-client";
+import { authSnapshot, serverAuthSnapshot, subscribeAuth } from "@/lib/auth-session";
 
-export function useAuth() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_evt, s) => {
-      setSession(s);
-      setUser(s?.user ?? null);
-    });
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      setLoading(false);
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
-
-  return { session, user, loading };
+/**
+ * Utilisateur connecté, pour TOUT le site.
+ *
+ * Avant, chaque composant (une quinzaine : en-tête, barre latérale, fiche
+ * produit, favoris, demandes…) ouvrait sa propre écoute et interrogeait la
+ * session de son côté. Ils pouvaient donc se contredire : l'un affichait
+ * « connecté » et l'autre « déconnecté », et le moindre hoquet réseau vidait
+ * la page. Désormais il n'existe qu'UN état partagé, alimenté par
+ * `lib/auth-session` qui sait récupérer une session perdue.
+ */
+export function useAuth(): { session: Session | null; user: User | null; loading: boolean } {
+  const snap = useSyncExternalStore(subscribeAuth, authSnapshot, serverAuthSnapshot);
+  return { session: snap.session, user: snap.user, loading: !snap.ready };
 }

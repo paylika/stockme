@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
+import { ensureSession } from "@/lib/auth-session";
 import type { WalletData } from "@/hooks/useWallet";
 
 /**
@@ -83,6 +84,10 @@ const listeners = new Set<() => void>();
  * Déconnexion / connexion : on VIDE la mémoire puis on recharge. Sans cela, un
  * vendeur qui se déconnecte sur un téléphone partagé laisserait ses données
  * visibles pour le compte suivant.
+ *
+ * ATTENTION : supabase-js émet aussi « SIGNED_OUT » quand un rafraîchissement
+ * de jeton échoue (réseau mobile). On vérifie donc qu'il n'y a plus vraiment de
+ * session avant de vider l'écran — sinon la page Profil se vidait toute seule.
  */
 let wired = false;
 const wireAuth = () => {
@@ -90,8 +95,15 @@ const wireAuth = () => {
   wired = true;
   supabase.auth.onAuthStateChange((event) => {
     if (event === "SIGNED_OUT") {
-      inflight = null;
-      emit({ data: null, loading: false });
+      void ensureSession().then((session) => {
+        if (session?.user) {
+          inflight = null;
+          void loadSellerDashboard(true);
+          return;
+        }
+        inflight = null;
+        emit({ data: null, loading: false });
+      });
     } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
       inflight = null;
       void loadSellerDashboard(true);
@@ -111,8 +123,8 @@ const emit = (next: Snapshot) => {
  * place, ce chemin n'est plus jamais utilisé.
  */
 const legacyDashboard = async (): Promise<SellerDashboard | null> => {
-  const { data: session } = await supabase.auth.getSession();
-  const uid = session.session?.user?.id;
+  const session = await ensureSession();
+  const uid = session?.user?.id;
   if (!uid) return null;
 
   const [profRes, prodRes, walletRes, statsRes] = await Promise.all([
@@ -150,8 +162,8 @@ export const loadSellerDashboard = async (force = false): Promise<SellerDashboar
   if (!force && snapshot.data && !snapshot.loading) return snapshot.data;
 
   const run = (async () => {
-    const { data: session } = await supabase.auth.getSession();
-    if (!session.session?.user) {
+    const session = await ensureSession();
+    if (!session?.user) {
       emit({ data: null, loading: false });
       return null;
     }

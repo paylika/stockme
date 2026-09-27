@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { ensureSession } from "@/lib/auth-session";
 import { supabase } from "@/integrations/supabase/stockme-client";
 import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
@@ -35,10 +36,10 @@ function ProfileEdit() {
 
   useEffect(() => {
     (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return;
-      setEmail(u.user.email ?? "");
-      const { data } = await supabase.from("profiles").select("*").eq("id", u.user.id).maybeSingle();
+      const session = await ensureSession();
+      if (!session?.user) return;
+      setEmail(session.user.email ?? "");
+      const { data } = await supabase.from("profiles").select("*").eq("id", session.user.id).maybeSingle();
       if (data) {
         setName(data.full_name ?? "");
         setShopName(data.shop_name ?? "");
@@ -67,12 +68,15 @@ function ProfileEdit() {
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    const { data: u } = await supabase.auth.getUser();
-    if (!u.user) return;
+    const session = await ensureSession();
+    if (!session?.user) {
+      setSaving(false);
+      return toast.error("Reconnectez-vous puis réessayez.");
+    }
     let finalAvatar = avatarUrl;
     if (avatarFile) {
       try {
-        finalAvatar = await uploadAvatar(avatarFile, u.user.id, avatarUrl);
+        finalAvatar = await uploadAvatar(avatarFile, session.user.id, avatarUrl);
       } catch (err) {
         setSaving(false);
         return toast.error(err instanceof Error ? err.message : "Erreur photo");
@@ -81,7 +85,7 @@ function ProfileEdit() {
     const { error } = await supabase
       .from("profiles")
       .update({ full_name: name, shop_name: shopName, phone, whatsapp, city, role, bio, avatar_url: finalAvatar || null })
-      .eq("id", u.user.id);
+      .eq("id", session.user.id);
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success("Profil mis à jour");
