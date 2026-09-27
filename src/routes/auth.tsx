@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/stockme-client";
+import { trackCompleteRegistration } from "@/lib/meta-pixel";
 import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
 import { Button } from "@/components/ui/button";
@@ -144,6 +145,8 @@ function AuthPage() {
       await supabase.auth.signInWithPassword({ email: sEmail, password: sPwd });
     }
     setLoading(false);
+    /* Pixel Meta : c'est LE prospect qu'on veut faire chercher aux campagnes. */
+    trackCompleteRegistration(typeof sRole === "string" ? sRole : undefined);
     toast.success("Bienvenue sur StockMe !");
     goAfterAuth();
   };

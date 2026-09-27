@@ -17,6 +17,7 @@ import { buildSeoHead, breadcrumbLd, SITE_URL } from "@/lib/seo";
 import { COUNTRY_FLAGS, countryOfCity } from "@/lib/constants";
 import { formatFCFA, sellerInquiryMessage, whatsappLink } from "@/lib/format";
 import { PRO_MONTHLY_BOOST_CREDIT } from "@/lib/pricing";
+import { trackContact } from "@/lib/meta-pixel";
 import { IMG, thumb } from "@/lib/img";
 import { securePaymentProposal } from "@/lib/xaalispay";
 import { SecurePaymentBlock } from "@/components/SecurePayment";
@@ -354,12 +355,14 @@ function SellerPage() {
                           href={waLink}
                           target="_blank"
                           rel="noopener noreferrer"
+                          onClick={() => trackContact("whatsapp")}
                           className="inline-flex h-9 items-center gap-1.5 rounded-full bg-volt px-3 text-xs font-bold text-volt-foreground transition hover:brightness-110"
                         >
                           <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
                         </a>
                         <a
                           href={`tel:${sellerContact}`}
+                          onClick={() => trackContact("appel")}
                           aria-label="Appeler le vendeur"
                           className="grid h-9 w-9 place-items-center rounded-full border border-border bg-background transition hover:bg-accent"
                         >

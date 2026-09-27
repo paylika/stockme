@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { IntensityGauge, computeIntensity } from "@/components/IntensityGauge";
 import { JsonLd } from "@/components/JsonLd";
 import { ProChip, VerifiedBadge, VerifiedMark } from "@/components/VerifiedBadge";
+import { trackContact, trackAddToWishlist } from "@/lib/meta-pixel";
 import { BackLink } from "@/components/BackLink";
 import { ProductReviews } from "@/components/ProductReviews";
 import { SecurePaymentBlock } from "@/components/SecurePayment";
@@ -215,6 +216,10 @@ function ProductPage() {
     supabase
       .rpc("log_product_event", { p_product_id: id, p_event: "contact", p_country: viewerCountryRef.current })
       .then(() => {});
+    /* Pixel Meta : un acheteur qui écrit au vendeur, c'est LA conversion du site
+       (l'équivalent d'un « ajout au panier »). Sans cet événement, Meta ne peut
+       pas optimiser les campagnes sur autre chose que des clics. */
+    trackContact("whatsapp", product?.name);
   };
 
   useEffect(() => {
@@ -323,6 +328,8 @@ function ProductPage() {
       await supabase.from("favorites").insert({ user_id: user.id, product_id: id });
       setIsFav(true);
       toast.success("Ajouté aux favoris");
+      /* Pixel Meta : l'acheteur garde le produit de côté = fort intérêt. */
+      trackAddToWishlist(product?.name);
     }
   };
 

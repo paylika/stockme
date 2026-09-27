@@ -15,6 +15,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { WhatsAppGroupPopup } from "@/components/WhatsAppGroupPopup";
 import { ScrollKeeper } from "@/components/ScrollKeeper";
 import { SellerMoneyProvider } from "@/components/SellerMoneyProvider";
+import { MetaPixel } from "@/components/MetaPixel";
 import { supabase, STOCKME_SUPABASE_URL } from "@/integrations/supabase/stockme-client";
 import { useEffect } from "react";
 import {
@@ -172,6 +173,10 @@ function RootComponent() {
         </SellerMoneyProvider>
       )}
       {!isAdminLayout && <WhatsAppGroupPopup />}
+      {/* Pixel Meta (Facebook / Instagram) : chargé sans ralentir le site.
+          Volontairement ABSENT des pages d'administration : les visites de
+          l'équipe fausseraient les statistiques des campagnes. */}
+      {!isAdminLayout && <MetaPixel />}
       {/* Mémoire de défilement : le retour depuis une fiche produit ramène à la
           position exacte dans la liste, sur tout le site. */}
       <ScrollKeeper />

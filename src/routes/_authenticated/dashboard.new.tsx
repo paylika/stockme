@@ -9,6 +9,7 @@ import { PhotoFailurePanel } from "@/components/PhotoFailurePanel";
 import { Button } from "@/components/ui/button";
 import { uploadImagesResilient, MAX_PHOTOS, FREE_MAX_PHOTOS, type UploadFailure } from "@/lib/image-upload";
 import { requireUserId } from "@/lib/current-user";
+import { trackPublishProduct } from "@/lib/meta-pixel";
 import { FREE_PRODUCTS, EXTRA_PUBLICATION_PRICE, PRO_AVAILABLE, PRO_MONTHLY_BOOST_CREDIT } from "@/lib/pricing";
 import { formatFCFA } from "@/lib/format";
 import { useSellerMoney } from "@/components/SellerMoneyProvider";
@@ -182,6 +183,8 @@ function NewProduct() {
     } else {
       toast.success("Produit publié !");
     }
+    /* Pixel Meta : le vendeur vient de publier — c'est le vrai passage à l'acte. */
+    trackPublishProduct(values.name, Number(values.price_fcfa) || undefined);
     navigate({ to: "/dashboard" });
   };
 
