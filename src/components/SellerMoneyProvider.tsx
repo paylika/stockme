@@ -43,7 +43,7 @@ export function BoostButton({ productId, productName }: { productId: string; pro
     <button
       type="button"
       onClick={() => boostHandler?.({ id: productId, name: productName })}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-volt/50 bg-volt/10 px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-volt/20"
+      className="inline-flex h-9 items-center gap-1.5 rounded-full bg-volt px-3.5 text-xs font-bold text-volt-foreground shadow-sm shadow-volt/40 transition hover:brightness-110"
     >
       <Rocket className="h-3.5 w-3.5 text-volt" /> Booster
     </button>

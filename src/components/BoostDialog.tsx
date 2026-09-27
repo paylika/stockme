@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/stockme-client";
 import { formatFCFA } from "@/lib/format";
 import {
   BOOST_DAY_PRICE,
+  BOOST_DEFAULT_DAYS,
   BOOST_MAX_DAYS,
   BOOST_MIN_DAYS,
   BOOST_PACKS,
@@ -58,19 +59,19 @@ export function BoostDialog({
   onStarted,
   initialDays,
 }: Props) {
-  const [days, setDays] = useState(7);
+  const [days, setDays] = useState(BOOST_DEFAULT_DAYS);
   const [customDays, setCustomDays] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setBusy(false);
-    const start = initialDays && initialDays >= BOOST_MIN_DAYS ? initialDays : 7;
+    const start = initialDays && initialDays >= BOOST_MIN_DAYS ? initialDays : BOOST_DEFAULT_DAYS;
     if (BOOST_PACKS.some((p) => p.days === start)) {
       setDays(start);
       setCustomDays("");
     } else {
-      setDays(7);
+      setDays(BOOST_DEFAULT_DAYS);
       setCustomDays(String(start));
     }
   }, [open, productId, initialDays]);

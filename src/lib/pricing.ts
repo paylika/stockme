@@ -34,12 +34,18 @@ export const BOOST_DAY_PRICE = 1000;
  * Les 3 formules proposées d'un clic (le prix est toujours jours × 1 000 F).
  * Aucune remise, aucune astuce : la durée EST le montant. C'est ce qui rend
  * l'achat immédiatement compréhensible (« 30 000 F = 1 mois »).
+ *
+ * Le format CONSEILLÉ est 7 jours / 7 000 F : un seul choix à comprendre,
+ * assez long pour voir l'effet, assez court pour oser essayer.
  */
 export const BOOST_PACKS: { days: number; label: string; popular?: boolean }[] = [
-  { days: 7, label: "1 semaine" },
-  { days: 15, label: "2 semaines", popular: true },
+  { days: 7, label: "1 semaine", popular: true },
+  { days: 15, label: "2 semaines" },
   { days: 30, label: "1 mois" },
 ];
+
+/** Durée pré-sélectionnée partout (7 jours = 7 000 F). */
+export const BOOST_DEFAULT_DAYS = 7;
 
 /** Durées proposées d'un clic (en jours). */
 export const BOOST_DAY_PRESETS = BOOST_PACKS.map((p) => p.days);

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { formatFCFA } from "@/lib/format";
 import {
   BOOST_DAY_PRICE,
+  BOOST_DEFAULT_DAYS,
   BOOST_MAX_DAYS,
   BOOST_MIN_DAYS,
   BOOST_PACKS,
@@ -52,7 +53,9 @@ const PACK_AMOUNTS = BOOST_PACKS.map((p) => boostPriceFor(p.days));
  */
 export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [days, setDays] = useState(15);
+  const [days, setDays] = useState(BOOST_DEFAULT_DAYS);
+  /** Le sélecteur de durée est replié par défaut : un seul choix à comprendre. */
+  const [showDays, setShowDays] = useState(false);
   const [customDays, setCustomDays] = useState("");
   const [busy, setBusy] = useState(false);
   const [resumed, setResumed] = useState<string | null>(null);
@@ -196,58 +199,83 @@ export function BoostLauncher({ products, balance, campaigns, onTopUp, onStarted
         </div>
       )}
 
-      {/* ② La durée (= le prix) */}
-      <p className="mt-4 text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">2. La durée</p>
-      <div className="mt-2 grid grid-cols-3 gap-2">
-        {BOOST_PACKS.map((p) => {
-          const active = !customDays && days === p.days;
-          return (
-            <button
-              key={p.days}
-              type="button"
-              onClick={() => {
-                setDays(p.days);
-                setCustomDays("");
-              }}
-              className={`relative rounded-xl border-2 px-2 py-2.5 text-center transition ${
-                active ? "border-volt bg-volt text-volt-foreground" : "border-border bg-background hover:bg-accent"
-              }`}
-            >
-              {p.popular && !active && (
-                <span className="absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-foreground px-1.5 py-0.5 text-[9px] font-bold text-background">
-                  le plus choisi
-                </span>
-              )}
-              <span className="block text-lg font-bold leading-tight">{p.days} jours</span>
-              <span className={`block text-sm font-bold ${active ? "" : "text-foreground"}`}>
-                {formatFCFA(boostPriceFor(p.days))}
+      {/* ② La durée — UN SEUL CHOIX AFFICHÉ PAR DÉFAUT : 7 jours = 7 000 F.
+          Le vendeur qui ne veut pas réfléchir appuie sur le bouton et c'est
+          tout ; celui qui veut ajuster ouvre « Changer la durée ». Avant, il
+          devait comprendre trois formules avant de pouvoir payer. */}
+      <p className="mt-4 text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
+        2. Combien de temps
+      </p>
+      <div className="mt-2 rounded-xl border-2 border-volt bg-volt/10 p-3">
+        <div className="flex items-start justify-between gap-3">
+          <span className="min-w-0">
+            <span className="block text-base font-bold leading-tight">
+              {validDays} jour{validDays > 1 ? "s" : ""} — {formatFCFA(needed)}
+            </span>
+            <span className="mt-0.5 block text-[11px] text-muted-foreground">
+              soit {formatFCFA(BOOST_DAY_PRICE)} par jour
+              {!customDays && days === BOOST_DEFAULT_DAYS ? " · le format conseillé" : ""}
+            </span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowDays((v) => !v)}
+            className="shrink-0 text-[11px] font-semibold text-cobalt underline underline-offset-2"
+          >
+            {showDays ? "Réduire" : "Changer la durée"}
+          </button>
+        </div>
+
+        {showDays && (
+          <>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {BOOST_PACKS.map((p) => {
+                const active = !customDays && days === p.days;
+                return (
+                  <button
+                    key={p.days}
+                    type="button"
+                    onClick={() => {
+                      setDays(p.days);
+                      setCustomDays("");
+                    }}
+                    className={`relative rounded-xl border-2 px-2 py-2.5 text-center transition ${
+                      active ? "border-volt bg-volt text-volt-foreground" : "border-border bg-background hover:bg-accent"
+                    }`}
+                  >
+                    {p.popular && !active && (
+                      <span className="absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-foreground px-1.5 py-0.5 text-[9px] font-bold text-background">
+                        conseillé
+                      </span>
+                    )}
+                    <span className="block text-lg font-bold leading-tight">{p.days} j</span>
+                    <span className={`block text-sm font-bold ${active ? "" : "text-foreground"}`}>
+                      {formatFCFA(boostPriceFor(p.days))}
+                    </span>
+                    <span className={`block text-[10px] ${active ? "opacity-80" : "text-muted-foreground"}`}>
+                      {p.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={BOOST_MIN_DAYS}
+                max={BOOST_MAX_DAYS}
+                placeholder={`Autre durée (${BOOST_MIN_DAYS} à ${BOOST_MAX_DAYS} jours)`}
+                value={customDays}
+                onChange={(e) => setCustomDays(e.target.value)}
+                className="h-10 w-40"
+              />
+              <span className="text-[11px] text-muted-foreground">
+                {formatFCFA(BOOST_DAY_PRICE)} par jour, quelle que soit la durée.
               </span>
-              <span className={`block text-[10px] ${active ? "opacity-80" : "text-muted-foreground"}`}>{p.label}</span>
-            </button>
-          );
-        })}
-      </div>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <Input
-          type="number"
-          inputMode="numeric"
-          min={BOOST_MIN_DAYS}
-          max={BOOST_MAX_DAYS}
-          placeholder="Autre durée (jours)"
-          value={customDays}
-          onChange={(e) => setCustomDays(e.target.value)}
-          className="h-10 w-40"
-        />
-        <span className="text-xs text-muted-foreground">
-          {validDays > 0 ? (
-            <>
-              {validDays} jour{validDays > 1 ? "s" : ""} = <strong className="text-foreground">{formatFCFA(needed)}</strong>{" "}
-              ({formatFCFA(BOOST_DAY_PRICE)}/jour)
-            </>
-          ) : (
-            <>Indiquez le nombre de jours souhaité ({formatFCFA(BOOST_DAY_PRICE)}/jour)</>
-          )}
-        </span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* ③ Payer, ou activer si le solde suffit */}

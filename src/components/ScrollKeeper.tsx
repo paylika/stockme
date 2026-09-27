@@ -32,11 +32,15 @@ function readScroll(key: string): number {
 export function ScrollKeeper() {
   // Clé de la page : chemin + filtres, pour que chaque liste filtrée garde sa
   // propre position (ex. /browse?city=Dakar ≠ /browse?city=Thiès).
+  // Chemin seul (sans les filtres) : sert à distinguer un vrai changement de
+  // page d'un simple changement d'onglet ou de filtre sur la même page.
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const href = useRouterState({
     select: (s) => `${s.location.pathname}${s.location.searchStr ?? ""}`,
   });
 
   const keyRef = useRef(href);
+  const pathRef = useRef(pathname);
   const backRef = useRef(false);
   const bootRef = useRef(true);
   const rafRef = useRef(0);
@@ -104,7 +108,9 @@ export function ScrollKeeper() {
   // 3) Changement de page : retour = on restaure, clic normal = on repart du haut.
   useEffect(() => {
     const previous = keyRef.current;
+    const previousPath = pathRef.current;
     keyRef.current = href;
+    pathRef.current = pathname;
     if (previous === href) return;
 
     if (backRef.current) {
@@ -112,8 +118,15 @@ export function ScrollKeeper() {
       restore(href);
       return;
     }
+
+    /* MÊME PAGE, seul le filtre/onglet change (ex. Statistiques → Produits) :
+       on NE remonte PAS en haut. C'était la cause du saut : l'adresse changeait
+       (?tab=produits) et le site croyait qu'on changeait de page, alors qu'on
+       reste au même endroit — l'utilisateur devait redescendre à la main. */
+    if (previousPath === pathname) return;
+
     window.scrollTo(0, 0);
-  }, [href]);
+  }, [href, pathname]);
 
   // 4) Rechargement de la page sur une entrée « retour » du navigateur
   //    (fréquent sur mobile quand on revient depuis une autre application).

@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
 import { MobileFooter } from "@/components/MobileFooter";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { StatusSwitch } from "@/components/StatusSwitch";
 import { VerifiedBadge, VerifiedBadgeGold } from "@/components/VerifiedBadge";
 import { BoostButton, useSellerMoney } from "@/components/SellerMoneyProvider";
@@ -42,9 +43,11 @@ import {
   Pencil,
   Phone,
   Rocket,
+  Search,
   ShieldQuestion,
   Sparkles,
   Trash2,
+  X,
   Zap,
 } from "lucide-react";
 
@@ -130,6 +133,8 @@ function ProfilePage() {
   // Le bloc « faire vérifier ma boutique » est DÉPLIÉ par défaut (l'offre doit
   // être vue immédiatement) tout en restant repliable d'un clic.
   const [badgeOpen, setBadgeOpen] = useState(true);
+  /** Recherche dans MES produits (le vendeur en a parfois 50 : défiler est long). */
+  const [productQuery, setProductQuery] = useState("");
   // Achat du badge : Wave / Orange Money par WhatsApp, activation manuelle.
   const [badgePayOpen, setBadgePayOpen] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -241,6 +246,16 @@ function ProfilePage() {
   const online = (products ?? []).filter((p) => p.published).length;
   const isVerified = !!profile?.verified && (!profile.verified_until || new Date(profile.verified_until) > new Date());
   const isLifetime = isVerified && !profile?.verified_until;
+  /**
+   * Filtre local de MES produits : nom, catégorie ou ville.
+   * Un vendeur avec 30 produits ne doit pas faire défiler 10 écrans pour
+   * retrouver un article — il tape deux lettres et le voilà.
+   */
+  const filteredProducts = (products ?? []).filter((p) => {
+    const q = productQuery.trim().toLowerCase();
+    if (!q) return true;
+    return p.name.toLowerCase().includes(q) || (p.category ?? "").toLowerCase().includes(q);
+  });
   // Avantages affichés = exactement ceux de la page Tarifs (source unique).
   const badgePlan = planById("verifie")!;
   // Portefeuille global : sert à rappeler le cadeau de bienvenue non utilisé.
@@ -568,7 +583,60 @@ function ProfilePage() {
         {/* ---------- Produits ---------- */}
         {tab === "produits" && (
           <>
-            <p className="mt-4 text-xs text-muted-foreground">
+            {/* MISE EN AVANT — le levier qui rapporte, expliqué en une ligne et
+                accessible sans chercher : 7 jours = 7 000 F (1 000 F/jour). */}
+            <button
+              type="button"
+              onClick={() => setTab("promo")}
+              className="mt-4 flex w-full items-center gap-3 rounded-2xl border border-volt/50 bg-volt/10 p-3 text-left transition hover:border-volt"
+            >
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-volt text-volt-foreground">
+                <Rocket className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-bold">Mettre un produit en tête de l'accueil</span>
+                <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
+                  7 jours pour {formatFCFA(7000)} ({formatFCFA(1000)} par jour). Les acheteurs de votre région
+                  voient votre produit en premier — vous suivez les vues et les contacts reçus.
+                </span>
+              </span>
+              <span className="shrink-0 text-xs font-bold text-volt">Booster →</span>
+            </button>
+
+            {/* RECHERCHE : avec 20, 50 ou 100 produits, faire défiler pour en
+                trouver un devient interminable. Le vendeur tape 2 lettres et
+                tombe directement dessus. */}
+            {(products?.length ?? 0) > 3 && (
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={productQuery}
+                    onChange={(e) => setProductQuery(e.target.value)}
+                    placeholder={`Rechercher parmi vos ${products?.length ?? 0} produits (nom, catégorie, ville…)`}
+                    className="h-11 pl-9"
+                    inputMode="search"
+                  />
+                  {productQuery && (
+                    <button
+                      type="button"
+                      aria-label="Effacer la recherche"
+                      onClick={() => setProductQuery("")}
+                      className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                {productQuery && (
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {filteredProducts.length} résultat{filteredProducts.length > 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
+            )}
+
+            <p className="mt-3 text-xs text-muted-foreground">
               Activez ou désactivez chaque réglage d'un simple appui : la ligne entière est cliquable.
             </p>
 
@@ -585,9 +653,17 @@ function ProfilePage() {
                 </p>
                 <Link to="/dashboard/new" className="mt-4"><Button variant="volt">Ajouter un produit</Button></Link>
               </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="mt-5 grid place-items-center rounded-2xl border border-dashed border-border py-12 text-center">
+                <Search className="h-8 w-8 text-muted-foreground" />
+                <p className="mt-3 text-sm font-semibold">Aucun produit ne correspond à « {productQuery} »</p>
+                <Button variant="outline" className="mt-3 h-10" onClick={() => setProductQuery("")}>
+                  Voir tous mes produits
+                </Button>
+              </div>
             ) : (
               <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-                {products.map((p) => {
+                {filteredProducts.map((p) => {
                   const hasPromo = p.promo_price_fcfa && p.promo_price_fcfa < p.price_fcfa;
                   const saving = savingId === p.id;
                   return (
