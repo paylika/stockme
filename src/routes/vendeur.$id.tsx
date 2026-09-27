@@ -210,13 +210,14 @@ function SellerPage() {
               </div>
             ) : (
               <>
-                {/* Avatar qui chevauche la bannière + identité.
-                    MOBILE : avatar puis nom en dessous — sinon le nom et le
-                    badge passent DERRIÈRE la bannière (texte foncé sur fond
-                    foncé : le badge semblait avoir disparu).
-                    ORDINATEUR : avatar et nom côte à côte, comme avant. */}
-                <div className="-mt-10 sm:-mt-12 sm:flex sm:items-end sm:gap-4">
-                  <div className="w-fit sm:shrink-0">
+                {/* Avatar + identité.
+                    MOBILE : l'avatar est SOUS la bannière, le nom et le badge
+                    en dessous. Avant, l'avatar chevauchait la bannière et le
+                    nom passait derrière (texte foncé sur fond foncé) : le badge
+                    semblait avoir disparu.
+                    ORDINATEUR : chevauchement élégant, côte à côte. */}
+                <div className="sm:-mt-12 sm:flex sm:items-end sm:gap-4">
+                  <div className="mt-3 w-fit sm:mt-0 sm:shrink-0">
                     <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl border-4 border-background bg-volt text-xl font-bold text-volt-foreground sm:h-24 sm:w-24">
                       {seller?.avatar_url ? (
                         <img

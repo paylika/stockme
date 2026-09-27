@@ -363,13 +363,14 @@ function ProfilePage() {
           </div>
 
           <div className="px-4 pb-6 sm:px-6">
-            {/* Avatar qui chevauche la bannière + identité.
-                MOBILE : avatar, puis nom + badge en dessous — sinon le nom et le
-                badge passent DERRIÈRE la bannière (le badge semblait masqué).
-                ORDINATEUR : côte à côte. */}
-            <div className="-mt-12 sm:-mt-14 sm:flex sm:items-end sm:gap-4">
-              <div className="relative w-fit sm:shrink-0">
-                <div className="grid h-24 w-24 place-items-center overflow-hidden rounded-2xl border-4 border-background bg-volt text-2xl font-bold text-volt-foreground">
+            {/* Avatar + identité.
+                MOBILE : avatar SOUS la bannière, puis nom + badge — sinon le nom
+                et le badge passaient derrière la bannière (le badge semblait
+                masqué).
+                ORDINATEUR : chevauchement élégant, côte à côte. */}
+            <div className="sm:-mt-14 sm:flex sm:items-end sm:gap-4">
+              <div className="relative mt-3 w-fit sm:mt-0 sm:shrink-0">
+                <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl border-4 border-background bg-volt text-xl font-bold text-volt-foreground sm:h-24 sm:w-24 sm:text-2xl">
                   {profile?.avatar_url ? (
                     <img src={profile.avatar_url} alt={displayName} className="h-full w-full object-cover" />
                   ) : (
