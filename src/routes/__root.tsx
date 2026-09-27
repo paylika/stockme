@@ -113,7 +113,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr">
-      <head><HeadContent /></head>
+      <head>
+        {/* VÉRIFICATION DU DOMAINE META (Facebook / Instagram).
+            ⚠️ Cette balise DOIT être dans le <head> STATIQUE rendu par le
+            serveur — Meta refuse une balise ajoutée par JavaScript. Elle est
+            donc écrite ici, en dur, et non dans un composant client. */}
+        <meta name="facebook-domain-verification" content="niwaxido3w5wjbydc2at3vkm12jftk" />
+        <HeadContent />
+      </head>
       <body>
         {children}
         <Scripts />
