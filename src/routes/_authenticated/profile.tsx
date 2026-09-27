@@ -18,7 +18,7 @@ import { ShopBanner } from "@/components/ShopBanner";
 import { UpgradeDialog } from "@/components/UpgradeDialog";
 import { VerifiedPaymentDialog } from "@/components/VerifiedPaymentDialog";
 import { usePaymentsStatus } from "@/lib/features";
-import { PRO_MONTHLY_BOOST_CREDIT, isProActive, planById, planOf, type PlanId } from "@/lib/pricing";
+import { PRO_AVAILABLE, PRO_MONTHLY_BOOST_CREDIT, isProActive, planById, planOf, type PlanId } from "@/lib/pricing";
 import { useAuth } from "@/hooks/useAuth";
 import { uploadAvatar, MAX_PHOTO_SIZE } from "@/lib/image-upload";
 import { useSellerDashboard } from "@/hooks/useSellerDashboard";
@@ -395,10 +395,27 @@ function ProfilePage() {
                   TOUS les écrans, mobile compris — un badge caché ne rassure
                   personne. */}
               <div className="mt-3 min-w-0 sm:mt-0 sm:flex-1 sm:pb-0.5">
-                <div className="flex items-center gap-1.5">
+                {/* flex-wrap : si l'écran est trop étroit, le bouton passe à la
+                    ligne SUIVANTE au lieu d'écraser le nom de la boutique. */}
+                <div className="flex flex-wrap items-center gap-1.5">
                   <h1 className="truncate font-display text-xl font-bold tracking-tight sm:text-2xl">{displayName}</h1>
                   {isVerified && <VerifiedMark size={19} tone={isLifetime ? "gold" : "blue"} />}
                   {isPro && <ProChip />}
+                  {/* BOUTON PRO, juste à côté du nom : c'est la première chose
+                      que voit un vendeur sur son profil, et il agit tout de
+                      suite sans chercher dans les onglets. */}
+                  {!isPro && PRO_AVAILABLE && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUpgradePlan("pro");
+                        setUpgradeOpen(true);
+                      }}
+                      className="ml-auto inline-flex h-8 shrink-0 items-center gap-1 rounded-full bg-volt px-2.5 text-[11px] font-bold text-volt-foreground shadow-sm shadow-volt/40 transition hover:brightness-110"
+                    >
+                      <Rocket className="h-3.5 w-3.5" /> Devenir Pro
+                    </button>
+                  )}
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   {isVerified ? (
