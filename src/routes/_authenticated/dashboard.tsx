@@ -12,6 +12,7 @@ import { StatusSwitch } from "@/components/StatusSwitch";
 import { BoostButton, SellerMoneyProvider, useSellerMoney } from "@/components/SellerMoneyProvider";
 import { SecurePaymentBlock } from "@/components/SecurePayment";
 import { FREE_PRODUCTS, EXTRA_PUBLICATION_PRICE, PRO_MONTHLY_BOOST_CREDIT } from "@/lib/pricing";
+import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { toast } from "sonner";
 
 type P = {
@@ -37,30 +38,30 @@ function Dashboard() {
   // Portefeuille global : permet de recharger SANS quitter la page quand le
   // vendeur a épuisé ses publications offertes.
   const money = useSellerMoney();
-  const [items, setItems] = useState<P[] | null>(null);
+  /**
+   * VITESSE : les produits et l'identité de la boutique viennent du paquet
+   * unique `seller_dashboard` (déjà chargé par le menu latéral) au lieu de trois
+   * appels supplémentaires à chaque ouverture de cette page.
+   */
+  const { data: dashboard, refresh: refreshDashboard } = useSellerDashboard();
   const [editing, setEditing] = useState<string | null>(null);
   const [qty, setQty] = useState<number>(0);
-  const [seller, setSeller] = useState<{ shop_name: string | null; full_name: string | null; avatar_url: string | null; verified: boolean; verified_until: string | null } | null>(null);
 
+  const items = dashboard ? (dashboard.products as P[]) : null;
+  const seller = dashboard?.profile
+    ? {
+        shop_name: dashboard.profile.shop_name,
+        full_name: dashboard.profile.full_name,
+        avatar_url: dashboard.profile.avatar_url,
+        verified: !!dashboard.profile.verified,
+        verified_until: dashboard.profile.verified_until,
+      }
+    : null;
+
+  /** Rafraîchit tout l'espace vendeur en UN seul appel. */
   const load = async () => {
-    const { data: u } = await supabase.auth.getUser();
-    if (!u.user) return;
-    const [{ data }, { data: prof }] = await Promise.all([
-      supabase
-        .from("products")
-        .select("id,name,price_fcfa,quantity,moq,city,category,images,published,sold_out,dropshipping")
-        .eq("owner_id", u.user.id)
-        .order("created_at", { ascending: false }),
-      supabase.from("profiles").select("shop_name,full_name,avatar_url,verified,verified_until").eq("id", u.user.id).maybeSingle(),
-    ]);
-    setItems((data ?? []) as P[]);
-    setSeller(
-      (prof as { shop_name: string | null; full_name: string | null; avatar_url: string | null; verified: boolean; verified_until: string | null } | null) ??
-        null,
-    );
+    await refreshDashboard();
   };
-
-  useEffect(() => { load(); }, []);
 
   const remove = async (id: string) => {
     if (!confirm("Supprimer ce produit ?")) return;

@@ -74,7 +74,28 @@ type Snapshot = { data: SellerDashboard | null; loading: boolean };
 
 let snapshot: Snapshot = { data: null, loading: false };
 let inflight: Promise<SellerDashboard | null> | null = null;
+let warnedOnce = false;
 const listeners = new Set<() => void>();
+
+/**
+ * Déconnexion / connexion : on VIDE la mémoire puis on recharge. Sans cela, un
+ * vendeur qui se déconnecte sur un téléphone partagé laisserait ses données
+ * visibles pour le compte suivant.
+ */
+let wired = false;
+const wireAuth = () => {
+  if (wired || typeof window === "undefined") return;
+  wired = true;
+  supabase.auth.onAuthStateChange((event) => {
+    if (event === "SIGNED_OUT") {
+      inflight = null;
+      emit({ data: null, loading: false });
+    } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+      inflight = null;
+      void loadSellerDashboard(true);
+    }
+  });
+};
 
 const emit = (next: Snapshot) => {
   snapshot = next;
@@ -140,6 +161,12 @@ export const loadSellerDashboard = async (force = false): Promise<SellerDashboar
 
     // Fonction absente ou en erreur → on repasse par les lectures classiques.
     if (error || !res?.ok) {
+      if (error && !warnedOnce) {
+        warnedOnce = true;
+        console.info(
+          "[StockMe] seller_dashboard absent : repli sur les lectures séparées (collez le BLOC 1 de supabase/VITESSE.sql pour accélérer).",
+        );
+      }
       const fallback = await legacyDashboard();
       emit({ data: fallback, loading: false });
       return fallback;
@@ -190,6 +217,7 @@ export function useSellerDashboard(enabled = true) {
   const [, bump] = useState(0);
 
   useEffect(() => {
+    wireAuth();
     const l = () => bump((n) => n + 1);
     listeners.add(l);
     return () => {
