@@ -297,6 +297,18 @@ function start(): void {
   if (started || typeof window === "undefined") return;
   started = true;
 
+  /**
+   * AFFICHAGE IMMÉDIAT, VÉRIFICATION ENSUITE.
+   *
+   * La session est déjà dans le navigateur : inutile de faire attendre
+   * l'utilisateur pendant une vérification réseau (parfois plusieurs secondes
+   * sur un téléphone). On affiche tout de suite ce que le navigateur sait, puis
+   * la vérification ci-dessous corrige s'il y a lieu. C'est ce qui évite
+   * l'écran « déconnecté » que voyaient les utilisateurs au rechargement.
+   */
+  const quick = localSession();
+  if (quick) emit({ session: quick, user: quick.user, ready: true });
+
   supabase.auth.onAuthStateChange((event, session) => {
     if (session) backupSession(session);
 
@@ -339,9 +351,14 @@ function start(): void {
 
   // Premier état : session locale (instantanée), récupération si besoin.
   void ensureSession().then((session) => {
-    // Un événement plus récent a pu passer entre-temps : on ne l'écrase pas.
-    if (snapshot.ready && snapshot.session) return;
-    emit({ session, user: session?.user ?? null, ready: true });
+    if (session) {
+      emit({ session, user: session.user, ready: true });
+      return;
+    }
+    // Rien trouvé : on ne remplace l'affichage immédiat que s'il n'y avait
+    // rien à afficher (une session définitivement refusée a déjà été effacée
+    // par la récupération).
+    if (!snapshot.session) emit({ session: null, user: null, ready: true });
   });
 
   // FILET DE SÉCURITÉ « NE JAMAIS RESTER BLOQUÉ ».
