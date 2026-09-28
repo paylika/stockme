@@ -59,13 +59,39 @@ export const Route = createFileRoute("/api/jobs/vignettes")({
         const url = new URL(request.url);
         const secret = await serverEnv("JOB_SECRET");
         const donne = url.searchParams.get("secret") ?? "";
-        if (!secret || donne !== secret) {
-          return Response.json({ error: "Accès refusé. Ajoutez ?secret=VOTRE_JOB_SECRET." }, { status: 401 });
-        }
-
         const cle = await serverEnv("SUPABASE_SERVICE_ROLE_KEY");
         if (!cle) return Response.json({ error: "SUPABASE_SERVICE_ROLE_KEY absente." }, { status: 500 });
         const service = serviceClient(cle);
+
+        /**
+         * DEUX FAÇONS DE DÉCLENCHER LA TÂCHE (pratique pour l'exploitant) :
+         *   • le secret de tâche planifiée (`?secret=…`) — pour un cron ;
+         *   • une session ADMINISTRATEUR — pour le bouton de la page admin.
+         * Ainsi, plus besoin de retrouver un secret pour lancer un rattrapage.
+         */
+        let autorise = !!secret && donne === secret;
+        if (!autorise) {
+          const jeton = (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
+          if (jeton) {
+            const { data: userData } = await service.auth.getUser(jeton);
+            const uid = userData?.user?.id;
+            if (uid) {
+              const { data: role } = await service
+                .from("user_roles")
+                .select("role")
+                .eq("user_id", uid)
+                .eq("role", "admin")
+                .maybeSingle();
+              if (role) autorise = true;
+            }
+          }
+        }
+        if (!autorise) {
+          return Response.json(
+            { error: "Accès refusé.", comment: "Ouvrez cette tâche depuis la page /admin, ou ajoutez ?secret=VOTRE_JOB_SECRET." },
+            { status: 401 },
+          );
+        }
 
         const apercu = url.searchParams.get("apercu") === "1";
         const limite = Math.min(Number(url.searchParams.get("limite") ?? TAILLE_LOT_DEFAUT) || TAILLE_LOT_DEFAUT, TAILLE_LOT_MAX);

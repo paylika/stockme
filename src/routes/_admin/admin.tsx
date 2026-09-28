@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/stockme-client";
 import { countryOfCity } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
 import { thumb } from "@/lib/img";
+import { AdminVignettes } from "@/components/AdminVignettes";
 import { Eye, EyeOff, MessageCircle, Package, Trash2, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -378,6 +379,10 @@ function AdminDashboard() {
       </div>
 
       {/* ===== KPIs clés (période) ===== */}
+      <div className="mt-6">
+        <AdminVignettes />
+      </div>
+
       <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Kpi icon={Users} label="Visiteurs" value={loading ? "…" : ps?.visits} accent="primary" hint={periodLabel} />
         <Kpi icon={MessageCircle} label="Contacts" value={loading ? "…" : ps?.contacts} accent="volt" hint={periodLabel} />
