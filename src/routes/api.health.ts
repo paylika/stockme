@@ -138,6 +138,65 @@ export const Route = createFileRoute("/api/health")({
           fonctions = { attendues: essais.length, manquantes };
         }
 
+        /* ---- 5) COMPTEUR DE VITESSE DE LA BASE (mesuré depuis le bord) ----
+           On chronomètre les requêtes que les pages utilisent vraiment. C'est le
+           seul indicateur comparable dans le temps : il ne dépend ni du réseau du
+           visiteur, ni du téléphone, ni du cache. Si ces durées montent au fil
+           des mois, c'est que la base ralentit (données qui grossissent, index
+           manquant) — et on le voit AVANT que les utilisateurs ne le sentent. */
+        let vitesse: { requete: string; ms: number; ok: boolean }[] | null = null;
+        if (detailed && serviceKey) {
+          const entetes = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" };
+          const chrono = async (nom: string, url: string, init?: RequestInit) => {
+            const t0 = Date.now();
+            try {
+              const ctrl = new AbortController();
+              const timer = setTimeout(() => ctrl.abort(), 8000);
+              const res = await fetch(url, { ...init, headers: entetes, signal: ctrl.signal });
+              clearTimeout(timer);
+              return { requete: nom, ms: Date.now() - t0, ok: res.ok };
+            } catch {
+              return { requete: nom, ms: Date.now() - t0, ok: false };
+            }
+          };
+
+          let produitId = "";
+          let vendeurId = "";
+          try {
+            const res = await fetch(`${STOCKME_SUPABASE_URL}/rest/v1/products?select=id,owner_id&published=eq.true&limit=1`, {
+              headers: entetes,
+            });
+            const rows = (await res.json()) as { id: string; owner_id: string }[];
+            produitId = rows?.[0]?.id ?? "";
+            vendeurId = rows?.[0]?.owner_id ?? "";
+          } catch {
+            /* les sondes dépendantes du produit seront ignorées */
+          }
+
+          const depuis30j = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+          const base = `${STOCKME_SUPABASE_URL}/rest/v1`;
+          const sondes: Promise<{ requete: string; ms: number; ok: boolean }>[] = [
+            chrono("accueil : 60 produits récents", `${base}/products?select=id,name,price_fcfa,images&published=eq.true&order=created_at.desc&limit=60`),
+            chrono("vendeurs vérifiés", `${base}/rpc/get_verified_sellers`, { method: "POST", body: "{}" }),
+          ];
+          if (produitId) {
+            sondes.push(
+              chrono("fiche produit", `${base}/products?select=*&id=eq.${produitId}`),
+              chrono("favoris du produit", `${base}/favorites?select=id&product_id=eq.${produitId}`),
+              chrono("vues 30 jours du produit", `${base}/product_events?select=id&product_id=eq.${produitId}&created_at=gte.${depuis30j}`),
+            );
+          }
+          if (vendeurId) {
+            sondes.push(
+              chrono("statistiques vendeur", `${base}/rpc/get_seller_stats`, {
+                method: "POST",
+                body: JSON.stringify({ p_seller_id: vendeurId }),
+              }),
+            );
+          }
+          vitesse = await Promise.all(sondes);
+        }
+
         const down = !base.ok;
         const degraded = down || !stockage.ok || !paiement.ok;
         const sqlManquant = (fonctions?.manquantes.length ?? 0) > 0;
@@ -160,6 +219,7 @@ export const Route = createFileRoute("/api/health")({
             paiement,
             volumes,
             fonctions,
+            vitesse,
             avertissement: sqlManquant
               ? "Du SQL n'a pas encore été collé dans Supabase : des fonctions attendues par le code sont absentes."
               : null,
