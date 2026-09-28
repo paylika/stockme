@@ -197,14 +197,49 @@ function ProductPage() {
     return () => { cancel = true; };
   }, [id]);
 
-  // 1 vue produit par visite (dédupliquée par session)
+  /**
+   * UNE VUE PAR VISITEUR ET PAR HEURE — pas une vue par chargement de page.
+   *
+   * Avant, la déduplication utilisait `sessionStorage`, qui est vidé dès que
+   * l'onglet ou l'application se ferme. Sur téléphone, cela arrive à CHAQUE
+   * changement d'application : le même visiteur écrivait donc une nouvelle ligne
+   * dans la base des dizaines de fois par jour, sans avoir rien fait de nouveau.
+   * C'était le premier poste d'écriture du site — celui qui grossit sans fin.
+   *
+   * Désormais on garde la date de la dernière vue dans le navigateur et on
+   * n'enregistre qu'une vue par heure. Conséquence : les vues d'un vendeur
+   * redeviennent ce qu'elles prétendent être (des visiteurs différents), et les
+   * totaux déjà enregistrés ne changent pas — seuls les doublons cessent.
+   */
   useEffect(() => {
-    if (!product) return;
-    const key = `stockme:viewed:${id}`;
-    if (typeof window !== "undefined" && !sessionStorage.getItem(key)) {
-      sessionStorage.setItem(key, "1");
+    if (!product || typeof window === "undefined") return;
+    const key = `stockme:vue:${id}`;
+    const maintenant = Date.now();
+    const delai = 60 * 60 * 1000; // une heure
+
+    let dernier = 0;
+    try {
+      dernier = Number(window.localStorage.getItem(key) ?? 0) || 0;
+    } catch {
+      // Stockage indisponible (navigation privée) : on retombe sur la session,
+      // moins efficace mais sans jamais bloquer la page.
+      try {
+        if (window.sessionStorage.getItem(key)) return;
+        window.sessionStorage.setItem(key, "1");
+      } catch {
+        /* on enregistre la vue, ce n'est pas grave */
+      }
       supabase.rpc("log_product_event", { p_product_id: id, p_event: "view" }).then(() => {});
+      return;
     }
+
+    if (maintenant - dernier < delai) return;
+    try {
+      window.localStorage.setItem(key, String(maintenant));
+    } catch {
+      /* sans gravité */
+    }
+    supabase.rpc("log_product_event", { p_product_id: id, p_event: "view" }).then(() => {});
   }, [product, id]);
 
   // Pays de l'acheteur (pour les contacts) — déduit du profil
