@@ -18,6 +18,7 @@ import { formatFCFA } from "@/lib/format";
 import { thumb } from "@/lib/img";
 import { AdminVignettes } from "@/components/AdminVignettes";
 import { AdminSauvegarde } from "@/components/AdminSauvegarde";
+import { AdminEnrichissement } from "@/components/AdminEnrichissement";
 import { Eye, EyeOff, MessageCircle, Package, Trash2, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -383,6 +384,7 @@ function AdminDashboard() {
       <div className="mt-6 space-y-3">
         <AdminSauvegarde />
         <AdminVignettes />
+        <AdminEnrichissement />
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
