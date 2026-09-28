@@ -32,6 +32,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedFavoritesRouteImport } from './routes/_authenticated/favorites'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as ApiGeoRouteImport } from './routes/api.geo'
+import { Route as ApiHealthRouteImport } from './routes/api.health'
 import { Route as DemandesIdRouteImport } from './routes/demandes.$id'
 import { Route as DemandesNouvelleRouteImport } from './routes/demandes.nouvelle'
 import { Route as LegalCguRouteImport } from './routes/legal.cgu'
@@ -166,6 +167,11 @@ const ApiGeoRoute = ApiGeoRouteImport.update({
   path: '/api/geo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemandesIdRoute = DemandesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -292,6 +298,7 @@ export interface FileRoutesByFullPath {
   '/favorites': typeof AuthenticatedFavoritesRoute
   '/profile': typeof AuthenticatedProfileRouteWithChildren
   '/api/geo': typeof ApiGeoRoute
+  '/api/health': typeof ApiHealthRoute
   '/demandes/$id': typeof DemandesIdRoute
   '/demandes/nouvelle': typeof DemandesNouvelleRoute
   '/legal/cgu': typeof LegalCguRoute
@@ -335,6 +342,7 @@ export interface FileRoutesByTo {
   '/favorites': typeof AuthenticatedFavoritesRoute
   '/profile': typeof AuthenticatedProfileRouteWithChildren
   '/api/geo': typeof ApiGeoRoute
+  '/api/health': typeof ApiHealthRoute
   '/demandes/$id': typeof DemandesIdRoute
   '/demandes/nouvelle': typeof DemandesNouvelleRoute
   '/legal/cgu': typeof LegalCguRoute
@@ -381,6 +389,7 @@ export interface FileRoutesById {
   '/_authenticated/favorites': typeof AuthenticatedFavoritesRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRouteWithChildren
   '/api/geo': typeof ApiGeoRoute
+  '/api/health': typeof ApiHealthRoute
   '/demandes/$id': typeof DemandesIdRoute
   '/demandes/nouvelle': typeof DemandesNouvelleRoute
   '/legal/cgu': typeof LegalCguRoute
@@ -426,6 +435,7 @@ export interface FileRouteTypes {
     | '/favorites'
     | '/profile'
     | '/api/geo'
+    | '/api/health'
     | '/demandes/$id'
     | '/demandes/nouvelle'
     | '/legal/cgu'
@@ -469,6 +479,7 @@ export interface FileRouteTypes {
     | '/favorites'
     | '/profile'
     | '/api/geo'
+    | '/api/health'
     | '/demandes/$id'
     | '/demandes/nouvelle'
     | '/legal/cgu'
@@ -514,6 +525,7 @@ export interface FileRouteTypes {
     | '/_authenticated/favorites'
     | '/_authenticated/profile'
     | '/api/geo'
+    | '/api/health'
     | '/demandes/$id'
     | '/demandes/nouvelle'
     | '/legal/cgu'
@@ -551,6 +563,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TarifsRoute: typeof TarifsRoute
   ApiGeoRoute: typeof ApiGeoRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   PaiementRetourRoute: typeof PaiementRetourRoute
   ProductIdRoute: typeof ProductIdRoute
   VendeurIdRoute: typeof VendeurIdRoute
@@ -725,6 +738,13 @@ declare module '@tanstack/react-router' {
       path: '/api/geo'
       fullPath: '/api/geo'
       preLoaderRoute: typeof ApiGeoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demandes/$id': {
@@ -978,6 +998,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TarifsRoute: TarifsRoute,
   ApiGeoRoute: ApiGeoRoute,
+  ApiHealthRoute: ApiHealthRoute,
   PaiementRetourRoute: PaiementRetourRoute,
   ProductIdRoute: ProductIdRoute,
   VendeurIdRoute: VendeurIdRoute,

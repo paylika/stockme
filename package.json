@@ -13,6 +13,8 @@
     "smoke": "node scripts/smoke.mjs",
     "smoke:local": "node scripts/smoke.mjs --local",
     "session": "node scripts/session.mjs",
+    "charge": "node scripts/load.mjs",
+    "health": "node -e \"fetch('https://stockme.store/api/health').then(r=>r.json()).then(j=>console.log(JSON.stringify(j,null,2)))\"",
     "verifier": "tsc --noEmit -p tsconfig.json && vite build && node scripts/smoke.mjs && node scripts/session.mjs"
   },
   "dependencies": {
