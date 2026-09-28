@@ -10,6 +10,7 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { JsonLd } from "@/components/JsonLd";
+import { ImageSecours } from "@/components/ImageSecours";
 import { ScrollKeeper } from "@/components/ScrollKeeper";
 import { SellerMoneyProvider } from "@/components/SellerMoneyProvider";
 import { MetaPixel } from "@/components/MetaPixel";
@@ -207,6 +208,9 @@ function RootComponent() {
       {!isAdminLayout && <MetaPixel />}
       {/* Mémoire de défilement : le retour depuis une fiche produit ramène à la
           position exacte dans la liste, sur tout le site. */}
+      {/* Filet de secours des images : une vignette ou un service d'images
+          injoignable ne doit jamais laisser une photo vide. */}
+      <ImageSecours />
       <ScrollKeeper />
       <JsonLd data={organizationLd()} />
       <JsonLd data={webSiteLd()} />

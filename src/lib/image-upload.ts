@@ -247,6 +247,65 @@ function classifyUploadError(err: unknown, size: number): string {
  */
 const UPLOAD_TIMEOUT_MS = 25_000;
 
+/** Suffixe des vignettes stockées à côté de la photo. */
+export const THUMB_SUFFIX = ".thumb.webp";
+
+/**
+ * FABRIQUE UNE VIGNETTE — la fin des 1,5 à 4 secondes d'attente par image.
+ *
+ * LE CONSTAT MESURÉ : sans vignette stockée, chaque image de liste passait par
+ * un service tiers gratuit (wsrv.nl) qui ajoutait un aller-retour complet
+ * (navigateur → service → base → service → navigateur) : 1,5 s à 4 s d'attente
+ * PAR IMAGE, plus lent que tout le JavaScript du site.
+ *
+ * En fabriquant la vignette UNE FOIS, à l'envoi, et en la rangeant à côté de la
+ * photo, les listes la servent directement depuis notre propre stockage.
+ */
+async function makeThumbnail(source: Blob, maxWidth = 900, quality = 0.72): Promise<Blob | null> {
+  if (typeof document === "undefined") return null;
+  if (!source.type.startsWith("image/")) return null;
+  try {
+    const bitmap = await createImageBitmap(source);
+    const ratio = Math.min(1, maxWidth / bitmap.width);
+    const w = Math.max(1, Math.round(bitmap.width * ratio));
+    const h = Math.max(1, Math.round(bitmap.height * ratio));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      bitmap.close?.();
+      return null;
+    }
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close?.();
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), "image/webp", quality));
+    // Une vignette plus lourde que l'original n'a aucun intérêt.
+    return blob && blob.size < source.size ? blob : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Envoie la vignette. C'est un BONUS : si elle échoue (navigateur ancien,
+ * réseau coupé), la photo reste parfaitement utilisable — le site retombe
+ * simplement sur l'ancien affichage.
+ */
+async function uploadThumbnail(path: string, source: Blob): Promise<void> {
+  try {
+    const thumb = await makeThumbnail(source);
+    if (!thumb) return;
+    await supabase.storage.from("product-images").upload(`${path}${THUMB_SUFFIX}`, thumb, {
+      contentType: "image/webp",
+      cacheControl: "31536000",
+      upsert: true,
+    });
+  } catch {
+    /* jamais bloquant : la publication ne doit pas dépendre de la vignette */
+  }
+}
+
 /** Envoi d'un fichier avec un délai maximum (interruption propre). */
 async function uploadBlobWithTimeout(path: string, blob: Blob, timeoutMs = UPLOAD_TIMEOUT_MS): Promise<void> {
   const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
@@ -260,6 +319,9 @@ async function uploadBlobWithTimeout(path: string, blob: Blob, timeoutMs = UPLOA
       signal: controller?.signal,
     });
     if (error) throw error;
+    /* La vignette part juste après, en arrière-plan : elle n'allonge jamais
+       l'attente du vendeur et n'empêche jamais la publication. */
+    void uploadThumbnail(path, blob);
   } finally {
     if (timer) clearTimeout(timer);
   }

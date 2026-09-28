@@ -23,6 +23,32 @@ const CDN = "https://wsrv.nl/";
 /** Hôtes à ne jamais redimensionner (données locales, SVG d'interface). */
 const SKIP = /^data:|\.svg(\?|$)/i;
 
+/** Vignette stockée à côté de la photo (voir lib/image-upload.ts). */
+const THUMB_SUFFIX = ".thumb.webp";
+/** Au-delà de cette largeur, la vignette stockée n'est plus assez définie. */
+const THUMB_MAX_WIDTH = 900;
+
+/**
+ * LA VIGNETTE DÉJÀ STOCKÉE, quand elle existe.
+ *
+ * POURQUOI C'EST LE POINT CLÉ : redimensionner à la volée par un service tiers
+ * gratuit coûte 1,5 à 4 secondes par image (mesuré en production) et place un
+ * service extérieur entre les vendeurs et leurs acheteurs. Depuis que le site
+ * fabrique une vignette à l'envoi, on la sert directement depuis notre propre
+ * stockage : aucun détour, aucune dépendance, et l'image part du même endroit
+ * que la base de données.
+ *
+ * Les photos envoyées AVANT cette évolution n'ont pas encore de vignette : le
+ * repli automatique (voir ImageSecours) garantit qu'elles s'affichent quand
+ * même, via l'ancienne méthode.
+ */
+function storedThumb(url: string): string | null {
+  if (!/\/storage\/v1\/object\/public\/product-images\//.test(url)) return null;
+  if (url.endsWith(THUMB_SUFFIX)) return url;
+  if (!/\.(jpe?g|png|webp|avif)$/i.test(url)) return null;
+  return `${url}${THUMB_SUFFIX}`;
+}
+
 export type ThumbOptions = {
   /** Largeur voulue en pixels. */
   w: number;
@@ -40,6 +66,13 @@ export function thumb(url: string | null | undefined, opts: ThumbOptions | numbe
   const o: ThumbOptions = typeof opts === "number" ? { w: opts } : opts;
   if (!/^https?:\/\//i.test(url) || SKIP.test(url)) return url;
   if (!o.w || o.w < 32) return url;
+
+  /* Priorité à la vignette déjà stockée chez nous : c'est plus rapide, et cela
+     ne dépend d'aucun service extérieur. */
+  if (!o.h && !o.cover && o.w <= THUMB_MAX_WIDTH) {
+    const stored = storedThumb(url);
+    if (stored) return stored;
+  }
 
   const params = new URLSearchParams();
   params.set("url", url);
