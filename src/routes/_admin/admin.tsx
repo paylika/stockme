@@ -153,6 +153,19 @@ const PALETTE = ["#1F3D8F", "#F0A836", "#2E63C9", "#E4852B", "#5B8DEF", "#C56A1E
 function AdminDashboard() {
   const [profiles, setProfiles] = useState<Profile[] | null>(null);
   const [products, setProducts] = useState<Product[] | null>(null);
+  /**
+   * Agrégats géographiques calculés PAR LA BASE (fonction admin_geo_stats).
+   *
+   * Avant, la page téléchargeait tous les produits et tous les profils pour
+   * compter les villes et les pays. Quand la fonction est installée, on ne
+   * télécharge plus que les annonces réellement affichées. Tant qu'elle ne
+   * l'est pas, `geoStats` reste vide et l'ancien calcul s'applique : la page
+   * fonctionne exactement comme avant.
+   */
+  const [geoStats, setGeoStats] = useState<{
+    cities: (string | null)[];
+    top_cities: { name: string; value: number }[];
+  } | null>(null);
   const [mounted, setMounted] = useState(false);
   const [preset, setPreset] = useState<Preset>("month");
   const [customStart, setCustomStart] = useState(() => toDateInput(new Date(Date.now() - 6 * 864e5)));
@@ -168,12 +181,26 @@ function AdminDashboard() {
 
   useEffect(() => {
     (async () => {
+      /* 1) Les agrégats géographiques : demandés à la base. S'ils arrivent, la
+            page n'a plus besoin de télécharger tout le catalogue. */
+      const geo = await supabase.rpc("admin_geo_stats");
+      const geoOk = !geo.error && !!geo.data;
+      if (geoOk) {
+        setGeoStats(geo.data as { cities: (string | null)[]; top_cities: { name: string; value: number }[] });
+      }
+
+      /* 2) Les données affichées. Seules 12 annonces sont montrées : quand la
+            fonction existe, on ne rapatrie que les plus récentes. Sinon on
+            reprend l'ancien comportement (tout), pour que les compteurs
+            restent justes. */
+      const produits = supabase
+        .from("products")
+        .select("id,name,category,price_fcfa,promo_price_fcfa,quantity,moq,city,zone,owner_id,created_at,images,published")
+        .order("created_at", { ascending: false });
+
       const [{ data: profs }, { data: prods }] = await Promise.all([
         supabase.from("profiles").select("*").order("created_at", { ascending: false }),
-        supabase
-          .from("products")
-          .select("id,name,category,price_fcfa,promo_price_fcfa,quantity,moq,city,zone,owner_id,created_at,images,published")
-          .order("created_at", { ascending: false }),
+        geoOk ? produits.limit(60) : produits,
       ]);
       setProfiles((profs ?? []) as Profile[]);
       setProducts((prods ?? []) as Product[]);
@@ -256,6 +283,14 @@ function AdminDashboard() {
   }, [profs]);
 
   const geo = useMemo(() => {
+    if (geoStats) {
+      /* Mêmes chiffres que l'ancien calcul, mais fournis par la base :
+         les villes distinctes des annonces ET des profils. */
+      const liste = geoStats.cities ?? [];
+      const cities = new Set(liste.filter((c): c is string => !!c));
+      const countries = new Set(liste.map((c) => countryOfCity(c)));
+      return { countries: countries.size, cities: cities.size };
+    }
     const countries = new Set<string>();
     const cities = new Set<string>();
     for (const p of prods) {
@@ -267,16 +302,19 @@ function AdminDashboard() {
       countries.add(countryOfCity(u.city));
     }
     return { countries: countries.size, cities: cities.size };
-  }, [profs, prods]);
+  }, [geoStats, profs, prods]);
 
   const topCities = useMemo(() => {
+    if (geoStats?.top_cities?.length) {
+      return geoStats.top_cities.map((t) => ({ name: t.name, value: t.value }));
+    }
     const m = new Map<string, number>();
     for (const p of prods) if (p.city) m.set(p.city, (m.get(p.city) ?? 0) + 1);
     return [...m.entries()]
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 8);
-  }, [prods]);
+  }, [geoStats, prods]);
 
   return (
     <div>

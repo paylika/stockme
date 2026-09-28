@@ -734,6 +734,18 @@ export type Database = {
           stock_value: number
         }[]
       }
+      /**
+       * Agrégats géographiques de la page admin, calculés par la base.
+       * `cities` contient aussi `null` quand une annonce ou un profil n'a pas
+       * de ville (l'ancien calcul le comptait comme « Autre »).
+       */
+      admin_geo_stats: {
+        Args: Record<string, never>
+        Returns: {
+          cities: (string | null)[]
+          top_cities: { name: string; value: number }[]
+        }
+      }
       set_user_role: {
         Args: {
           p_user_id: string
