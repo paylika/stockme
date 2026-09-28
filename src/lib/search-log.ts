@@ -53,6 +53,8 @@ export function logSearch(recherche: RechercheAEnregistrer): void {
       p_category: recherche.categorie ?? null,
       p_country: recherche.pays ?? null,
     })
-    .then(() => {})
-    .catch(() => {});
+    .then(
+      () => {},
+      () => {},
+    );
 }
