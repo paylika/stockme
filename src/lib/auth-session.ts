@@ -327,13 +327,21 @@ function start(): void {
         return;
 
       case "INITIAL_SESSION":
-        // Au premier chargement, supabase-js annonce souvent « rien » avant
-        // qu'on ait restauré la session du navigateur : on ne tranche pas ici.
-        if (!session && !snapshot.session) {
+        /**
+         * Au premier chargement, supabase-js annonce « aucune session » AVANT
+         * que celle conservée dans le navigateur soit restaurée.
+         *
+         * ⚠️ RÈGLE ABSOLUE ICI : ne JAMAIS conclure « déconnecté » sur cet
+         * événement. On ne l'accepte comme déconnexion qu'après une tentative
+         * de récupération. Sinon on efface la session qu'on vient d'afficher et
+         * l'utilisateur est renvoyé vers la page de connexion alors qu'il est
+         * connecté — exactement le bug d'origine.
+         */
+        if (!session) {
           setTimeout(announceNoSession, 0);
           return;
         }
-        emit({ session: session ?? null, user: session?.user ?? null, ready: true });
+        emit({ session, user: session.user, ready: true });
         return;
 
       case "TOKEN_REFRESHED":
