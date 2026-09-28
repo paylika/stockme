@@ -92,11 +92,38 @@ function Browse() {
       if (search.category) query = query.eq("category", search.category);
       if (search.q) query = query.ilike("name", `%${search.q}%`);
 
-      const [{ data }, { data: adData }] = await Promise.all([
-        query,
+      /**
+       * PHASE 1 — RECHERCHE PAR PERTINENCE.
+       *
+       * Avant, une recherche ne regardait QUE le titre (`name ILIKE '%mot%'`) :
+       * aucune tolérance aux fautes de frappe, les mots-clés et attributs
+       * produits par l'IA ignorés, la ville de l'acheteur ignorée. Beaucoup de
+       * recherches ne trouvaient donc rien alors que le produit existait.
+       *
+       * `search_products` classe désormais par pertinence réelle : titre,
+       * tolérance aux fautes, mots-clés IA, attributs IA, description,
+       * fraîcheur, vendeur vérifié et même ville.
+       *
+       * SI LA FONCTION SQL N'EST PAS ENCORE COLLÉE : on garde exactement
+       * l'ancienne recherche. Aucune casse, aucun écran vide.
+       */
+      let resultats: unknown[] | null = null;
+      if (search.q && search.q.trim().length >= 2) {
+        const { data: classes, error } = await supabase.rpc("search_products", {
+          p_query: search.q,
+          p_city: search.city ?? null,
+          p_category: search.category ?? null,
+          p_limit: 60,
+        });
+        if (!error && Array.isArray(classes)) resultats = classes;
+      }
+
+      const [{ data: anciens }, { data: adData }] = await Promise.all([
+        resultats ? Promise.resolve({ data: null }) : query,
         // Produits actuellement mis en avant : ils passent en tête des résultats.
         supabase.rpc("get_sponsored_products", { p_limit: 6 }),
       ]);
+      const data = resultats ?? anciens;
       if (cancel) return;
 
       const ads = (adData as { id: string; ad_id: string }[] | null) ?? [];

@@ -761,6 +761,21 @@ export type Database = {
         }
         Returns: undefined
       }
+      /**
+       * Recherche classée par pertinence (phase 1) : titre, tolérance aux
+       * fautes de frappe, mots-clés et attributs IA, description, fraîcheur,
+       * vendeur vérifié et proximité de ville. Renvoie les annonces complètes
+       * avec un champ `pertinence`.
+       */
+      search_products: {
+        Args: {
+          p_query: string
+          p_city?: string | null
+          p_category?: string | null
+          p_limit?: number
+        }
+        Returns: unknown
+      }
       set_user_role: {
         Args: {
           p_user_id: string
