@@ -42,7 +42,9 @@ export function logSearch(recherche: RechercheAEnregistrer): void {
   if (signature === derniere.signature && maintenant - derniere.at < DELAI_MINIMUM_MS) return;
   derniere = { signature, at: maintenant };
 
-  // Envoi en arrière-plan : jamais d'attente, jamais d'erreur visible.
+  // Envoi en arrière-plan : jamais d'attente, jamais d'erreur visible — y
+  // compris tant que le SQL n'est pas collé dans Supabase (le site ne doit
+  // jamais dépendre de cette mémoire pour fonctionner).
   void supabase
     .rpc("log_search", {
       p_query: terme,
@@ -51,5 +53,6 @@ export function logSearch(recherche: RechercheAEnregistrer): void {
       p_category: recherche.categorie ?? null,
       p_country: recherche.pays ?? null,
     })
-    .then(() => {});
+    .then(() => {})
+    .catch(() => {});
 }
