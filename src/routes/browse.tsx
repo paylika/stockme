@@ -118,11 +118,35 @@ function Browse() {
         if (!error && Array.isArray(classes)) resultats = classes;
       }
 
-      const [{ data: anciens }, { data: adData }] = await Promise.all([
-        resultats ? Promise.resolve({ data: null }) : query,
-        // Produits actuellement mis en avant : ils passent en tête des résultats.
-        supabase.rpc("get_sponsored_products", { p_limit: 6 }),
-      ]);
+      /**
+       * PHASE 3 — LES PUBS QUI ONT DU SENS.
+       *
+       * Avant : une annonce sponsorisée s'affichait parce que le vendeur avait
+       * payé, même si elle ne répondait pas à la recherche de l'acheteur —
+       * l'acheteur était trompé et le vendeur payait pour des vues inutiles.
+       *
+       * `get_sponsored_products_v2` part de la sélection EXISTANTE (toutes les
+       * règles de publicité sont conservées) et ajoute deux garanties : la pub
+       * doit répondre à la recherche, et une annonce vue 300 fois sans un seul
+       * clic n'occupe plus la place.
+       *
+       * Si la fonction SQL n'est pas encore collée, on garde exactement les
+       * pubs d'aujourd'hui.
+       */
+      const pubsPertinentes = await supabase.rpc("get_sponsored_products_v2", {
+        p_limit: 6,
+        p_query: search.q ?? null,
+        p_city: search.city ?? null,
+        p_category: search.category ?? null,
+      });
+      if (pubsPertinentes.error || !Array.isArray(pubsPertinentes.data)) {
+        pubsPertinentes.data = (
+          await supabase.rpc("get_sponsored_products", { p_limit: 6 })
+        ).data as never;
+      }
+
+      const { data: anciens } = resultats ? { data: null } : await query;
+      const adData = pubsPertinentes.data;
       const data = resultats ?? anciens;
       if (cancel) return;
 

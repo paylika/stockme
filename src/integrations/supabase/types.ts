@@ -776,6 +776,20 @@ export type Database = {
         }
         Returns: unknown
       }
+      /**
+       * Publicités filtrées par pertinence (phase 3) : la sélection existante
+       * est conservée, puis on écarte les pubs qui ne répondent pas à la
+       * recherche et celles vues 300 fois sans un seul clic.
+       */
+      get_sponsored_products_v2: {
+        Args: {
+          p_limit?: number
+          p_query?: string | null
+          p_city?: string | null
+          p_category?: string | null
+        }
+        Returns: unknown
+      }
       set_user_role: {
         Args: {
           p_user_id: string
