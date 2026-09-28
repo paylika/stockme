@@ -457,7 +457,6 @@ try {
   const d = await r.json();
   const methods = d?.methods ?? [];
   const card = methods.includes("card");
-  const mobile = methods.includes("wave") || methods.includes("orange_money");
 
   if (methods.length === 0) {
     ko("Paiement : moyens disponibles", "AUCUN moyen de paiement disponible — personne ne peut payer");
@@ -465,14 +464,8 @@ try {
     ok("Paiement : moyens disponibles", methods.join(", "));
   }
   if (!card) warn("Paiement par carte bancaire", "indisponible (clé Stripe ?)");
-  if (!mobile) {
-    warn(
-      "Paiement Wave / Orange Money",
-      "indisponible : la variable UNITECH_API_KEY est absente du Worker Cloudflare",
-    );
-  }
   const bad = (d?.providers ?? []).filter((p) => !p.configured).map((p) => p.label);
-  if (bad.length && mobile && card) warn("Fournisseurs non configurés", bad.join(", "));
+  if (bad.length && card) warn("Fournisseurs non configurés", bad.join(", "));
 } catch (e) {
   ko("Paiement : moyens disponibles", e.message);
 }

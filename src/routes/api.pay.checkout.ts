@@ -49,7 +49,8 @@ export const Route = createFileRoute("/api/pay/checkout")({
 
           const purpose = body.purpose ?? "";
           const amount = Number(body.amount ?? 0);
-          const method = (body.method ?? "wave") as PaymentMethod;
+          // StockMe encaisse par carte : c'est le moyen par défaut.
+          const method = (body.method ?? "card") as PaymentMethod;
 
           if (!["wallet_topup", "boost", "subscription"].includes(purpose)) {
             return Response.json({ error: "Objet de paiement invalide." }, { status: 400 });

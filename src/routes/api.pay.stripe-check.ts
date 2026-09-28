@@ -88,7 +88,6 @@ export const Route = createFileRoute("/api/pay/stripe-check")({
             STRIPE_CURRENCY: forcedCurrency ?? null,
             SUPABASE_SERVICE_ROLE_KEY: !!serviceKey,
             JOB_SECRET: !!jobSecret,
-            UNITECH_API_KEY: !!(await serverEnv("UNITECH_API_KEY")),
           },
           service_role: { works: serviceRoleWorks, error: serviceRoleError },
           webhook_urls: {

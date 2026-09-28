@@ -1,15 +1,23 @@
-import { unitechPayProvider } from "@/lib/payments/unitechpay.server";
 import { stripeProvider } from "@/lib/payments/stripe.server";
 import type { PaymentMethod, PaymentProvider } from "@/lib/payments/types";
 
 /**
  * Registre des fournisseurs de paiement.
  *
- * Pour ajouter PayDunya, CinetPay, Bictorys… : créez le fichier du fournisseur
- * sur le modèle de `unitechpay.server.ts`, puis ajoutez-le ici. Le reste de
- * l'application (portefeuille, boosts, abonnements) n'a pas à changer.
+ * StockMe encaisse par CARTE BANCAIRE (Visa / Mastercard, via Stripe).
+ * C'est le seul moyen en ligne : c'est un choix d'exploitation, pas un oubli.
+ *
+ * Conséquence importante : tout ce que le site annonce comme payable en ligne
+ * est payable par carte, et rien d'autre. La tour de contrôle (/api/health) ne
+ * signale plus de moyen de paiement manquant, puisque aucun n'est attendu.
+ *
+ * POUR AJOUTER UN MOYEN PLUS TARD (mobile money, virement…) : le fournisseur
+ * `unitechpay.server.ts` est conservé dans le dossier ; il suffit de le
+ * remettre dans cette liste et d'ajouter sa clé dans les variables du Worker.
+ * Le reste du site (portefeuille, boosts, abonnements) n'a rien à changer : il
+ * n'affiche que les moyens réellement configurés.
  */
-export const PROVIDERS: PaymentProvider[] = [unitechPayProvider, stripeProvider];
+export const PROVIDERS: PaymentProvider[] = [stripeProvider];
 
 export const getProvider = (name: string): PaymentProvider | undefined =>
   PROVIDERS.find((p) => p.name === name);
