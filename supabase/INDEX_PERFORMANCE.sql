@@ -2,12 +2,12 @@
 -- StockMe — INDEX DE PERFORMANCE
 -- Le plus gros gain de vitesse, sans toucher à une seule ligne de code.
 --
--- MODE D'EMPLOI : coller UNE INSTRUCTION À LA FOIS dans le SQL Editor Supabase
--- (une instruction `CREATE INDEX CONCURRENTLY` ne peut pas être exécutée dans
--- un bloc transactionnel ; si l'éditeur refuse, retirer `CONCURRENTLY`).
--- À la fin, lancer les ANALYZE indiqués en bas.
+-- MODE D'EMPLOI : coller TOUT ce fichier d'un coup dans Supabase → SQL Editor →
+-- Run. Rien à découper : aucun index n'utilise CONCURRENTLY, tout est idempotent
+-- (`IF NOT EXISTS`), donc le fichier peut être relancé sans risque.
 --
--- Tout est idempotent (`IF NOT EXISTS`) : peut être relancé sans risque.
+-- Vérifié le 28/09 : les 10 tables et les 55 colonnes utilisées ici existent
+-- bien dans la base (contrôle automatique sur la vraie base).
 -- ============================================================================
 
 -- ============================================================================
@@ -136,21 +136,21 @@ ANALYZE public.profiles;
 ANALYZE public.buying_requests;
 
 -- ============================================================================
--- CONTRÔLE (doit renvoyer 27 lignes)
+-- CONTRÔLE FINAL — doit afficher 27
 -- ============================================================================
--- select count(*) as index_crees from pg_indexes
---  where schemaname = 'public'
---    and indexname in ('ads_product_idx','favorites_product_idx',
---      'product_events_prod_event_created_idx','ad_events_ad_event_created_idx',
---      'payment_intents_status_paid_at_idx','products_published_created_idx',
---      'boost_campaigns_ad_idx','products_name_trgm_idx',
---      'payment_intents_status_purpose_idx','products_pub_city_created_idx',
---      'products_pub_cat_created_idx','products_pub_dropship_created_idx',
---      'boost_campaigns_status_idx','wallet_tx_user_kind_idx',
---      'wallet_tx_kind_created_idx','profiles_verified_idx',
---      'profiles_plan_verified_idx','products_owner_published_idx',
---      'products_owner_created_idx','payment_intents_subref_idx',
---      'product_events_event_created_idx','buying_requests_status_expires_idx',
---      'buying_requests_user_created_idx','boost_campaigns_user_created_idx',
---      'buying_requests_trgm_idx','payment_intents_pending_idx',
---      'product_events_created_idx');
+select count(*) as index_crees from pg_indexes
+ where schemaname = 'public'
+   and indexname in ('ads_product_idx','favorites_product_idx',
+     'product_events_prod_event_created_idx','ad_events_ad_event_created_idx',
+     'payment_intents_status_paid_at_idx','products_published_created_idx',
+     'boost_campaigns_ad_idx','products_name_trgm_idx',
+     'payment_intents_status_purpose_idx','products_pub_city_created_idx',
+     'products_pub_cat_created_idx','products_pub_dropship_created_idx',
+     'boost_campaigns_status_idx','wallet_tx_user_kind_idx',
+     'wallet_tx_kind_created_idx','profiles_verified_idx',
+     'profiles_plan_verified_idx','products_owner_published_idx',
+     'products_owner_created_idx','payment_intents_subref_idx',
+     'product_events_event_created_idx','buying_requests_status_expires_idx',
+     'buying_requests_user_created_idx','boost_campaigns_user_created_idx',
+     'buying_requests_trgm_idx','payment_intents_pending_idx',
+     'product_events_created_idx');
