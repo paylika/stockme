@@ -48,6 +48,7 @@ import { Route as ApiAiEnrichRouteImport } from './routes/api.ai.enrich'
 import { Route as ApiAiImageSearchRouteImport } from './routes/api.ai.image-search'
 import { Route as ApiAiStatusRouteImport } from './routes/api.ai.status'
 import { Route as ApiJobsBoostDailyRouteImport } from './routes/api.jobs.boost-daily'
+import { Route as ApiJobsVignettesRouteImport } from './routes/api.jobs.vignettes'
 import { Route as ApiPayCheckoutRouteImport } from './routes/api.pay.checkout'
 import { Route as ApiPayReconcileRouteImport } from './routes/api.pay.reconcile'
 import { Route as ApiPayStripeCheckRouteImport } from './routes/api.pay.stripe-check'
@@ -249,6 +250,11 @@ const ApiJobsBoostDailyRoute = ApiJobsBoostDailyRouteImport.update({
   path: '/api/jobs/boost-daily',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiJobsVignettesRoute = ApiJobsVignettesRouteImport.update({
+  id: '/api/jobs/vignettes',
+  path: '/api/jobs/vignettes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPayCheckoutRoute = ApiPayCheckoutRouteImport.update({
   id: '/api/pay/checkout',
   path: '/api/pay/checkout',
@@ -314,6 +320,7 @@ export interface FileRoutesByFullPath {
   '/api/ai/image-search': typeof ApiAiImageSearchRoute
   '/api/ai/status': typeof ApiAiStatusRoute
   '/api/jobs/boost-daily': typeof ApiJobsBoostDailyRoute
+  '/api/jobs/vignettes': typeof ApiJobsVignettesRoute
   '/api/pay/checkout': typeof ApiPayCheckoutRoute
   '/api/pay/reconcile': typeof ApiPayReconcileRoute
   '/api/pay/stripe-check': typeof ApiPayStripeCheckRoute
@@ -358,6 +365,7 @@ export interface FileRoutesByTo {
   '/api/ai/image-search': typeof ApiAiImageSearchRoute
   '/api/ai/status': typeof ApiAiStatusRoute
   '/api/jobs/boost-daily': typeof ApiJobsBoostDailyRoute
+  '/api/jobs/vignettes': typeof ApiJobsVignettesRoute
   '/api/pay/checkout': typeof ApiPayCheckoutRoute
   '/api/pay/reconcile': typeof ApiPayReconcileRoute
   '/api/pay/stripe-check': typeof ApiPayStripeCheckRoute
@@ -405,6 +413,7 @@ export interface FileRoutesById {
   '/api/ai/image-search': typeof ApiAiImageSearchRoute
   '/api/ai/status': typeof ApiAiStatusRoute
   '/api/jobs/boost-daily': typeof ApiJobsBoostDailyRoute
+  '/api/jobs/vignettes': typeof ApiJobsVignettesRoute
   '/api/pay/checkout': typeof ApiPayCheckoutRoute
   '/api/pay/reconcile': typeof ApiPayReconcileRoute
   '/api/pay/stripe-check': typeof ApiPayStripeCheckRoute
@@ -451,6 +460,7 @@ export interface FileRouteTypes {
     | '/api/ai/image-search'
     | '/api/ai/status'
     | '/api/jobs/boost-daily'
+    | '/api/jobs/vignettes'
     | '/api/pay/checkout'
     | '/api/pay/reconcile'
     | '/api/pay/stripe-check'
@@ -495,6 +505,7 @@ export interface FileRouteTypes {
     | '/api/ai/image-search'
     | '/api/ai/status'
     | '/api/jobs/boost-daily'
+    | '/api/jobs/vignettes'
     | '/api/pay/checkout'
     | '/api/pay/reconcile'
     | '/api/pay/stripe-check'
@@ -541,6 +552,7 @@ export interface FileRouteTypes {
     | '/api/ai/image-search'
     | '/api/ai/status'
     | '/api/jobs/boost-daily'
+    | '/api/jobs/vignettes'
     | '/api/pay/checkout'
     | '/api/pay/reconcile'
     | '/api/pay/stripe-check'
@@ -571,6 +583,7 @@ export interface RootRouteChildren {
   ApiAiImageSearchRoute: typeof ApiAiImageSearchRoute
   ApiAiStatusRoute: typeof ApiAiStatusRoute
   ApiJobsBoostDailyRoute: typeof ApiJobsBoostDailyRoute
+  ApiJobsVignettesRoute: typeof ApiJobsVignettesRoute
   ApiPayCheckoutRoute: typeof ApiPayCheckoutRoute
   ApiPayReconcileRoute: typeof ApiPayReconcileRoute
   ApiPayStripeCheckRoute: typeof ApiPayStripeCheckRoute
@@ -852,6 +865,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiJobsBoostDailyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/jobs/vignettes': {
+      id: '/api/jobs/vignettes'
+      path: '/api/jobs/vignettes'
+      fullPath: '/api/jobs/vignettes'
+      preLoaderRoute: typeof ApiJobsVignettesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/pay/checkout': {
       id: '/api/pay/checkout'
       path: '/api/pay/checkout'
@@ -1006,6 +1026,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAiImageSearchRoute: ApiAiImageSearchRoute,
   ApiAiStatusRoute: ApiAiStatusRoute,
   ApiJobsBoostDailyRoute: ApiJobsBoostDailyRoute,
+  ApiJobsVignettesRoute: ApiJobsVignettesRoute,
   ApiPayCheckoutRoute: ApiPayCheckoutRoute,
   ApiPayReconcileRoute: ApiPayReconcileRoute,
   ApiPayStripeCheckRoute: ApiPayStripeCheckRoute,
