@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer,
   BarChart,
@@ -166,6 +166,8 @@ function AdminDashboard() {
     cities: (string | null)[];
     top_cities: { name: string; value: number }[];
   } | null>(null);
+  /** La fonction SQL d'agrégats est-elle installée ? Sinon : ancienne méthode. */
+  const [geoDisponible, setGeoDisponible] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [preset, setPreset] = useState<Preset>("month");
   const [customStart, setCustomStart] = useState(() => toDateInput(new Date(Date.now() - 6 * 864e5)));
@@ -182,30 +184,65 @@ function AdminDashboard() {
   useEffect(() => {
     (async () => {
       /* 1) Les agrégats géographiques : demandés à la base. S'ils arrivent, la
-            page n'a plus besoin de télécharger tout le catalogue. */
+            page n'a plus besoin de télécharger tout le catalogue NI tous les
+            profils. */
       const geo = await supabase.rpc("admin_geo_stats");
       const geoOk = !geo.error && !!geo.data;
+      setGeoDisponible(geoOk);
       if (geoOk) {
         setGeoStats(geo.data as { cities: (string | null)[]; top_cities: { name: string; value: number }[] });
       }
 
-      /* 2) Les données affichées. Seules 12 annonces sont montrées : quand la
-            fonction existe, on ne rapatrie que les plus récentes. Sinon on
-            reprend l'ancien comportement (tout), pour que les compteurs
-            restent justes. */
+      /* 2) Les annonces affichées. Seules 12 sont montrées : quand la fonction
+            existe, on ne rapatrie que les plus récentes. Sinon on reprend
+            l'ancien comportement (tout), pour que les compteurs restent justes. */
       const produits = supabase
         .from("products")
         .select("id,name,category,price_fcfa,promo_price_fcfa,quantity,moq,city,zone,owner_id,created_at,images,published")
         .order("created_at", { ascending: false });
 
-      const [{ data: profs }, { data: prods }] = await Promise.all([
-        supabase.from("profiles").select("*").order("created_at", { ascending: false }),
-        geoOk ? produits.limit(60) : produits,
-      ]);
-      setProfiles((profs ?? []) as Profile[]);
+      const { data: prods } = await (geoOk ? produits.limit(60) : produits);
       setProducts((prods ?? []) as Product[]);
+
+      /* 3) Les profils : uniquement les vendeurs concernés (voir l'effet
+            ci-dessous). Sans la fonction SQL, on garde l'ancien téléchargement
+            complet pour que les noms et les compteurs restent exacts. */
+      if (!geoOk) {
+        const { data: profs } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
+        setProfiles((profs ?? []) as unknown as Profile[]);
+      }
     })();
   }, []);
+
+  /**
+   * LES NOMS DES VENDEURS, SANS TÉLÉCHARGER TOUS LES UTILISATEURS.
+   *
+   * Avant, la page rapatriait TOUS les profils (acheteurs compris) pour
+   * n'afficher que les noms des vendeurs. Désormais on ne demande que les
+   * identifiants réellement utiles : les propriétaires des annonces affichées
+   * et les vendeurs des statistiques. À 10 000 utilisateurs, cela divise le
+   * poids de la page par plusieurs dizaines.
+   */
+  const idsProfils = useMemo(() => {
+    const s = new Set<string>();
+    for (const p of products ?? []) s.add(p.owner_id);
+    for (const id of Object.keys(sellerStats)) s.add(id);
+    return [...s].join(",");
+  }, [products, sellerStats]);
+
+  const profilsCharges = useRef<string>("");
+
+  useEffect(() => {
+    if (!geoDisponible || !idsProfils) return;
+    if (profilsCharges.current === idsProfils) return;
+    profilsCharges.current = idsProfils;
+    const liste = idsProfils.split(",").filter(Boolean);
+    supabase
+      .from("profiles")
+      .select("*")
+      .in("id", liste)
+      .then(({ data }) => setProfiles((data ?? []) as unknown as Profile[]));
+  }, [geoDisponible, idsProfils]);
 
   const range = useMemo(() => computeRange(preset, customStart, customEnd), [preset, customStart, customEnd]);
 
@@ -675,7 +712,11 @@ function Kpi({
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
-  value: number | string;
+  /**
+   * `value` peut être absent : quand une statistique n'a pas pu être chargée,
+   * on préfère ne rien afficher plutôt qu'un « 0 » qui serait un faux chiffre.
+   */
+  value: number | string | undefined;
   accent: "primary" | "volt";
   hint?: string;
   small?: boolean;
