@@ -1,13 +1,14 @@
-import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 
+/**
+ * `@tanstack/react-query` n'est plus utilisé : le site n'effectue aucune requête
+ * via ses hooks (`useQuery` / `useMutation`). Il était pourtant embarqué dans le
+ * paquet téléchargé par TOUS les visiteurs, pour rien.
+ */
 export const getRouter = () => {
-  const queryClient = new QueryClient();
-
   const router = createRouter({
     routeTree,
-    context: { queryClient },
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
   });

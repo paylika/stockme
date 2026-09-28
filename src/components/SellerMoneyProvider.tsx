@@ -5,9 +5,20 @@ import { useWallet, type WalletData } from "@/hooks/useWallet";
 import { useAuth } from "@/hooks/useAuth";
 import { usePaymentsStatus } from "@/lib/features";
 import { isAdminEmail } from "@/lib/constants";
-import { TopUpDialog } from "@/components/TopUpDialog";
-import { BoostDialog } from "@/components/BoostDialog";
+import { lazy, Suspense } from "react";
 import { toast } from "sonner";
+
+/**
+ * Les fenêtres « Recharger » et « Booster » ne s'ouvrent que sur un clic : elles
+ * n'ont rien à faire dans le paquet téléchargé par tous les visiteurs. Elles
+ * arrivent à part, au moment où le vendeur clique.
+ */
+const TopUpDialog = lazy(() =>
+  import("@/components/TopUpDialog").then((m) => ({ default: m.TopUpDialog })),
+);
+const BoostDialog = lazy(() =>
+  import("@/components/BoostDialog").then((m) => ({ default: m.BoostDialog })),
+);
 
 type BoostTarget = { id: string; name: string };
 
@@ -146,29 +157,34 @@ export function SellerMoneyProvider({
     <SellerMoneyContext.Provider value={value}>
       {children}
 
-      <TopUpDialog
-        open={topUpOpen}
-        onOpenChange={(o) => {
-          setTopUpOpen(o);
-          if (!o) {
-            setTopUpAmount(null);
-            setTopUpPresets(undefined);
-          }
-        }}
-        methods={payments.methods}
-        defaultPhone={defaultPhone}
-        initialAmount={topUpAmount}
-        presets={topUpPresets}
-        pending={wallet?.pending ?? []}
-      />
+      {/* `Suspense` : le temps que la fenêtre arrive, on n'affiche rien — elle
+          ne s'ouvre qu'après un clic, il n'y a donc aucun vide visible. */}
+      <Suspense fallback={null}>
+        {topUpOpen && (
+          <TopUpDialog
+            open={topUpOpen}
+            onOpenChange={(o) => {
+              setTopUpOpen(o);
+              if (!o) {
+                setTopUpAmount(null);
+                setTopUpPresets(undefined);
+              }
+            }}
+            methods={payments.methods}
+            defaultPhone={defaultPhone}
+            initialAmount={topUpAmount}
+            presets={topUpPresets}
+            pending={wallet?.pending ?? []}
+          />
+        )}
 
-      {boost && (
-        <BoostDialog
-          open={!!boost}
-          onOpenChange={(o) => !o && setBoost(null)}
-          productId={boost.id}
-          productName={boost.name}
-          balance={wallet?.balance_fcfa ?? 0}
+        {boost && (
+          <BoostDialog
+            open={!!boost}
+            onOpenChange={(o) => !o && setBoost(null)}
+            productId={boost.id}
+            productName={boost.name}
+            balance={wallet?.balance_fcfa ?? 0}
           /* Une mise en avant existe déjà sur ce produit ? On ne la double pas :
              le pop-up propose alors de la prolonger ou de la reprendre. */
           existing={(() => {
@@ -190,8 +206,9 @@ export function SellerMoneyProvider({
               window.dispatchEvent(new CustomEvent("stockme:money-changed"));
             }
           }}
-        />
-      )}
+          />
+        )}
+      </Suspense>
     </SellerMoneyContext.Provider>
   );
 }

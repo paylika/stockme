@@ -1,8 +1,7 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
-  createRootRouteWithContext,
+  createRootRoute,
   useRouter,
   useRouterState,
   HeadContent,
@@ -10,14 +9,31 @@ import {
 } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
 import { JsonLd } from "@/components/JsonLd";
-import { WhatsAppGroupPopup } from "@/components/WhatsAppGroupPopup";
 import { ScrollKeeper } from "@/components/ScrollKeeper";
 import { SellerMoneyProvider } from "@/components/SellerMoneyProvider";
 import { MetaPixel } from "@/components/MetaPixel";
 import { supabase, STOCKME_SUPABASE_URL } from "@/integrations/supabase/stockme-client";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
+
+/**
+ * CHARGÉS SEULEMENT QUAND ON EN A BESOIN.
+ *
+ * La barre latérale du vendeur et la popup d'invitation étaient téléchargées
+ * par TOUS les visiteurs, y compris un acheteur qui ouvre simplement une fiche
+ * produit pour écrire au vendeur — alors qu'il n'utilisera jamais ni son
+ * portefeuille ni ses statistiques. Elles partent maintenant dans un fichier à
+ * part, récupéré juste après l'affichage de la page.
+ *
+ * C'est le principal poste du « paquet de démarrage » : moins de code à
+ * télécharger, c'est moins de pages qui traînent sur un réseau mobile faible.
+ */
+const AppSidebar = lazy(() =>
+  import("@/components/AppSidebar").then((m) => ({ default: m.AppSidebar })),
+);
+const WhatsAppGroupPopup = lazy(() =>
+  import("@/components/WhatsAppGroupPopup").then((m) => ({ default: m.WhatsAppGroupPopup })),
+);
 import {
   buildSeoHead,
   defaultImage,
@@ -65,7 +81,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
-export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+export const Route = createRootRoute({
   head: () => {
     const { meta, links } = buildSeoHead({
       title: defaultTitle,
@@ -130,7 +146,6 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  const { queryClient } = Route.useRouteContext();
   // En mode admin, on ne montre pas la sidebar StockMe (l'admin a sa propre sidebar).
   const routeMatches = useRouterState({ select: (r) => r.matches });
   const pathname = useRouterState({ select: (r) => r.location.pathname });
@@ -164,7 +179,7 @@ function RootComponent() {
   }, [pathname]);
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <>
       {isAdminLayout ? (
         <Outlet />
       ) : (
@@ -172,14 +187,20 @@ function RootComponent() {
            directement les pop-up Recharger / Booster, sans passer par le profil. */
         <SellerMoneyProvider>
           <SidebarProvider>
-            <AppSidebar />
+            <Suspense fallback={null}>
+              <AppSidebar />
+            </Suspense>
             <SidebarInset className="min-w-0">
               <Outlet />
             </SidebarInset>
           </SidebarProvider>
         </SellerMoneyProvider>
       )}
-      {!isAdminLayout && <WhatsAppGroupPopup />}
+      {!isAdminLayout && (
+        <Suspense fallback={null}>
+          <WhatsAppGroupPopup />
+        </Suspense>
+      )}
       {/* Pixel Meta (Facebook / Instagram) : chargé sans ralentir le site.
           Volontairement ABSENT des pages d'administration : les visites de
           l'équipe fausseraient les statistiques des campagnes. */}
@@ -190,6 +211,6 @@ function RootComponent() {
       <JsonLd data={organizationLd()} />
       <JsonLd data={webSiteLd()} />
       <Toaster richColors position="top-right" />
-    </QueryClientProvider>
+    </>
   );
 }
