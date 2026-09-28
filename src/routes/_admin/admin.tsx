@@ -17,6 +17,7 @@ import { countryOfCity } from "@/lib/constants";
 import { formatFCFA } from "@/lib/format";
 import { thumb } from "@/lib/img";
 import { AdminVignettes } from "@/components/AdminVignettes";
+import { AdminSauvegarde } from "@/components/AdminSauvegarde";
 import { Eye, EyeOff, MessageCircle, Package, Trash2, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -379,7 +380,8 @@ function AdminDashboard() {
       </div>
 
       {/* ===== KPIs clés (période) ===== */}
-      <div className="mt-6">
+      <div className="mt-6 space-y-3">
+        <AdminSauvegarde />
         <AdminVignettes />
       </div>
 
