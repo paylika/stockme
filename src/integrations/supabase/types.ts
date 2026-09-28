@@ -746,6 +746,21 @@ export type Database = {
           top_cities: { name: string; value: number }[]
         }
       }
+      /**
+       * Mémoire des recherches (phase 0). L'identifiant de l'utilisateur est
+       * ajouté par la base elle-même : rien de personnel n'est envoyé par le
+       * navigateur, et rien ne peut être falsifié.
+       */
+      log_search: {
+        Args: {
+          p_query: string
+          p_results: number
+          p_city?: string | null
+          p_category?: string | null
+          p_country?: string | null
+        }
+        Returns: undefined
+      }
       set_user_role: {
         Args: {
           p_user_id: string

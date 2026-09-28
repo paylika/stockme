@@ -15,6 +15,7 @@ import { fetchBrowseFeed } from "@/lib/ssr-feed";
 import { trackAdClick, trackAdImpression } from "@/lib/ad-tracking";
 import { ALL_COUNTRIES, useVisitorCountry } from "@/lib/geo";
 import { buildSeoHead } from "@/lib/seo";
+import { logSearch } from "@/lib/search-log";
 
 type Filters = { city?: string; category?: string; q?: string; min?: number; max?: number };
 
@@ -101,6 +102,25 @@ function Browse() {
       const ads = (adData as { id: string; ad_id: string }[] | null) ?? [];
       const boosted = new Set(ads.map((a) => a.id));
       const adMap = new Map(ads.map((a) => [a.id, a.ad_id]));
+
+      /**
+       * PHASE 0 — ON GARDE LA MÉMOIRE DE LA RECHERCHE.
+       *
+       * Jusqu'ici, rien n'était enregistré : impossible de savoir ce que les
+       * acheteurs cherchent, ni quelles recherches ne trouvent RIEN (pourtant
+       * l'information la plus précieuse : elle dit où il manque de l'offre).
+       * C'est la matière première des futures recommandations, et ça ne coûte
+       * rien. L'échec éventuel de cet envoi ne perturbe jamais l'affichage.
+       */
+      if (search.q || search.city || search.category) {
+        logSearch({
+          terme: search.q,
+          resultats: (data ?? []).length,
+          ville: search.city ?? null,
+          categorie: search.category ?? null,
+          pays: visitor.country ?? null,
+        });
+      }
       setBoostedIds(boosted);
       setAdByProduct(adMap);
 
