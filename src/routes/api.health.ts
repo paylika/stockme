@@ -197,6 +197,61 @@ export const Route = createFileRoute("/api/health")({
           vitesse = await Promise.all(sondes);
         }
 
+        /* ---- 6) CONSOMMATION DE BANDE PASSANTE ----
+           L'hébergeur a coupé le service pour un quota de données dépassé :
+           l'objectif est de VOIR le compteur monter, au lieu de découvrir la
+           coupure quand tout est déjà bloqué.
+           Nécessite un jeton personnel Supabase (SUPABASE_ACCESS_TOKEN, gratuit
+           à créer dans le tableau de bord). Sans ce jeton, on l'indique
+           simplement — jamais d'erreur pour l'exploitant. */
+        let bandePassante: unknown = null;
+        if (detailed) {
+          const jeton = await serverEnv("SUPABASE_ACCESS_TOKEN");
+          if (!jeton) {
+            bandePassante = {
+              configure: false,
+              comment:
+                "Ajoutez la variable SUPABASE_ACCESS_TOKEN (jeton personnel Supabase, gratuit) pour suivre ici la consommation de données.",
+            };
+          } else {
+            try {
+              const ref = new URL(STOCKME_SUPABASE_URL).hostname.split(".")[0];
+              const res = await fetch(`https://api.supabase.com/v1/projects/${ref}/usage`, {
+                headers: { Authorization: `Bearer ${jeton}` },
+              });
+              const texte = await res.text();
+              const mesures: Record<string, unknown>[] = [];
+              const explorer = (v: unknown, profondeur = 0) => {
+                if (!v || typeof v !== "object" || profondeur > 4) return;
+                if (Array.isArray(v)) {
+                  v.forEach((x) => explorer(x, profondeur + 1));
+                  return;
+                }
+                const o = v as Record<string, unknown>;
+                const nom = String(o.metric ?? o.name ?? o.metric_name ?? "").toLowerCase();
+                if (nom.includes("egress") || nom.includes("bandwidth")) mesures.push(o);
+                Object.values(o).forEach((x) => explorer(x, profondeur + 1));
+              };
+              if (res.ok) {
+                try {
+                  explorer(JSON.parse(texte));
+                } catch {
+                  /* réponse inattendue : on la montre brute ci-dessous */
+                }
+              }
+              bandePassante = {
+                configure: true,
+                http: res.status,
+                mesures: mesures.slice(0, 4),
+                lu: mesures.length > 0,
+                apercu: mesures.length ? undefined : texte.slice(0, 300),
+              };
+            } catch (err) {
+              bandePassante = { configure: true, erreur: err instanceof Error ? err.message : "erreur" };
+            }
+          }
+        }
+
         const down = !base.ok;
         const degraded = down || !stockage.ok || !paiement.ok;
         const sqlManquant = (fonctions?.manquantes.length ?? 0) > 0;
@@ -220,6 +275,7 @@ export const Route = createFileRoute("/api/health")({
             volumes,
             fonctions,
             vitesse,
+            bandePassante,
             avertissement: sqlManquant
               ? "Du SQL n'a pas encore été collé dans Supabase : des fonctions attendues par le code sont absentes."
               : null,

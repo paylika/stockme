@@ -78,6 +78,17 @@ export const fetchHomeFeed = createServerFn({ method: "GET" }).handler(
  * Les filtres choisis par l'acheteur (ville, catégorie, recherche) restent
  * gérés côté navigateur, comme avant.
  */
+/**
+ * NOMBRE D'ANNONCES AFFICHÉES D'UN COUP.
+ *
+ * Réduit de 60 à 24 pour la bande passante : chaque annonce télécharge une
+ * photo, et 60 photos d'un coup ont contribué à épuiser le quota de données de
+ * l'hébergeur (jusqu'à couper le service). L'acheteur voit la suite en un clic
+ * (« Voir plus ») : il ne perd rien, et le site consomme ~60 % de données en
+ * moins par visite.
+ */
+export const PAGE_PRODUITS = 24;
+
 export const fetchBrowseFeed = createServerFn({ method: "GET" }).handler(
   async (): Promise<{ products: FeedProduct[] }> => {
     let cities: string[] | null = null;
@@ -96,7 +107,7 @@ export const fetchBrowseFeed = createServerFn({ method: "GET" }).handler(
       .eq("published", true)
       .eq("dropshipping", false)
       .order("created_at", { ascending: false })
-      .limit(60);
+      .limit(PAGE_PRODUITS);
 
     if (cities) query = query.in("city", cities);
 

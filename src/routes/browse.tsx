@@ -11,7 +11,7 @@ import { Search, SlidersHorizontal, X } from "lucide-react";
 import { ProductCard, type ListingProduct } from "@/components/ProductCard";
 import { ImageSearchButton } from "@/components/ImageSearchButton";
 import { useVerifiedSellers } from "@/hooks/useVerifiedSellers";
-import { fetchBrowseFeed } from "@/lib/ssr-feed";
+import { fetchBrowseFeed, PAGE_PRODUITS } from "@/lib/ssr-feed";
 import { trackAdClick, trackAdImpression } from "@/lib/ad-tracking";
 import { ALL_COUNTRIES, useVisitorCountry } from "@/lib/geo";
 import { buildSeoHead } from "@/lib/seo";
@@ -62,6 +62,11 @@ function Browse() {
   /** produit → annonce : permet de compter les clics sur une mise en avant. */
   const [adByProduct, setAdByProduct] = useState<Map<string, string>>(new Map());
   const [q, setQ] = useState(search.q ?? "");
+  /**
+   * Nombre d'annonces demandées. On commence à 24 (au lieu de 60) pour la
+   * bande passante, et « Voir plus » augmente ce nombre par palier de 24.
+   */
+  const [limite, setLimite] = useState(PAGE_PRODUITS);
   const verified = useVerifiedSellers();
   const visitor = useVisitorCountry();
   /** Premier affichage : les données viennent du serveur, rien à recharger. */
@@ -86,7 +91,7 @@ function Browse() {
     // On ne vide plus la liste pendant le rafraîchissement : les produits
     // affichés restent à l'écran jusqu'à l'arrivée des nouveaux.
     const run = async () => {
-      let query = supabase.from("products").select("*").eq("published", true).eq("dropshipping", false).order("created_at", { ascending: false }).limit(60);
+      let query = supabase.from("products").select("*").eq("published", true).eq("dropshipping", false).order("created_at", { ascending: false }).limit(limite);
       if (search.city) query = query.eq("city", search.city);
       else if (visitorCities) query = query.in("city", visitorCities);
       if (search.category) query = query.eq("category", search.category);
@@ -197,12 +202,27 @@ function Browse() {
     run();
     return () => { cancel = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.city, search.category, search.q, visitor.country]);
+  }, [search.city, search.category, search.q, visitor.country, limite]);
 
-  const update = (patch: Partial<Filters>) =>
+  /**
+   * « VOIR PLUS » — l'acheteur charge la suite sans quitter la page.
+   *
+   * C'est la contrepartie de la réduction de 60 à 24 annonces : on ne réduit pas
+   * ce que l'acheteur peut voir, on réduit ce qui est téléchargé d'un coup.
+   * Plafond à 4 paliers (96 annonces) : au-delà, l'acheteur affine avec les
+   * filtres plutôt que de faire défiler sans fin.
+   */
+  const LIMITE_MAX = PAGE_PRODUITS * 4;
+
+  const update = (patch: Partial<Filters>) => {
+    setLimite(PAGE_PRODUITS);
     navigate({ search: (prev: Filters) => ({ ...prev, ...patch }) });
+  };
 
-  const clearAll = () => navigate({ search: {} });
+  const clearAll = () => {
+    setLimite(PAGE_PRODUITS);
+    navigate({ search: {} });
+  };
   const hasFilters = !!(search.city || search.category || search.q);
 
   return (
@@ -286,18 +306,29 @@ function Browse() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {items.map((p, i) => (
-              <ProductCard
-                key={p.id}
-                product={p}
-                sellerVerified={!!p.owner_id && verified.has(p.owner_id)}
-                sponsored={boostedIds.has(p.id)}
-                onOpen={adByProduct.has(p.id) ? () => trackAdClick(adByProduct.get(p.id)) : undefined}
-                delayMs={i * 45}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {items.map((p, i) => (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  sellerVerified={!!p.owner_id && verified.has(p.owner_id)}
+                  sponsored={boostedIds.has(p.id)}
+                  onOpen={adByProduct.has(p.id) ? () => trackAdClick(adByProduct.get(p.id)) : undefined}
+                  delayMs={i * 45}
+                />
+              ))}
+            </div>
+
+            {/* Charger la suite : moins de données par visite, autant de choix. */}
+            {items.length >= limite && limite < LIMITE_MAX && (
+              <div className="mt-6 flex justify-center">
+                <Button variant="outline" className="h-11 px-6" onClick={() => setLimite((n) => n + PAGE_PRODUITS)}>
+                  Voir plus d'annonces
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
