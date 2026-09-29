@@ -94,6 +94,14 @@ export const Route = createFileRoute("/api/ai/enrich")({
           let rows: { id: string; name: string; category: string | null; description: string | null }[] = [];
           let userId: string | null = null;
 
+          /**
+           * Un administrateur fait des RATTRAPAGES DE MASSE (des centaines
+           * d'annonces d'un coup, pour que la recherche ait de la matière) :
+           * son plafond est donc plus large que celui d'un vendeur, pour qui
+           * 300 fiches par jour est déjà énorme.
+           */
+          let estAdmin = false;
+
           if (isJob) {
             const { data } = await admin
               .from("products")
@@ -112,6 +120,7 @@ export const Route = createFileRoute("/api/ai/enrich")({
               _user_id: userId,
               _role: "admin",
             });
+            estAdmin = !!isAdmin;
 
             let query = scoped
               .from("products")
@@ -126,9 +135,10 @@ export const Route = createFileRoute("/api/ai/enrich")({
 
           // Plafond quotidien : protège la facture d'un usage abusif.
           if (userId) {
+            const plafond = estAdmin ? 2000 : AI_DAILY_LIMITS.enrich;
             const used = await countAiCallsToday("enrich", userId);
-            if (used >= AI_DAILY_LIMITS.enrich) {
-              return Response.json({ ok: false, reason: "quota" }, { status: 429 });
+            if (used >= plafond) {
+              return Response.json({ ok: false, reason: "quota", limit: plafond }, { status: 429 });
             }
           }
 
