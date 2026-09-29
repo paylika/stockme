@@ -20,7 +20,21 @@
  */
 const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 const LOCAL = process.argv.includes("--local");
-const USERS = Math.min(Number(args[0] ?? 10), 50);
+/**
+ * ⚠️ NE CONTOURNE PLUS LE CACHE PAR DÉFAUT — LEÇON APPRISE À NOS DÉPENS.
+ *
+ * Ce script ajoutait un paramètre aléatoire à chaque adresse pour mesurer le
+ * « vrai » travail du serveur : le cache de Cloudflare était donc court-circuité
+ * à chaque requête, et chaque page rechargeait toutes ses photos DEPUIS LA BASE.
+ * Quelques passages à 30 visiteurs simultanés ont ainsi consommé plusieurs
+ * gigaoctets de bande passante — jusqu'à faire restreindre le service par
+ * l'hébergeur et rendre le site inaccessible (personne ne pouvait se connecter).
+ *
+ * Désormais : on mesure par défaut ce que vivent les vrais visiteurs (avec le
+ * cache). Mesurer l'origine demande une option explicite `--origine`, plafonnée.
+ */
+const ORIGINE = process.argv.includes("--origine");
+const USERS = Math.min(Number(args[0] ?? 10), ORIGINE ? 20 : 50);
 const SECONDS = Math.min(Number(args[1] ?? 20), 180);
 const SITE = LOCAL ? "http://localhost:3000" : "https://stockme.store";
 
@@ -46,12 +60,12 @@ try {
 }
 
 /** Le mélange de pages : ce qu'un visiteur fait réellement. */
+const cache = ORIGINE ? () => `?l=${Math.random().toString(36).slice(2)}` : () => "";
 const scenarios = [
-  { nom: "Accueil (cache CDN)", chemin: () => "/", poids: 1 },
-  { nom: "Accueil (vrai rendu)", chemin: () => `/?l=${Math.random().toString(36).slice(2)}`, poids: 2 },
-  { nom: "Catalogue /browse", chemin: () => `/browse?l=${Math.random().toString(36).slice(2)}`, poids: 2 },
-  ...(produit ? [{ nom: "Fiche produit", chemin: () => `/product/${produit}?l=${Math.random().toString(36).slice(2)}`, poids: 3 }] : []),
-  ...(vendeur ? [{ nom: "Boutique vendeur", chemin: () => `/vendeur/${vendeur}?l=${Math.random().toString(36).slice(2)}`, poids: 1 }] : []),
+  { nom: "Accueil", chemin: () => `/${cache()}`, poids: 3 },
+  { nom: "Catalogue /browse", chemin: () => `/browse${cache()}`, poids: 2 },
+  ...(produit ? [{ nom: "Fiche produit", chemin: () => `/product/${produit}${cache()}`, poids: 4 }] : []),
+  ...(vendeur ? [{ nom: "Boutique vendeur", chemin: () => `/vendeur/${vendeur}${cache()}`, poids: 1 }] : []),
   { nom: "API santé", chemin: () => "/api/health", poids: 1 },
 ];
 
@@ -102,7 +116,7 @@ const percentile = (valeurs, p) => {
 console.log(`\n=== TEST DE CHARGE — ${SITE} ===`);
 console.log(`${USERS} utilisateur(s) simultané(s) pendant ${SECONDS} secondes`);
 console.log(`Pages testées : ${retenues.map((s) => s.nom).join(", ")}\n`);
-console.log("(mesure du vrai travail : le cache du CDN est contourné par un paramètre aléatoire)\n");
+console.log(`(mode : ${ORIGINE ? "ORIGINE — le cache est contourné, ce test consomme de la bande passante" : "réel — avec le cache, comme un vrai visiteur"})`);
 
 const melange = retenues.flatMap((s) => Array(s.poids).fill(s));
 const fin = Date.now() + SECONDS * 1000;
