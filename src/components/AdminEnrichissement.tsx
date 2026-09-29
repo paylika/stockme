@@ -93,8 +93,27 @@ export function AdminEnrichissement() {
           return;
         }
 
-        const corps = (await reponse.json()) as { results?: unknown[] };
-        total += corps.results?.length ?? ids.length;
+        const corps = (await reponse.json()) as { results?: unknown[]; requested?: number };
+
+        /**
+         * DIAGNOSTIC VISIBLE.
+         *
+         * La tâche d'IA répond « succès » même quand elle n'a rien pu produire :
+         * elle renvoie simplement une liste vide. Le bouton tournait donc sans
+         * fin sans expliquer la cause — presque toujours la clé d'IA absente ou
+         * le solde épuisé chez le fournisseur. On s'arrête au premier signe et
+         * on dit clairement quoi vérifier.
+         */
+        const enrichiesPaquet = corps.results?.length ?? 0;
+        if (ids.length > 0 && enrichiesPaquet === 0) {
+          setMessage(
+            `L'IA n'a rien pu produire pour ${ids.length} annonce(s). Deux causes possibles : la clé DEEPSEEK_API_KEY absente dans les variables Cloudflare, ou le solde du compte DeepSeek épuisé. Rien n'a été enregistré : relancez dès que c'est réglé.`,
+          );
+          setRestantes(await compter());
+          return;
+        }
+
+        total += enrichiesPaquet;
         setFaites(total);
         const reste = await compter();
         setRestantes(reste);
