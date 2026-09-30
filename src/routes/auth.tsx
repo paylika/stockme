@@ -116,7 +116,12 @@ function AuthPage() {
    * immédiatement. C'est le même écran, sans le détour.
    */
   const goAfterAuth = () => {
-    navigate({ to: destination as never, replace: true });
+    // Repli : si la navigation interne échoue pour une raison quelconque, on
+    // revient à l'ancien comportement. Le vendeur ne doit JAMAIS rester bloqué
+    // sur l'écran de connexion après avoir réussi à se connecter.
+    void navigate({ to: destination as never, replace: true }).catch(() => {
+      window.location.assign(destination);
+    });
   };
 
   const login = async (e: React.FormEvent) => {
