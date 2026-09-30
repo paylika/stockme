@@ -94,7 +94,7 @@ function AuthPage() {
     /* `ensureSession` : si la session existe (même à récupérer), on renvoie
        l'utilisateur là où il allait, au lieu de lui remontrer le formulaire. */
     ensureSession().then((session) => {
-      if (session) window.location.assign(destination);
+      if (session) navigate({ to: destination as never, replace: true });
     });
   }, [destination]);
 
@@ -103,8 +103,20 @@ function AuthPage() {
     setSCity("");
   };
 
+  /**
+   * APRÈS CONNEXION : NAVIGATION INTERNE, SANS RECHARGEMENT.
+   *
+   * Avant, on rechargeait toute la page (`window.location.assign`) : sur
+   * téléphone, cela revient à retélécharger l'application complète (plus de
+   * 200 Ko de code), à la relancer, puis à recharger les données de la page
+   * d'arrivée. D'où l'impression que « la connexion met 16 secondes » alors
+   * que la connexion elle-même était terminée en une seconde.
+   *
+   * La session est déjà en mémoire : le routeur peut afficher la suite
+   * immédiatement. C'est le même écran, sans le détour.
+   */
   const goAfterAuth = () => {
-    window.location.assign(destination);
+    navigate({ to: destination as never, replace: true });
   };
 
   const login = async (e: React.FormEvent) => {
