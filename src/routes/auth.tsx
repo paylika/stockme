@@ -116,12 +116,38 @@ function AuthPage() {
    * immédiatement. C'est le même écran, sans le détour.
    */
   const goAfterAuth = () => {
-    // Repli : si la navigation interne échoue pour une raison quelconque, on
-    // revient à l'ancien comportement. Le vendeur ne doit JAMAIS rester bloqué
-    // sur l'écran de connexion après avoir réussi à se connecter.
-    void navigate({ to: destination as never, replace: true }).catch(() => {
-      window.location.assign(destination);
-    });
+    /**
+     * ARRIVÉE APRÈS CONNEXION — RAPIDE, ET SANS AUCUN RISQUE DE BLOCAGE.
+     *
+     * Correction après l'incident : l'adresse d'arrivée peut arriver encodée
+     * (`%2Fprofile`). Envoyée telle quelle au routeur, elle ne correspond à
+     * AUCUNE page : la navigation interne échouait en silence, on restait sur
+     * l'écran de connexion, et l'utilisateur avait l'impression d'être
+     * « connecté mais pas connecté ».
+     *
+     * On décode donc l'adresse, on vérifie qu'elle ressemble à un vrai chemin
+     * du site, et on garde TROIS filets : le routeur, une vérification juste
+     * après, puis le rechargement classique en dernier recours.
+     */
+    let cible = destination;
+    try {
+      cible = decodeURIComponent(destination);
+    } catch {
+      /* adresse illisible : on garde la valeur brute */
+    }
+    const valide =
+      typeof cible === "string" && cible.startsWith("/") && !cible.startsWith("//") && !cible.includes("%");
+    const vers = valide ? cible : "/profile";
+
+    void navigate({ to: vers as never, replace: true })
+      .then(() => {
+        // Si le routeur n'a rien affiché (page inconnue), le navigateur prend le
+        // relais : on ne reste JAMAIS bloqué sur l'écran de connexion.
+        window.setTimeout(() => {
+          if (window.location.pathname === "/auth") window.location.assign(vers);
+        }, 700);
+      })
+      .catch(() => window.location.assign(vers));
   };
 
   const login = async (e: React.FormEvent) => {

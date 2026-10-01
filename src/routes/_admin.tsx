@@ -32,7 +32,9 @@ export const Route = createFileRoute("/_admin")({
 function AdminLayout() {
   const [adminEmail, setAdminEmail] = useState("");
   /** "checking" tant qu'on ne sait pas ; évite d'afficher la console à un visiteur. */
-  const [status, setStatus] = useState<"checking" | "allowed" | "denied">("checking");
+  const [status, setStatus] = useState<"checking" | "allowed" | "denied" | "erreur">("checking");
+  /** Incrémenté par « Réessayer » : relance la vérification. */
+  const [tentative, setTentative] = useState(0);
   const pathname = useRouterState({ select: (r) => r.location.pathname });
 
   /**
@@ -46,26 +48,51 @@ function AdminLayout() {
    */
   useEffect(() => {
     let cancel = false;
+    /**
+     * VÉRIFICATION DES DROITS — AVEC DÉLAI MAXIMUM ET RATTRAPAGE.
+     *
+     * Bug constaté en production : cet écran restait bloqué INDÉFINIMENT sur
+     * « Vérification de vos droits… ». Si la vérification échouait (réseau
+     * mobile qui lâche, session illisible), aucune réponse n'arrivait : la page
+     * ne finissait jamais de charger et l'administrateur ne pouvait plus entrer,
+     * sans aucun moyen de s'en sortir sans recharger à la main.
+     *
+     * Trois protections désormais :
+     *   1. tout est entouré d'un try/catch — une erreur ne bloque plus rien ;
+     *   2. un délai maximum de 8 secondes — au-delà, on propose de réessayer ;
+     *   3. un refus réel (droits absents) renvoie vers l'accueil, comme avant.
+     */
+    const minuteur = setTimeout(() => {
+      if (!cancel) setStatus((actuel) => (actuel === "checking" ? "erreur" : actuel));
+    }, 8000);
+
     (async () => {
-      const session = await ensureSession();
-      if (cancel) return;
-      if (!session?.user) {
-        setStatus("denied");
-        return;
+      try {
+        const session = await ensureSession();
+        if (cancel) return;
+        if (!session?.user) {
+          setStatus("denied");
+          return;
+        }
+        setAdminEmail(session.user.email ?? "");
+        const { data } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .eq("role", "admin")
+          .maybeSingle();
+        if (!cancel) setStatus(data ? "allowed" : "denied");
+      } catch {
+        // Panne réseau : on ne bloque JAMAIS l'écran, on propose de réessayer.
+        if (!cancel) setStatus("erreur");
       }
-      setAdminEmail(session.user.email ?? "");
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      if (!cancel) setStatus(data ? "allowed" : "denied");
     })();
+
     return () => {
       cancel = true;
+      clearTimeout(minuteur);
     };
-  }, []);
+  }, [tentative]);
 
   if (status === "checking") {
     return (
@@ -73,6 +100,34 @@ function AdminLayout() {
         <div className="mx-auto max-w-5xl px-4 py-10">
           <div className="h-8 w-56 rounded bg-muted shimmer" />
           <p className="mt-4 text-xs text-muted-foreground">Vérification de vos droits…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "erreur") {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="mx-auto max-w-md px-4 py-16 text-center">
+          <h1 className="font-display text-xl font-semibold">Vérification impossible</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Votre connexion ou le réseau n'a pas répondu à temps. Vos droits ne sont pas en cause : réessayez.
+          </p>
+          <div className="mt-5 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => {
+                setStatus("checking");
+                setTentative((n) => n + 1);
+              }}
+              className="inline-flex h-11 items-center justify-center rounded-xl bg-volt px-5 text-sm font-bold text-volt-foreground transition hover:brightness-110"
+            >
+              Réessayer
+            </button>
+            <Link to="/" className="text-sm font-medium text-muted-foreground underline underline-offset-4">
+              Retour à l'accueil
+            </Link>
+          </div>
         </div>
       </div>
     );
