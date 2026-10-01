@@ -229,6 +229,66 @@ state = await hardLoad("/");
 if (/StockMe/.test(state?.text ?? "")) ok("Site public accessible sans session");
 else ko("Site public accessible sans session", "page vide");
 
+/* TEST 6 — LA CONNEXION PAR LE FORMULAIRE (le parcours réel de l'utilisateur)
+ *
+ * POURQUOI CE TEST EXISTE : les tests précédents injectaient la session
+ * directement dans le navigateur, sans jamais passer par le formulaire. C'est
+ * exactement pour cela que la panne « connecté mais pas connecté » n'a pas été
+ * détectée hier : le vrai parcours (saisir son mot de passe, cliquer, arriver
+ * sur sa page) n'était pas testé. Il l'est désormais, à chaque exécution.
+ */
+await evaluate(`localStorage.clear()`);
+await send("Page.navigate", { url: "about:blank" });
+await sleep(600);
+/* `?mode=login` ouvre DIRECTEMENT l'onglet de connexion : la page s'ouvre par
+   défaut sur « Créer un compte », ce qui peut tromper un utilisateur pressé. */
+await send("Page.navigate", { url: `${SITE}/auth?mode=login` });
+await sleep(6000);
+
+const rempli = await (async () => {
+  /* Remplir le formulaire de connexion et l'envoyer (envoi du formulaire
+     lui-même : plus fiable que de deviner le libellé du bouton). */
+  return evaluate(`
+    (() => {
+      const poser = (el, v) => {
+        const d = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+        d.call(el, v);
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+      };
+      const champMdp = document.querySelector('input[type="password"]');
+      if (!champMdp) return { champs: false, bouton: false };
+      const formulaire = champMdp.closest("form");
+      const champEmail = formulaire
+        ? formulaire.querySelector('input[type="email"], input[name="email"], input[type="text"]')
+        : null;
+      if (champEmail) poser(champEmail, ${JSON.stringify(email)});
+      poser(champMdp, ${JSON.stringify(password)});
+      // On envoie le formulaire lui-même : plus fiable que deviner le libellé du bouton.
+      if (formulaire) {
+        if (typeof formulaire.requestSubmit === "function") formulaire.requestSubmit();
+        else formulaire.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      }
+      return { champs: !!champEmail, bouton: !!formulaire };
+    })()
+  `);
+})();
+
+if (!rempli?.champs || !rempli?.bouton) {
+  warn("TEST 6 — connexion par le formulaire", "formulaire introuvable (mise en page modifiée ?)");
+} else {
+  await settle(20000);
+  await sleep(6000);
+  const apres = await evaluate(`({ path: location.pathname, text: (document.body.innerText || "").slice(0, 140) })`);
+  if (apres?.path && apres.path !== "/auth") {
+    ok("TEST 6 — connexion par le formulaire (parcours réel)", `arrivé sur ${apres.path}`);
+  } else {
+    ko(
+      "TEST 6 — connexion par le formulaire (parcours réel)",
+      `resté sur /auth — « ${(apres?.text ?? "").replace(/\s+/g, " ")} »`,
+    );
+  }
+}
+
 ws.close();
 browser.kill();
 

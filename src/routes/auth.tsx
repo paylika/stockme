@@ -44,7 +44,19 @@ import logoUrl from "@/assets/stockme-logo.jpg";
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>): { redirect?: string; mode?: "login" | "signup" } => ({
     redirect: typeof search.redirect === "string" ? search.redirect : undefined,
-    mode: search.mode === "login" ? "login" : "signup",
+    /**
+     * PAR DÉFAUT : L'ONGLET « CONNEXION », PLUS « CRÉER UN COMPTE ».
+     *
+     * C'était un piège réel : la page s'ouvrait sur le formulaire d'inscription.
+     * Un utilisateur (ou l'administrateur lui-même) qui venait se connecter
+     * remplissait donc le formulaire d'INSCRIPTION, et se retrouvait soit avec
+     * une erreur, soit avec un NOUVEAU compte — donc sans ses droits
+     * d'administrateur, avec l'impression que « la connexion ne marche pas ».
+     *
+     * Les boutons « Créer un compte » (accueil, publication, fiche vendeur)
+     * passent explicitement `mode=signup` : ils ne sont pas affectés.
+     */
+    mode: search.mode === "signup" ? "signup" : "login",
   }),
   head: () => {
     const { meta, links } = buildSeoHead({
