@@ -464,8 +464,10 @@ try {
     ok("Paiement : moyens disponibles", methods.join(", "));
   }
   if (!card) warn("Paiement par carte bancaire", "indisponible (clé Stripe ?)");
-  const bad = (d?.providers ?? []).filter((p) => !p.configured).map((p) => p.label);
-  if (bad.length && card) warn("Fournisseurs non configurés", bad.join(", "));
+  /* Note : un fournisseur non configuré n'est PAS un problème s'il attend
+     volontairement sa mise en service (interrupteur fermé, par exemple
+     XaalisPay avant les tests). Seul compte le fait qu'au moins un moyen de
+     paiement soit réellement utilisable — vérifié juste au-dessus. */
 } catch (e) {
   ko("Paiement : moyens disponibles", e.message);
 }

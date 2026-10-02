@@ -76,13 +76,35 @@ export const xaalispayProvider: PaymentProvider = {
   methods: ["wave", "orange_money"],
 
   async isConfigured() {
-    const [cle, secret] = await Promise.all([
+    const [cle, secret, interrupteur] = await Promise.all([
       serverEnv("XAALISPAY_API_KEY"),
       serverEnv("XAALISPAY_WEBHOOK_SECRET"),
+      serverEnv("XAALISPAY_ENABLED"),
     ]);
-    // Les DEUX sont nécessaires : sans le secret, on ne pourrait pas vérifier
-    // que la notification vient bien de XaalisPay (donc pas de crédit fiable).
-    return !!cle && !!secret;
+    /**
+     * DOUBLE SÉCURITÉ AVANT LA MISE EN SERVICE.
+     *
+     * Il faut les TROIS choses pour que Wave / Orange Money apparaisse aux
+     * utilisateurs :
+     *   1. la clé API (`XAALISPAY_API_KEY`) ;
+     *   2. le secret de webhook (`XAALISPAY_WEBHOOK_SECRET`) — sans lui, on ne
+     *      pourrait pas vérifier que la notification vient bien de XaalisPay,
+     *      donc un paiement pourrait être encaissé sans être crédité ;
+     *   3. l'interrupteur `XAALISPAY_ENABLED = "true"`.
+     *
+     * L'interrupteur est là pour une raison précise : que l'on puisse mettre les
+     * clés, TOUT TESTER tranquillement (adresse de webhook, petit paiement réel,
+     * crédit du portefeuille), et n'ouvrir au public qu'ensuite, en changeant
+     * une seule variable. Tant qu'il est absent, le fournisseur est invisible :
+     * aucun bouton, aucune offre, aucun risque.
+     *
+     * MISE EN SERVICE (dans l'ordre) :
+     *   1. ajouter XAALISPAY_API_KEY et XAALISPAY_WEBHOOK_SECRET ;
+     *   2. vérifier le webhook avec scripts/xaalispay-test.mjs ;
+     *   3. faire un vrai petit paiement et vérifier le crédit du portefeuille ;
+     *   4. alors seulement : ajouter XAALISPAY_ENABLED = "true".
+     */
+    return !!cle && !!secret && interrupteur === "true";
   },
 
   /**
