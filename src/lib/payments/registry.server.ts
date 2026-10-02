@@ -1,23 +1,20 @@
 import { stripeProvider } from "@/lib/payments/stripe.server";
+import { xaalispayProvider } from "@/lib/payments/xaalispay.server";
 import type { PaymentMethod, PaymentProvider } from "@/lib/payments/types";
 
 /**
  * Registre des fournisseurs de paiement.
  *
- * StockMe encaisse par CARTE BANCAIRE (Visa / Mastercard, via Stripe).
- * C'est le seul moyen en ligne : c'est un choix d'exploitation, pas un oubli.
+ *   • CARTE BANCAIRE (Stripe) — encaissement classique ;
+ *   • XAALISPAY CONNECT — Wave / Orange Money (les moyens que tes vendeurs
+ *     utilisent réellement) et séquestre pour les commandes entre acheteur et
+ *     vendeur.
  *
- * Conséquence importante : tout ce que le site annonce comme payable en ligne
- * est payable par carte, et rien d'autre. La tour de contrôle (/api/health) ne
- * signale plus de moyen de paiement manquant, puisque aucun n'est attendu.
- *
- * POUR AJOUTER UN MOYEN PLUS TARD (mobile money, virement…) : le fournisseur
- * `unitechpay.server.ts` est conservé dans le dossier ; il suffit de le
- * remettre dans cette liste et d'ajouter sa clé dans les variables du Worker.
- * Le reste du site (portefeuille, boosts, abonnements) n'a rien à changer : il
- * n'affiche que les moyens réellement configurés.
+ * Un fournisseur n'apparaît sur le site que s'il est RÉELLEMENT configuré
+ * (clés présentes dans les variables du Worker) : on ne propose jamais un
+ * moyen de paiement qui ne pourrait pas aboutir.
  */
-export const PROVIDERS: PaymentProvider[] = [stripeProvider];
+export const PROVIDERS: PaymentProvider[] = [stripeProvider, xaalispayProvider];
 
 export const getProvider = (name: string): PaymentProvider | undefined =>
   PROVIDERS.find((p) => p.name === name);
