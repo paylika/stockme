@@ -85,10 +85,18 @@ export function usePaymentsStatus(): PaymentsStatus {
 
   useEffect(() => {
     let cancel = false;
-    if (cached) {
-      setState({ ...cached, loading: false });
-      return;
-    }
+    /**
+     * ⚠️ ON APPELLE TOUJOURS `fetchStatus()`, MÊME SI UNE VALEUR EST EN CACHE.
+     *
+     * Bug constaté : un administrateur ne voyait plus Wave / Orange Money.
+     * Cause : la page avait mémorisé la réponse « visiteur » (carte uniquement)
+     * lors d'un chargement précédent, et ce raccourci la réutilisait sans
+     * vérifier si la session avait changé entre-temps.
+     *
+     * `fetchStatus()` sait gérer ce cas : il compare la présence de session et
+     * ne rappelle le serveur que si nécessaire. C'est lui qui décide — plus ce
+     * raccourci.
+     */
     fetchStatus().then((s) => {
       if (!cancel) setState({ ...s, loading: false });
     });
