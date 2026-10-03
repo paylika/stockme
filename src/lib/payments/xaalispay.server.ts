@@ -85,7 +85,10 @@ async function requete<T>(chemin: string, init: { method?: string; body?: unknow
       await new Promise((r) => setTimeout(r, 800));
       res = await appel();
       if (res.status >= 500) {
-        throw new Error(`XaalisPay a répondu ${res.status} (${corps.slice(0, 80)}). Réessayez dans un instant.`);
+        throw new Error(
+          `XaalisPay a répondu ${res.status} sur l'adresse ${base} (${corps.slice(0, 60)}). ` +
+            `Si le code est 1016, l'adresse est introuvable : vérifiez la variable XAALISPAY_API_URL.`,
+        );
       }
     }
   } catch (err) {
