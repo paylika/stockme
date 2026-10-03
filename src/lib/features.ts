@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ensureSession } from "@/lib/auth-session";
 
 /**
  * Interrupteur central des fonctionnalités PAYANTES (portefeuille, boost,
@@ -31,16 +32,30 @@ export type PaymentsStatus = {
   providers: { name: string; label: string; methods: string[]; configured: boolean }[];
 };
 
-let cached: Omit<PaymentsStatus, "loading"> | null = null;
+let cached: (Omit<PaymentsStatus, "loading"> & { avecSession: boolean }) | null = null;
 let inflight: Promise<Omit<PaymentsStatus, "loading">> | null = null;
 
 async function fetchStatus(): Promise<Omit<PaymentsStatus, "loading">> {
-  if (cached) return cached;
   if (typeof window === "undefined") return { enabled: false, methods: [], providers: [] };
+
+  /**
+   * ON ENVOIE LA SESSION QUAND ELLE EXISTE.
+   *
+   * Pourquoi : le mobile money (Wave / Orange) est réservé à l'administration
+   * pendant les tests. C'est le SERVEUR qui décide — il a donc besoin de savoir
+   * qui demande. Le cache est conservé séparément avec et sans session, sinon
+   * un administrateur qui se connecte verrait encore la réponse « visiteur ».
+   */
+  const session = await ensureSession();
+  const avecSession = !!session?.access_token;
+
+  if (cached && cached.avecSession === avecSession) return cached;
 
   inflight =
     inflight ??
-    fetch("/api/pay/checkout")
+    fetch("/api/pay/checkout", {
+      headers: avecSession ? { Authorization: `Bearer ${session?.access_token}` } : {},
+    })
       .then((r) => (r.ok ? r.json() : { methods: [], providers: [] }))
       .then((d: { methods?: string[]; providers?: PaymentsStatus["providers"] }) => {
         const methods = d?.methods ?? [];
@@ -48,12 +63,16 @@ async function fetchStatus(): Promise<Omit<PaymentsStatus, "loading">> {
           enabled: PAYMENTS_UI_ENABLED && methods.length > 0,
           methods,
           providers: d?.providers ?? [],
+          avecSession,
         };
         return cached;
       })
       .catch(() => {
-        cached = { enabled: false, methods: [], providers: [] };
+        cached = { enabled: false, methods: [], providers: [], avecSession };
         return cached;
+      })
+      .finally(() => {
+        inflight = null;
       });
 
   return inflight;

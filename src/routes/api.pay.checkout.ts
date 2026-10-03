@@ -1,33 +1,90 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { availableProviders, resolveProvider } from "@/lib/payments/registry.server";
-import { userClient } from "@/lib/payments/supabase-server";
+import { serviceClient, userClient } from "@/lib/payments/supabase-server";
+import { serverEnv } from "@/lib/server-env";
 import type { PaymentMethod } from "@/lib/payments/types";
 import { planById } from "@/lib/pricing";
 
 /**
  * Point d'entrée unique du paiement (portefeuille, boost, abonnement).
  *
- * Le fournisseur (UnitechPay, Stripe…) est choisi ici, pas dans l'interface :
- * ajouter un prestataire ne touche donc jamais le code du vendeur.
+ * Le fournisseur (carte bancaire, Wave / Orange Money…) est choisi ici, pas
+ * dans l'interface : ajouter un prestataire ne touche donc jamais le code du
+ * vendeur.
  *
  * POST /api/pay/checkout
  *   { purpose: 'wallet_topup'|'boost'|'subscription', amount, method,
  *     provider?, customerNumber?, metadata? }
- *   Authorization: Bearer <jeton de session>
+ *   Authorization: <jeton de session>
  */
+
+/**
+ * L'APPELANT EST-IL ADMINISTRATEUR ?
+ *
+ * Sert à réserver le mobile money à l'administration pendant les tests. La
+ * réponse vient de la base (table des rôles), jamais du navigateur : elle ne
+ * peut donc pas être falsifiée. En cas de doute (réseau, jeton illisible), on
+ * répond NON — le pire qui puisse arriver est qu'un administrateur doive
+ * réessayer, jamais qu'un inconnu encaisse par un moyen non testé.
+ */
+async function estAdministrateur(token: string): Promise<boolean> {
+  if (!token) return false;
+  try {
+    const cle = await serverEnv("SUPABASE_SERVICE_ROLE_KEY");
+    if (!cle) return false;
+    const service = serviceClient(cle);
+    const { data: userData } = await service.auth.getUser(token);
+    const uid = userData?.user?.id;
+    if (!uid) return false;
+    const { data: role } = await service
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", uid)
+      .eq("role", "admin")
+      .maybeSingle();
+    return !!role;
+  } catch {
+    return false;
+  }
+}
+
 export const Route = createFileRoute("/api/pay/checkout")({
   server: {
     handlers: {
-      // Quels moyens de paiement sont disponibles aujourd'hui ?
-      GET: async () => {
+      /**
+       * QUELS MOYENS DE PAIEMENT SONT DISPONIBLES ?
+       *
+       * MISE EN SERVICE PROGRESSIVE — le mobile money (Wave / Orange) est
+       * d'abord réservé à l'ADMINISTRATION : c'est ainsi qu'on teste un vrai
+       * paiement avant de l'ouvrir aux vendeurs. La vérification est faite ICI,
+       * côté serveur : un visiteur ne peut pas la contourner en modifiant la
+       * page, et il ne voit même pas l'option.
+       *
+       * Le jour de l'ouverture au public : mettre XAALISPAY_ENABLED = "true"
+       * dans Cloudflare suffit (l'interrupteur du fournisseur).
+       */
+      GET: async ({ request }) => {
+        const token = (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
+        const admin = await estAdministrateur(token);
+
         const providers = await availableProviders();
         const methods: PaymentMethod[] = [];
         for (const p of providers) {
           if (!p.configured) continue;
-          for (const m of p.methods) if (!methods.includes(m)) methods.push(m);
+          for (const m of p.methods) {
+            // Les moyens autres que la carte restent privés pendant les tests.
+            if (m !== "card" && !admin) continue;
+            if (!methods.includes(m)) methods.push(m);
+          }
         }
+
         return Response.json({
-          providers: providers.map((p) => ({ name: p.name, label: p.label, methods: p.methods, configured: p.configured })),
+          providers: providers.map((p) => ({
+            name: p.name,
+            label: p.label,
+            methods: admin ? p.methods : p.methods.filter((m) => m === "card"),
+            configured: p.configured,
+          })),
           methods,
         });
       },
@@ -60,6 +117,21 @@ export const Route = createFileRoute("/api/pay/checkout")({
           }
 
           const provider = await resolveProvider(body.provider, method);
+
+          /**
+           * MÊME GARDE-FOU À L'ENCAISSEMENT : le mobile money est réservé à
+           * l'administration pendant les tests. Sans ce contrôle, quelqu'un
+           * pourrait appeler l'adresse directement en contournant la page.
+           */
+          if (method !== "card" && !(await estAdministrateur(token))) {
+            return Response.json(
+              {
+                error:
+                  "Le paiement Wave / Orange Money est en cours de test et réservé à l'administration. Choisissez la carte bancaire.",
+              },
+              { status: 403 },
+            );
+          }
 
           const supabase = userClient(token);
           const { data: userData, error: userError } = await supabase.auth.getUser();
