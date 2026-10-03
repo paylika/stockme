@@ -179,6 +179,55 @@ function RootComponent() {
     else window.setTimeout(send, 2500);
   }, [pathname]);
 
+  /**
+   * RÉPARATION AUTOMATIQUE APRÈS UN DÉPLOIEMENT — LE BUG LE PLUS FRÉQUENT.
+   *
+   * LE PROBLÈME : à chaque déploiement, les fichiers de code changent de nom
+   * (ils portent une empreinte de leur contenu). Quelqu'un qui a le site ouvert
+   * — ou qui navigue au mauvais moment — demande alors un fichier qui n'existe
+   * plus : la page ne s'ouvre pas, la navigation casse, parfois l'écran reste
+   * blanc. C'est exactement le « ça se casse souvent » rapporté par les
+   * utilisateurs, et c'est le prix d'avoir déployé trop souvent dans la journée.
+   *
+   * LA RÉPARATION : on écoute ces erreurs précises et on RECHARGE la page une
+   * fois. L'utilisateur ne voit pas l'erreur, il voit sa page s'afficher. Un
+   * garde-fou de 20 secondes empêche toute boucle de rechargement.
+   */
+  useEffect(() => {
+    const MORCEAU_MANQUANT =
+      /dynamically imported module|Importing a module script failed|error loading dynamically imported module|ChunkLoadError|Loading chunk .* failed/i;
+
+    const reparer = () => {
+      try {
+        const cle = "stockme:reparation";
+        const dernier = Number(window.sessionStorage.getItem(cle) ?? 0);
+        if (Date.now() - dernier < 20_000) return; // déjà tenté à l'instant : on n'insiste pas
+        window.sessionStorage.setItem(cle, String(Date.now()));
+      } catch {
+        /* stockage bloqué : on recharge quand même */
+      }
+      window.location.reload();
+    };
+
+    const surRejet = (e: PromiseRejectionEvent) => {
+      const message = String((e.reason as { message?: string })?.message ?? e.reason ?? "");
+      if (MORCEAU_MANQUANT.test(message)) {
+        e.preventDefault();
+        reparer();
+      }
+    };
+    const surErreur = (e: ErrorEvent) => {
+      if (MORCEAU_MANQUANT.test(String(e.message ?? ""))) reparer();
+    };
+
+    window.addEventListener("unhandledrejection", surRejet);
+    window.addEventListener("error", surErreur);
+    return () => {
+      window.removeEventListener("unhandledrejection", surRejet);
+      window.removeEventListener("error", surErreur);
+    };
+  }, []);
+
   return (
     <>
       {isAdminLayout ? (
