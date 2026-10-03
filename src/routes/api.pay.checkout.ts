@@ -66,6 +66,17 @@ export const Route = createFileRoute("/api/pay/checkout")({
           }
         }
 
+        /**
+         * ORDRE D'AFFICHAGE : LE MOBILE MONEY D'ABORD, LA CARTE ENSUITE.
+         *
+         * Au Sénégal, on paie par Wave ou Orange Money — pas par carte. Proposer
+         * la carte en premier, c'est demander au vendeur de chercher un moyen
+         * qu'il n'a pas. L'ordre est décidé ICI (le serveur), donc il s'applique
+         * partout d'un coup : rechargement, badge, abonnement, mise en avant.
+         */
+        const ordre: Record<string, number> = { wave: 0, orange_money: 1, card: 9 };
+        methods.sort((a, b) => (ordre[a] ?? 5) - (ordre[b] ?? 5));
+
         return Response.json({
           providers: providers.map((p) => ({
             name: p.name,
