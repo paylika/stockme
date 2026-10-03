@@ -189,7 +189,20 @@ export const xaalispayProvider: PaymentProvider = {
         amount: Math.round(input.amount),
         // `beneficiary` reste obligatoire ; ici la plateforme s'auto-encaisse
         // (le compte connecté de StockMe est créé côté XaalisPay).
-        beneficiary: await serverEnv("XAALISPAY_BENEFICIARY_REF"),
+        /**
+         * BÉNÉFICIAIRE — ÉCRIT EN DUR, POUR LA MÊME RAISON QUE L'ADRESSE.
+         *
+         * XaalisPay exige soit `beneficiary`, soit `splits` : sans l'un des deux,
+         * il refuse la transaction (« Fournir beneficiary ou splits »). La
+         * variable Cloudflare `XAALISPAY_BENEFICIARY_REF` n'arrivait pas jusqu'au
+         * Worker (les secrets passent, les variables simples non), donc le champ
+         * partait vide et le paiement échouait.
+         *
+         * `stockme-platform` est l'identifiant du compte marchand StockMe, créé
+         * chez XaalisPay et vérifié : l'argent lui est destiné. Ce n'est pas un
+         * secret, il peut donc figurer ici sans inconvénient.
+         */
+        beneficiary: (await serverEnv("XAALISPAY_BENEFICIARY_REF")) ?? "stockme-platform",
         // `on_funding` : les fonds passent directement en disponible — utile
         // pour un rechargement de portefeuille (pas de séquestre à gérer).
         release_policy: "on_funding",
