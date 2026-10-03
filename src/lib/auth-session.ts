@@ -310,7 +310,23 @@ function start(): void {
   if (quick) emit({ session: quick, user: quick.user, ready: true });
 
   supabase.auth.onAuthStateChange((event, session) => {
-    if (session) backupSession(session);
+    if (session) {
+      /**
+       * ⚠️ CORRECTION D'UN DÉFAUT QUI DÉCONNECTAIT SUR TÉLÉPHONE.
+       *
+       * `signedOutOnPurpose` passait à vrai lors d'une déconnexion VOLONTAIRE et
+       * n'était JAMAIS remis à faux. Conséquence : après une reconnexion, si
+       * supabase-js annonçait une déconnexion passagère — ce qui arrive souvent
+       * sur mobile quand le réseau vacille — la récupération de session restait
+       * bloquée par ce drapeau, et l'utilisateur était déconnecté juste après
+       * s'être connecté.
+       *
+       * Dès qu'une session existe, la déconnexion volontaire n'a plus lieu
+       * d'être : on remet le drapeau à faux.
+       */
+      signedOutOnPurpose = false;
+      backupSession(session);
+    }
 
     switch (event) {
       case "SIGNED_OUT":
