@@ -135,6 +135,78 @@ async function requete<T>(chemin: string, init: { method?: string; body?: unknow
   return json as T;
 }
 
+/** Solde du compte marchand StockMe chez XaalisPay. */
+export type SoldeXaalisPay = {
+  /** Argent en séquestre (en attente de livraison). */
+  enSequestre: number;
+  /** Argent disponible, retirable. */
+  disponible: number;
+  /** Argent bloqué (litige). */
+  bloque: number;
+  /** Déjà versé sur ton compte mobile money. */
+  dejaVerse: number;
+};
+
+/**
+ * Retrouve le compte marchand StockMe par sa référence, plutôt que par son
+ * identifiant technique : si l'identifiant change un jour, rien ne casse.
+ */
+async function compteStockme(): Promise<string> {
+  const comptes = await requete<{ id: string; external_ref: string | null }[]>("/accounts", { method: "GET" });
+  const trouve = (Array.isArray(comptes) ? comptes : []).find((c) => c.external_ref === "stockme-platform");
+  if (!trouve) throw new Error("Compte marchand StockMe introuvable chez XaalisPay.");
+  return trouve.id;
+}
+
+/** Lit le solde (ce que tu as gagné et ce que tu peux retirer). */
+export async function soldeXaalisPay(): Promise<SoldeXaalisPay> {
+  const id = await compteStockme();
+  const b = await requete<{
+    escrow_balance?: number;
+    available_balance?: number;
+    blocked_balance?: number;
+    paid_out_balance?: number;
+  }>(`/accounts/${id}/balance`, { method: "GET" });
+  return {
+    enSequestre: b.escrow_balance ?? 0,
+    disponible: b.available_balance ?? 0,
+    bloque: b.blocked_balance ?? 0,
+    dejaVerse: b.paid_out_balance ?? 0,
+  };
+}
+
+/**
+ * RETIRE L'ARGENT VERS TON COMPTE MOBILE MONEY.
+ *
+ * Sans montant : tout le disponible. XaalisPay prélève 3,5 % au retrait, et
+ * seulement si le retrait réussit (un échec est intégralement recrédité).
+ */
+export async function retirerXaalisPay(montant?: number): Promise<{
+  montant: number;
+  net: number;
+  frais: number;
+  statut: string;
+}> {
+  const id = await compteStockme();
+  const solde = await soldeXaalisPay();
+  const aRetirer = montant && montant > 0 ? Math.min(Math.floor(montant), solde.disponible) : solde.disponible;
+  if (aRetirer < 100) throw new Error("Le montant à retirer est trop faible (minimum 100 F).");
+
+  const res = await requete<{
+    amount?: number;
+    net_amount?: number;
+    xaalispay_fee?: number;
+    status?: string;
+  }>(`/accounts/${id}/payouts`, { body: { amount: aRetirer } });
+
+  return {
+    montant: res.amount ?? aRetirer,
+    net: res.net_amount ?? aRetirer,
+    frais: res.xaalispay_fee ?? 0,
+    statut: res.status ?? "processing",
+  };
+}
+
 type TransactionXaalis = {
   id?: string;
   status?: string;

@@ -18,6 +18,7 @@ import { formatFCFA } from "@/lib/format";
 import { thumb } from "@/lib/img";
 import { AdminVignettes } from "@/components/AdminVignettes";
 import { AdminSauvegarde } from "@/components/AdminSauvegarde";
+import { AdminRetrait } from "@/components/AdminRetrait";
 import { AdminEnrichissement } from "@/components/AdminEnrichissement";
 import { Eye, EyeOff, MessageCircle, Package, Trash2, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -382,6 +383,7 @@ function AdminDashboard() {
 
       {/* ===== KPIs clés (période) ===== */}
       <div className="mt-6 space-y-3">
+        <AdminRetrait />
         <AdminSauvegarde />
         <AdminVignettes />
         <AdminEnrichissement />

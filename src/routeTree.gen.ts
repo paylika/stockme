@@ -48,6 +48,7 @@ import { Route as ApiAiEnrichRouteImport } from './routes/api.ai.enrich'
 import { Route as ApiAiImageSearchRouteImport } from './routes/api.ai.image-search'
 import { Route as ApiAiStatusRouteImport } from './routes/api.ai.status'
 import { Route as ApiJobsBoostDailyRouteImport } from './routes/api.jobs.boost-daily'
+import { Route as ApiJobsRetraitRouteImport } from './routes/api.jobs.retrait'
 import { Route as ApiJobsSauvegardeRouteImport } from './routes/api.jobs.sauvegarde'
 import { Route as ApiJobsVignettesRouteImport } from './routes/api.jobs.vignettes'
 import { Route as ApiPayCheckoutRouteImport } from './routes/api.pay.checkout'
@@ -251,6 +252,11 @@ const ApiJobsBoostDailyRoute = ApiJobsBoostDailyRouteImport.update({
   path: '/api/jobs/boost-daily',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiJobsRetraitRoute = ApiJobsRetraitRouteImport.update({
+  id: '/api/jobs/retrait',
+  path: '/api/jobs/retrait',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiJobsSauvegardeRoute = ApiJobsSauvegardeRouteImport.update({
   id: '/api/jobs/sauvegarde',
   path: '/api/jobs/sauvegarde',
@@ -326,6 +332,7 @@ export interface FileRoutesByFullPath {
   '/api/ai/image-search': typeof ApiAiImageSearchRoute
   '/api/ai/status': typeof ApiAiStatusRoute
   '/api/jobs/boost-daily': typeof ApiJobsBoostDailyRoute
+  '/api/jobs/retrait': typeof ApiJobsRetraitRoute
   '/api/jobs/sauvegarde': typeof ApiJobsSauvegardeRoute
   '/api/jobs/vignettes': typeof ApiJobsVignettesRoute
   '/api/pay/checkout': typeof ApiPayCheckoutRoute
@@ -372,6 +379,7 @@ export interface FileRoutesByTo {
   '/api/ai/image-search': typeof ApiAiImageSearchRoute
   '/api/ai/status': typeof ApiAiStatusRoute
   '/api/jobs/boost-daily': typeof ApiJobsBoostDailyRoute
+  '/api/jobs/retrait': typeof ApiJobsRetraitRoute
   '/api/jobs/sauvegarde': typeof ApiJobsSauvegardeRoute
   '/api/jobs/vignettes': typeof ApiJobsVignettesRoute
   '/api/pay/checkout': typeof ApiPayCheckoutRoute
@@ -421,6 +429,7 @@ export interface FileRoutesById {
   '/api/ai/image-search': typeof ApiAiImageSearchRoute
   '/api/ai/status': typeof ApiAiStatusRoute
   '/api/jobs/boost-daily': typeof ApiJobsBoostDailyRoute
+  '/api/jobs/retrait': typeof ApiJobsRetraitRoute
   '/api/jobs/sauvegarde': typeof ApiJobsSauvegardeRoute
   '/api/jobs/vignettes': typeof ApiJobsVignettesRoute
   '/api/pay/checkout': typeof ApiPayCheckoutRoute
@@ -469,6 +478,7 @@ export interface FileRouteTypes {
     | '/api/ai/image-search'
     | '/api/ai/status'
     | '/api/jobs/boost-daily'
+    | '/api/jobs/retrait'
     | '/api/jobs/sauvegarde'
     | '/api/jobs/vignettes'
     | '/api/pay/checkout'
@@ -515,6 +525,7 @@ export interface FileRouteTypes {
     | '/api/ai/image-search'
     | '/api/ai/status'
     | '/api/jobs/boost-daily'
+    | '/api/jobs/retrait'
     | '/api/jobs/sauvegarde'
     | '/api/jobs/vignettes'
     | '/api/pay/checkout'
@@ -563,6 +574,7 @@ export interface FileRouteTypes {
     | '/api/ai/image-search'
     | '/api/ai/status'
     | '/api/jobs/boost-daily'
+    | '/api/jobs/retrait'
     | '/api/jobs/sauvegarde'
     | '/api/jobs/vignettes'
     | '/api/pay/checkout'
@@ -595,6 +607,7 @@ export interface RootRouteChildren {
   ApiAiImageSearchRoute: typeof ApiAiImageSearchRoute
   ApiAiStatusRoute: typeof ApiAiStatusRoute
   ApiJobsBoostDailyRoute: typeof ApiJobsBoostDailyRoute
+  ApiJobsRetraitRoute: typeof ApiJobsRetraitRoute
   ApiJobsSauvegardeRoute: typeof ApiJobsSauvegardeRoute
   ApiJobsVignettesRoute: typeof ApiJobsVignettesRoute
   ApiPayCheckoutRoute: typeof ApiPayCheckoutRoute
@@ -878,6 +891,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiJobsBoostDailyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/jobs/retrait': {
+      id: '/api/jobs/retrait'
+      path: '/api/jobs/retrait'
+      fullPath: '/api/jobs/retrait'
+      preLoaderRoute: typeof ApiJobsRetraitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/jobs/sauvegarde': {
       id: '/api/jobs/sauvegarde'
       path: '/api/jobs/sauvegarde'
@@ -1046,6 +1066,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAiImageSearchRoute: ApiAiImageSearchRoute,
   ApiAiStatusRoute: ApiAiStatusRoute,
   ApiJobsBoostDailyRoute: ApiJobsBoostDailyRoute,
+  ApiJobsRetraitRoute: ApiJobsRetraitRoute,
   ApiJobsSauvegardeRoute: ApiJobsSauvegardeRoute,
   ApiJobsVignettesRoute: ApiJobsVignettesRoute,
   ApiPayCheckoutRoute: ApiPayCheckoutRoute,
