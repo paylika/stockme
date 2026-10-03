@@ -209,6 +209,16 @@ export const xaalispayProvider: PaymentProvider = {
         external_ref: reference,
         payment_method: methode,
         initiate_charge: true,
+        /**
+         * RETOUR SUR STOCKME APRÈS PAIEMENT.
+         *
+         * Sans ces deux adresses, l'acheteur qui vient de payer resterait sur la
+         * page de XaalisPay sans jamais revenir voir le résultat sur StockMe —
+         * il croirait que rien ne s'est passé. On le ramène donc sur notre page
+         * de retour, qui confirme le paiement et met à jour le solde affiché.
+         */
+        ...(input.successUrl ? { success_url: input.successUrl } : {}),
+        ...(input.cancelUrl ? { error_url: input.cancelUrl } : {}),
         ...(input.customerNumber ? { payer: { phone: input.customerNumber.replace(/[^\d+]/g, "") } } : {}),
       },
     });
