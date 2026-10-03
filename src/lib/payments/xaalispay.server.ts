@@ -40,17 +40,58 @@ async function requete<T>(chemin: string, init: { method?: string; body?: unknow
    */
   const base = ((await serverEnv("XAALISPAY_API_URL")) ?? "https://api.xaalispay.com").replace(/\/+$/, "");
 
+  /**
+   * REQUÊTE ROBUSTE VERS XAALISPAY.
+   *
+   * Incident constaté : un « HTTP 530 » (erreur Cloudflare) s'affichait côté
+   * utilisateur, alors que leur API répondait parfaitement (200 en 1 s) depuis
+   * un navigateur. Leur application est hébergée sur Railway, elle-même
+   * protégée par Cloudflare : les requêtes envoyées par notre serveur partaient
+   * SANS en-tête « User-Agent », ce que ce genre de protection rejette.
+   *
+   * Trois corrections :
+   *   1. on s'identifie clairement (User-Agent + Accept) ;
+   *   2. un délai maximum de 20 s, sinon on échoue proprement au lieu de
+   *      laisser l'utilisateur attendre indéfiniment ;
+   *   3. une seconde tentative automatique après 800 ms — un réveil de serveur
+   *      ou un hoquet réseau ne doit pas faire échouer un paiement.
+   */
+  const appel = async (): Promise<Response> => {
+    const ctrl = new AbortController();
+    const minuteur = setTimeout(() => ctrl.abort(), 20_000);
+    try {
+      return await fetch(`${base}/api/v1/connect${chemin}`, {
+        method: init.method ?? "POST",
+        headers: {
+          Authorization: `Bearer ${cle}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "User-Agent": "StockMe/1.0 (+https://stockme.store)",
+        },
+        body: init.body === undefined ? undefined : JSON.stringify(init.body),
+        signal: ctrl.signal,
+      });
+    } finally {
+      clearTimeout(minuteur);
+    }
+  };
+
   let res: Response;
   try {
-    res = await fetch(`${base}/api/v1/connect${chemin}`, {
-      method: init.method ?? "POST",
-      headers: { Authorization: `Bearer ${cle}`, "Content-Type": "application/json" },
-      body: init.body === undefined ? undefined : JSON.stringify(init.body),
-    });
-  } catch {
-    // Adresse injoignable : message clair plutôt qu'une erreur technique.
+    res = await appel();
+    if (res.status >= 500) {
+      // Hoquet côté XaalisPay (ou réveil de leur serveur) : on retente une fois.
+      const corps = await res.text();
+      await new Promise((r) => setTimeout(r, 800));
+      res = await appel();
+      if (res.status >= 500) {
+        throw new Error(`XaalisPay a répondu ${res.status} (${corps.slice(0, 80)}). Réessayez dans un instant.`);
+      }
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("XaalisPay a répondu")) throw err;
     throw new Error(
-      `XaalisPay injoignable à l'adresse ${base}. Vérifiez XAALISPAY_API_URL (l'adresse de leur documentation ne répond pas).`,
+      `XaalisPay injoignable (${base}). Réessayez dans un instant ; si cela persiste, signalez-le à XaalisPay.`,
     );
   }
 
