@@ -42,6 +42,32 @@ async function mobileMoneyAutorise(token: string): Promise<boolean> {
 
 async function estAdministrateur(token: string): Promise<boolean> {
   if (!token) return false;
+
+  /**
+   * DEUX CHEMINS INDÉPENDANTS POUR VÉRIFIER LE RÔLE.
+   *
+   * Un seul chemin ne suffisait pas : la vérification passait uniquement par la
+   * clé de service, et si celle-ci manquait ou échouait, l'administrateur était
+   * traité comme un visiteur — il ne voyait donc plus Wave / Orange Money.
+   *
+   *   1. la session de l'utilisateur elle-même interroge la base (fonction
+   *      `has_role`, prévue pour ça) — aucun secret supplémentaire requis ;
+   *   2. en repli, la clé de service.
+   *
+   * Si l'un des deux confirme le rôle, c'est suffisant.
+   */
+  try {
+    const scoped = userClient(token);
+    const { data: userData } = await scoped.auth.getUser();
+    const uid = userData?.user?.id;
+    if (uid) {
+      const { data: role } = await scoped.rpc("has_role", { _user_id: uid, _role: "admin" });
+      if (role === true) return true;
+    }
+  } catch {
+    /* on tente le second chemin */
+  }
+
   try {
     const cle = await serverEnv("SUPABASE_SERVICE_ROLE_KEY");
     if (!cle) return false;

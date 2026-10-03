@@ -262,6 +262,16 @@ export const Route = createFileRoute("/api/health")({
           version,
           base: { ok: base.ok, ms: base.ms },
           stockage: { ok: stockage.ok, ms: stockage.ms },
+          /**
+           * DIAGNOSTIC VISIBLE SANS SECRET.
+           *
+           * Ces deux informations n'exposent aucun secret, mais elles permettent
+           * de savoir en un coup d'œil si un problème vient du serveur ou de
+           * l'affichage : quels moyens de paiement sont réellement configurés, et
+           * si la clé de service (qui sert à vérifier les rôles) est présente.
+           */
+          paiement: { moyens: paiement.moyens, ok: paiement.ok },
+          service_role: !!serviceKey,
         };
 
         if (!detailed) {
