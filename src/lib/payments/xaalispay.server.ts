@@ -38,7 +38,21 @@ async function requete<T>(chemin: string, init: { method?: string; body?: unknow
    * répond. L'adresse est donc configurable sans redéploiement : dès qu'ils
    * donnent la bonne, il suffit d'ajouter `XAALISPAY_API_URL` dans Cloudflare.
    */
-  const base = ((await serverEnv("XAALISPAY_API_URL")) ?? "https://api.xaalispay.com").replace(/\/+$/, "");
+  /**
+   * ADRESSE DE L'API — ÉCRITE EN DUR, VOLONTAIREMENT.
+   *
+   * L'adresse figure dans leur documentation sous `api.xaalispay.com`, mais ce
+   * nom de domaine n'existe pas : leur API tourne réellement sur Railway. La
+   * variable Cloudflare `XAALISPAY_API_URL` n'arrivait pas jusqu'au Worker, ce
+   * qui provoquait une erreur 530 (code 1016 « domaine introuvable ») à chaque
+   * paiement.
+   *
+   * On ne dépend donc plus d'aucune configuration : l'adresse qui FONCTIONNE
+   * (vérifiée : 200 en 1 seconde, compte marchand créé, transaction de test
+   * réussie avec un vrai lien Wave) est écrite ici. La variable reste possible
+   * comme surcharge, si XaalisPay change un jour d'hébergement.
+   */
+  const base = ((await serverEnv("XAALISPAY_API_URL")) ?? "https://xaalispay.up.railway.app").replace(/\/+$/, "");
 
   /**
    * REQUÊTE ROBUSTE VERS XAALISPAY.
