@@ -26,17 +26,33 @@ import {
  * configuré : rien ne casse, et le site n'affiche pas ce moyen de paiement.
  */
 
-const API_URL = "https://api.xaalispay.com";
-
 async function requete<T>(chemin: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   const cle = await serverEnv("XAALISPAY_API_KEY");
   if (!cle) throw new Error("XaalisPay non configuré (XAALISPAY_API_KEY manquante).");
 
-  const res = await fetch(`${API_URL}/api/v1/connect${chemin}`, {
-    method: init.method ?? "POST",
-    headers: { Authorization: `Bearer ${cle}`, "Content-Type": "application/json" },
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
+  /**
+   * ADRESSE DE L'API — À VÉRIFIER AUPRÈS DE XAALISPAY.
+   *
+   * Le 28/09, l'adresse indiquée dans LEUR documentation (`api.xaalispay.com`)
+   * ne se résout pas en DNS : elle n'existe pas publiquement, seul leur site
+   * répond. L'adresse est donc configurable sans redéploiement : dès qu'ils
+   * donnent la bonne, il suffit d'ajouter `XAALISPAY_API_URL` dans Cloudflare.
+   */
+  const base = ((await serverEnv("XAALISPAY_API_URL")) ?? "https://api.xaalispay.com").replace(/\/+$/, "");
+
+  let res: Response;
+  try {
+    res = await fetch(`${base}/api/v1/connect${chemin}`, {
+      method: init.method ?? "POST",
+      headers: { Authorization: `Bearer ${cle}`, "Content-Type": "application/json" },
+      body: init.body === undefined ? undefined : JSON.stringify(init.body),
+    });
+  } catch {
+    // Adresse injoignable : message clair plutôt qu'une erreur technique.
+    throw new Error(
+      `XaalisPay injoignable à l'adresse ${base}. Vérifiez XAALISPAY_API_URL (l'adresse de leur documentation ne répond pas).`,
+    );
+  }
 
   const texte = await res.text();
   let json: unknown = null;
