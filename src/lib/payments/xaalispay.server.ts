@@ -92,35 +92,29 @@ export const xaalispayProvider: PaymentProvider = {
   methods: ["wave", "orange_money"],
 
   async isConfigured() {
-    const [cle, secret, interrupteur] = await Promise.all([
+    const [cle, secret] = await Promise.all([
       serverEnv("XAALISPAY_API_KEY"),
       serverEnv("XAALISPAY_WEBHOOK_SECRET"),
-      serverEnv("XAALISPAY_ENABLED"),
     ]);
     /**
-     * DOUBLE SÉCURITÉ AVANT LA MISE EN SERVICE.
+     * « CONFIGURÉ » = techniquement prêt, et rien d'autre.
      *
-     * Il faut les TROIS choses pour que Wave / Orange Money apparaisse aux
-     * utilisateurs :
-     *   1. la clé API (`XAALISPAY_API_KEY`) ;
-     *   2. le secret de webhook (`XAALISPAY_WEBHOOK_SECRET`) — sans lui, on ne
-     *      pourrait pas vérifier que la notification vient bien de XaalisPay,
-     *      donc un paiement pourrait être encaissé sans être crédité ;
-     *   3. l'interrupteur `XAALISPAY_ENABLED = "true"`.
+     * Il ne faut QUE ces deux valeurs : la clé API (pour créer les transactions)
+     * et le secret de webhook (pour vérifier que l'argent est bien arrivé).
      *
-     * L'interrupteur est là pour une raison précise : que l'on puisse mettre les
-     * clés, TOUT TESTER tranquillement (adresse de webhook, petit paiement réel,
-     * crédit du portefeuille), et n'ouvrir au public qu'ensuite, en changeant
-     * une seule variable. Tant qu'il est absent, le fournisseur est invisible :
-     * aucun bouton, aucune offre, aucun risque.
+     * ⚠️ CORRECTION D'UNE ERREUR DE CONCEPTION : `isConfigured()` exigeait aussi
+     * l'interrupteur `XAALISPAY_ENABLED`. Résultat, avec l'interrupteur fermé
+     * (le temps des tests), le fournisseur était considéré comme INEXISTANT —
+     * donc invisible pour tout le monde, y compris pour l'administrateur qui
+     * voulait justement tester. Deux sécurités qui se contredisaient.
      *
-     * MISE EN SERVICE (dans l'ordre) :
-     *   1. ajouter XAALISPAY_API_KEY et XAALISPAY_WEBHOOK_SECRET ;
-     *   2. vérifier le webhook avec scripts/xaalispay-test.mjs ;
-     *   3. faire un vrai petit paiement et vérifier le crédit du portefeuille ;
-     *   4. alors seulement : ajouter XAALISPAY_ENABLED = "true".
+     * Désormais :
+     *   • ce qui est « configuré » = les deux clés présentes ;
+     *   • QUI peut s'en servir = décidé dans la route de paiement :
+     *       – administrateur : toujours (c'est le mode test) ;
+     *       – tout le monde : seulement quand XAALISPAY_ENABLED = "true".
      */
-    return !!cle && !!secret && interrupteur === "true";
+    return !!cle && !!secret;
   },
 
   /**

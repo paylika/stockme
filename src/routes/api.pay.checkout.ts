@@ -19,14 +19,27 @@ import { planById } from "@/lib/pricing";
  */
 
 /**
- * L'APPELANT EST-IL ADMINISTRATEUR ?
+ * QUI PEUT PAYER PAR MOBILE MONEY ?
  *
- * Sert à réserver le mobile money à l'administration pendant les tests. La
- * réponse vient de la base (table des rôles), jamais du navigateur : elle ne
- * peut donc pas être falsifiée. En cas de doute (réseau, jeton illisible), on
- * répond NON — le pire qui puisse arriver est qu'un administrateur doive
- * réessayer, jamais qu'un inconnu encaisse par un moyen non testé.
+ *   • l'ADMINISTRATEUR, toujours — c'est le mode test : il peut faire un vrai
+ *     paiement pendant que le public ne voit rien ;
+ *   • TOUT LE MONDE, seulement quand `XAALISPAY_ENABLED = "true"` (ouverture).
+ *
+ * La réponse vient de la base (table des rôles) et des variables du serveur,
+ * jamais du navigateur : elle ne peut pas être falsifiée. En cas de doute
+ * (réseau, jeton illisible), on répond NON — le pire qui puisse arriver est
+ * qu'un administrateur doive réessayer, jamais qu'un inconnu encaisse par un
+ * moyen qui n'a pas été testé.
  */
+async function mobileMoneyAutorise(token: string): Promise<boolean> {
+  try {
+    if ((await serverEnv("XAALISPAY_ENABLED")) === "true") return true;
+  } catch {
+    /* on continue vers la vérification du rôle */
+  }
+  return estAdministrateur(token);
+}
+
 async function estAdministrateur(token: string): Promise<boolean> {
   if (!token) return false;
   try {
@@ -65,7 +78,7 @@ export const Route = createFileRoute("/api/pay/checkout")({
        */
       GET: async ({ request }) => {
         const token = (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
-        const admin = await estAdministrateur(token);
+        const admin = await mobileMoneyAutorise(token);
 
         const providers = await availableProviders();
         const methods: PaymentMethod[] = [];
@@ -123,7 +136,7 @@ export const Route = createFileRoute("/api/pay/checkout")({
            * l'administration pendant les tests. Sans ce contrôle, quelqu'un
            * pourrait appeler l'adresse directement en contournant la page.
            */
-          if (method !== "card" && !(await estAdministrateur(token))) {
+          if (method !== "card" && !(await mobileMoneyAutorise(token))) {
             return Response.json(
               {
                 error:
